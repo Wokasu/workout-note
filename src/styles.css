@@ -1,0 +1,493 @@
+:root {
+  --bg: #fff7fb;
+  --card: #ffffff;
+  --text: #2a2230;
+  --muted: #8a7f92;
+  --line: #f0e4ec;
+  --danger: #e5484d;
+  --good: #2fae6b;
+  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17131b;
+    --card: #221c28;
+    --text: #f3eef6;
+    --muted: #a399ab;
+    --line: #342b3b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+.app {
+  /* 推しカラーが白など淡い色でも見えるよう、アクセントは少し濃くする */
+  --accent: color-mix(in srgb, var(--oshi) 80%, var(--text) 20%);
+  --tint: color-mix(in srgb, var(--oshi) 14%, var(--card));
+  min-height: 100dvh;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px 16px calc(84px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--oshi) 22%, transparent), transparent 40%),
+    var(--bg);
+}
+
+.hero {
+  text-align: center;
+  padding: 24px 0 8px;
+}
+.hero h1 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--accent);
+}
+.hero p {
+  color: var(--muted);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.05);
+  border: 1px solid var(--line);
+}
+.card h2,
+.card h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+.card h4 {
+  margin: 12px 0 6px;
+  font-size: 15px;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* カウントダウン */
+.countdown {
+  text-align: center;
+  background: linear-gradient(135deg, var(--oshi), color-mix(in srgb, var(--oshi) 55%, #ffffff));
+  color: var(--on-oshi);
+  border: none;
+}
+.event-name {
+  font-size: 14px;
+  opacity: 0.9;
+}
+.big {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.days {
+  font-size: 56px;
+  margin: 0 4px;
+  line-height: 1.1;
+}
+
+/* 応援 */
+.cheer {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--tint);
+}
+.cheer p {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.avatar {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--oshi);
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+}
+
+/* カロリーリング */
+.ring-wrap {
+  position: relative;
+  width: 170px;
+  margin: 0 auto;
+}
+.ring {
+  width: 100%;
+  display: block;
+}
+.ring-bg {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 12;
+}
+.ring-fg {
+  fill: none;
+  stroke: var(--oshi);
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s;
+}
+.ring-fg.over {
+  stroke: var(--danger);
+}
+.ring-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.ring-main {
+  font-size: 32px;
+  font-weight: 700;
+}
+.ring-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+.remain {
+  text-align: center;
+  font-weight: 600;
+}
+.remain.over,
+.day-total.over {
+  color: var(--danger);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.stat-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+.bar {
+  height: 10px;
+  border-radius: 99px;
+  background: var(--line);
+  margin-top: 14px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--oshi);
+  border-radius: 99px;
+  transition: width 0.4s;
+}
+.bar-label {
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.notice {
+  font-size: 13px;
+  line-height: 1.6;
+  background: color-mix(in srgb, #ffb020 15%, var(--card));
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 12px 0 0;
+}
+
+/* フォーム */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+legend {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+label,
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+input,
+select {
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+}
+input:focus,
+select:focus {
+  outline: 2px solid var(--oshi);
+  outline-offset: 0;
+}
+.row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.row > label {
+  flex: 1;
+}
+.row .grow {
+  flex: 3;
+}
+.kcal-input {
+  flex: 1.3 !important;
+}
+.colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  padding: 0;
+  cursor: pointer;
+}
+.swatch.selected {
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+}
+.colors input[type='color'] {
+  width: 40px;
+  height: 34px;
+  padding: 2px;
+}
+.error {
+  color: var(--danger);
+  margin: 0;
+  font-size: 14px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ボタン */
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 12px;
+  border: none;
+  padding: 11px 16px;
+  color: var(--text);
+  background: transparent;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.primary {
+  background: var(--oshi);
+  color: var(--on-oshi);
+  font-weight: 700;
+}
+.ghost {
+  border: 1px solid var(--line);
+}
+.danger {
+  background: color-mix(in srgb, var(--danger) 12%, var(--card));
+  color: var(--danger);
+  font-weight: 700;
+}
+.wide {
+  width: 100%;
+}
+.icon {
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 18px;
+}
+
+.seg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.seg button {
+  padding: 8px 2px;
+  font-size: 12px;
+  border: 1px solid var(--line);
+}
+.seg button.on {
+  background: var(--tint);
+  border-color: var(--oshi);
+  font-weight: 700;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.chip {
+  padding: 6px 10px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--bg);
+}
+.chip small {
+  color: var(--muted);
+}
+
+.date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.date-nav button {
+  padding: 6px 14px;
+  font-size: 20px;
+}
+.date-title {
+  font-weight: 700;
+}
+.day-total {
+  text-align: center;
+  margin-top: 8px;
+}
+.day-total b {
+  font-size: 24px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.list li:last-child {
+  border-bottom: none;
+}
+.list li > span:first-child {
+  flex: 1;
+}
+.kcal {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.down {
+  color: var(--good);
+}
+.up {
+  color: var(--danger);
+}
+
+/* グラフ */
+.chart {
+  width: 100%;
+  display: block;
+}
+.chart .grid {
+  stroke: var(--line);
+}
+.chart .axis {
+  font-size: 9px;
+  fill: var(--muted);
+}
+.chart .line {
+  fill: none;
+  stroke: var(--oshi);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.chart .dot {
+  fill: var(--card);
+  stroke: var(--oshi);
+  stroke-width: 2;
+}
+.chart .goal-line {
+  stroke: var(--muted);
+  stroke-dasharray: 4 4;
+}
+
+/* タブバー */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.tabbar button {
+  flex: 1;
+  max-width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  padding: 8px 0 10px;
+  border-radius: 0;
+  color: var(--muted);
+}
+.tabbar button.on {
+  color: var(--accent);
+  font-weight: 700;
+}
+.tab-icon {
+  font-size: 20px;
+}
