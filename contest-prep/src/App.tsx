@@ -33,7 +33,7 @@ function upsertBody(body: BodyRecord[], rec: BodyRecord): BodyRecord[] {
 }
 
 export function App() {
-  const [data, setData] = useAppData();
+  const [data, setData, sync] = useAppData();
   const [tab, setTab] = useState<Tab>('today');
   const today = todayKey();
   const { profile, logs, body, myFoods } = data;
@@ -120,7 +120,7 @@ export function App() {
         )}
         {tab === 'analysis' && <Analysis profile={profile} targetWeightKg={targets.targetWeightKg} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
-          <Settings data={data} today={today} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
+          <Settings data={data} sync={sync} today={today} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}
       </main>
       <nav className="tabbar">

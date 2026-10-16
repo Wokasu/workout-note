@@ -1,26 +1,53 @@
 import { useState } from 'react';
 import type { AppData, Profile } from '../types';
-import { normalizeData } from '../lib/storage';
+import { normalizeData, type SyncState } from '../lib/storage';
+import { getCapability } from '../lib/cloud';
 import { ProfileForm } from './ProfileForm';
+
+interface Downloads {
+  save(req: { filename: string; data: string }): Promise<unknown>;
+}
+
+const SYNC_LABEL: Record<SyncState['status'], string> = {
+  local: 'この端末のブラウザにだけ保存しています',
+  connecting: '保存領域に接続しています…',
+  synced: 'あなた専用の保存領域に保存済み',
+  saving: '保存しています…',
+  error: '保存できていない変更があります',
+};
 
 interface Props {
   data: AppData;
+  sync: SyncState;
   today: string;
   onSaveProfile: (p: Profile) => void;
   onRestore: (d: AppData) => void;
   onReset: () => void;
 }
 
-export function Settings({ data, today, onSaveProfile, onRestore, onReset }: Props) {
+export function Settings({ data, sync, today, onSaveProfile, onRestore, onReset }: Props) {
   const [saved, setSaved] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [message, setMessage] = useState('');
 
-  const backup = () => {
-    const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+  const backup = async () => {
+    const json = JSON.stringify(data, null, 1);
+    const filename = `contest-prep-${today}.json`;
+    // claude.ai の公開ページでは、確認画面を出して保存する
+    const downloads = await getCapability<Downloads>('downloads');
+    if (downloads) {
+      try {
+        await downloads.save({ filename, data: json });
+        setMessage('バックアップを保存しました');
+      } catch (e) {
+        if ((e as { code?: string })?.code !== 'declined') setMessage('バックアップを保存できませんでした');
+      }
+      return;
+    }
+    const blob = new Blob([json], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `contest-prep-${today}.json`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -52,10 +79,27 @@ export function Settings({ data, today, onSaveProfile, onRestore, onReset }: Pro
 
       <section className="card form">
         <h3>データ</h3>
-        <p className="muted">
-          データはこの端末のブラウザにだけ保存されています。機種変更やブラウザのデータ削除に備えて、ときどきバックアップしてください。
+        <p className={`status ${sync.status === 'synced' ? 'ok' : sync.status === 'error' ? 'warn' : ''}`}>
+          {SYNC_LABEL[sync.status]}
+          {sync.status === 'error' && sync.message && (
+            <>
+              <br />
+              {sync.message}
+            </>
+          )}
         </p>
-        <button className="ghost wide" onClick={backup}>
+        {sync.status === 'error' && sync.retry && (
+          <button className="ghost wide" onClick={sync.retry}>
+            もう一度保存する
+          </button>
+        )}
+        <p className="muted">
+          {sync.status === 'local'
+            ? 'claude.ai のページで開くと、スマホと PC で同じデータを使えます。ブラウザのデータを消すと記録も消えるので、ときどきバックアップしてください。'
+            : 'claude.ai のあなた専用の保存領域に保存しています。スマホでも PC でも同じデータが見られ、ブラウザのデータを消しても残ります。ほかの人がこのページを開いても記録は見えません。'}
+          {sync.migrated && ' この端末にあった記録は保存領域に移しました。'}
+        </p>
+        <button className="ghost wide" onClick={() => void backup()}>
           バックアップを保存（JSON）
         </button>
         <label className="file">

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AppData, Profile } from '../types';
+import { CloudSync, getCapability, type Db, type SyncStatus } from './cloud';
 
 const KEY = 'contest-prep:v1';
 
 export const EMPTY: AppData = { profile: null, logs: [], body: [], myFoods: [] };
 
-/** 保存データやバックアップを読み込む（壊れた項目は空にする） */
 /** 後から増えた設定項目の初期値（古い保存データを読むときに補う） */
 const PROFILE_DEFAULTS: Pick<Profile, 'targetMode' | 'targetBodyFatPct' | 'bodyFatSource'> = {
   targetMode: 'weight',
@@ -13,6 +13,7 @@ const PROFILE_DEFAULTS: Pick<Profile, 'targetMode' | 'targetBodyFatPct' | 'bodyF
   bodyFatSource: 'auto',
 };
 
+/** 保存データやバックアップを読み込む（壊れた項目は空にする） */
 export function normalizeData(raw: unknown): AppData {
   const d = (raw ?? {}) as Partial<AppData>;
   return {
@@ -32,16 +33,63 @@ export function loadData(): AppData {
   }
 }
 
+export interface SyncState {
+  status: SyncStatus;
+  message?: string;
+  /** この端末にあったデータを保存領域へ移した */
+  migrated?: boolean;
+  retry?: () => void;
+}
+
+/**
+ * アプリのデータ。ブラウザにも控えを置き（すぐ表示するため）、
+ * claude.ai の公開ページでは保存領域と同期する。
+ */
 export function useAppData() {
   const [data, setData] = useState<AppData>(loadData);
+  const [sync, setSync] = useState<SyncState>({ status: 'local' });
+  const engine = useRef<CloudSync | null>(null);
+  const latest = useRef(data);
+  latest.current = data;
+
   useEffect(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(data));
     } catch {
       // ストレージが使えない環境（プライベートモード等）ではメモリ上だけで動かす
     }
+    engine.current?.push(data);
   }, [data]);
-  return [data, setData] as const;
+
+  useEffect(() => {
+    let active = true;
+    let cloud: CloudSync | null = null;
+    void (async () => {
+      const db = await getCapability<Db>('db');
+      if (!db || !active) return;
+      cloud = new CloudSync(
+        db,
+        (d) => setData(normalizeData(d)),
+        (status, message) => setSync((s) => ({ ...s, status, message })),
+      );
+      const migrated = await cloud.start(latest.current);
+      if (!active) {
+        cloud.stop();
+        return;
+      }
+      engine.current = cloud;
+      // 読み込み中にこの端末で記録したぶんも移す（保存領域が空だったときだけ）
+      if (migrated) cloud.push(latest.current);
+      setSync((s) => ({ ...s, migrated, retry: () => cloud?.retry() }));
+    })();
+    return () => {
+      active = false;
+      cloud?.stop();
+      engine.current = null;
+    };
+  }, []);
+
+  return [data, setData, sync] as const;
 }
 
 export function newId(): string {
