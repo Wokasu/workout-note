@@ -20,5 +20,5 @@ ${css}
 ${js}
 </script>
 `;
-writeFileSync(join('dist', 'oshi-diet.html'), html);
+writeFileSync(join('dist', 'contest-prep.html'), html);
 console.log(`dist/contest-prep.html (${Math.round(html.length / 1024)} KB)`);
