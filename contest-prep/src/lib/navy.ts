@@ -76,3 +76,50 @@ export function ffmi(leanKg: number, heightCm: number): { ffmi: number; normaliz
 export function weightAtBodyFat(leanKg: number, bodyFatPct: number): number {
   return Math.round((leanKg / (1 - bodyFatPct / 100)) * 10) / 10;
 }
+
+/** ボディビル・フィジークの大会でよく目安にされる体脂肪率 */
+export const STAGE_BODY_FAT: Record<Sex, number[]> = {
+  male: [4, 5, 6, 8, 10],
+  female: [10, 12, 14, 16, 18],
+};
+
+export interface TargetOption {
+  bodyFatPct: number;
+  /** 除脂肪体重を保ったままこの体脂肪率になる体重 */
+  weightKg: number;
+  /** 大会までに必要な週あたり減量 */
+  kgPerWeek: number;
+  /** 今の体重に対する週あたり減量（%） */
+  pctPerWeek: number;
+  /** 減量ペースの上限内で届くか */
+  withinCap: boolean;
+}
+
+/** 大会時の目標体重の目安（今より軽いものだけ、体脂肪率の低い順） */
+export function targetOptions(
+  sex: Sex,
+  leanKg: number,
+  currentKg: number,
+  daysLeft: number,
+  maxWeeklyLossPct: number,
+): TargetOption[] {
+  return STAGE_BODY_FAT[sex]
+    .map((bodyFatPct) => {
+      const weightKg = weightAtBodyFat(leanKg, bodyFatPct);
+      const kgPerWeek = daysLeft > 0 ? ((currentKg - weightKg) / daysLeft) * 7 : Infinity;
+      const pctPerWeek = (kgPerWeek / currentKg) * 100;
+      return {
+        bodyFatPct,
+        weightKg,
+        kgPerWeek: Math.round(kgPerWeek * 100) / 100,
+        pctPerWeek: Math.round(pctPerWeek * 10) / 10,
+        withinCap: pctPerWeek <= maxWeeklyLossPct + 1e-9,
+      };
+    })
+    .filter((o) => o.weightKg < currentKg);
+}
+
+/** 上限ペース内で届く中で一番絞れた目安 */
+export function recommendedOption(options: TargetOption[]): TargetOption | undefined {
+  return options.find((o) => o.withinCap);
+}

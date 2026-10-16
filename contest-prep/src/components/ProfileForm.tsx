@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import type { BodyFatSource, Profile, Sex } from '../types';
+import type { BodyFatSource, BodyRecord, Profile, Sex } from '../types';
 import { ACTIVITY_OPTIONS } from '../lib/nutrition';
-import { addDays } from '../lib/date';
+import { seriesOf, valueAtOrBefore } from '../lib/analysis';
+import { ffmi, navyBodyFat, targetOptions } from '../lib/navy';
+import { addDays, daysBetween, formatJa } from '../lib/date';
+import { TargetGuide } from './TargetGuide';
+
+export type NavySizes = Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>;
 
 interface Props {
   initial: Profile | null;
   today: string;
-  /** 取り込み済みの最新体重（初回設定の初期値に使う） */
-  latestWeight: number | null;
-  onSave: (p: Profile) => void;
+  /** 取り込み済みの身体データ（体重・サイズの初期値と体脂肪率に使う） */
+  body: BodyRecord[];
+  /** 今の体重（7日平均）。まだ記録がなければ null で、入力した体重を使う */
+  currentKg: number | null;
+  /** sizes は海軍式のサイズを入力し直したときだけ渡す（今日の記録に保存する） */
+  onSave: (p: Profile, sizes: NavySizes | null) => void;
   submitLabel: string;
 }
 
@@ -20,7 +28,9 @@ type Form = Record<
   | 'heightCm'
   | 'startWeightKg'
   | 'targetWeightKg'
-  | 'targetBodyFatPct'
+  | 'neckCm'
+  | 'waistCm'
+  | 'hipCm'
   | 'proteinPerKg'
   | 'fatPct'
   | 'maxWeeklyLossPct'
@@ -30,10 +40,13 @@ type Form = Record<
   string
 >;
 
-export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel }: Props) {
+export function ProfileForm({ initial, today, body, currentKg, onSave, submitLabel }: Props) {
+  const latestWeight = seriesOf(body, 'weightKg').at(-1)?.value;
+  // 首とウエストを測った一番新しい記録をサイズの初期値にする
+  const lastSizes = [...body].reverse().find((r) => r.waistCm !== undefined && r.neckCm !== undefined);
   const [sex, setSex] = useState<Sex>(initial?.sex ?? 'male');
   const [activity, setActivity] = useState(initial?.activityFactor ?? 1.55);
-  const [targetMode, setTargetMode] = useState<Profile['targetMode']>(initial?.targetMode ?? 'weight');
+  const [sizesEdited, setSizesEdited] = useState(false);
   const [bodyFatSource, setBodyFatSource] = useState<BodyFatSource>(initial?.bodyFatSource ?? 'auto');
   const [tdeeMode, setTdeeMode] = useState<Profile['tdeeMode']>(initial?.tdeeMode ?? 'auto');
   const [useManual, setUseManual] = useState(initial?.manualMacros != null);
@@ -43,9 +56,11 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
     prepStartDate: initial?.prepStartDate ?? today,
     age: initial ? String(initial.age) : '',
     heightCm: initial ? String(initial.heightCm) : '',
-    startWeightKg: initial ? String(initial.startWeightKg) : latestWeight ? String(latestWeight) : '',
-    targetWeightKg: initial?.targetWeightKg ? String(initial.targetWeightKg) : '',
-    targetBodyFatPct: String(initial?.targetBodyFatPct ?? 6),
+    startWeightKg: initial ? String(initial.startWeightKg) : latestWeight ? String(Math.round(latestWeight * 10) / 10) : '',
+    targetWeightKg: initial && initial.targetWeightKg >= 30 ? String(initial.targetWeightKg) : '',
+    neckCm: lastSizes?.neckCm !== undefined ? String(lastSizes.neckCm) : '',
+    waistCm: lastSizes?.waistCm !== undefined ? String(lastSizes.waistCm) : '',
+    hipCm: lastSizes?.hipCm !== undefined ? String(lastSizes.hipCm) : '',
     proteinPerKg: String(initial?.proteinPerKg ?? 2.4),
     fatPct: String(initial?.fatPct ?? 20),
     maxWeeklyLossPct: String(initial?.maxWeeklyLossPct ?? 1),
@@ -54,7 +69,30 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
     manualC: initial?.manualMacros ? String(initial.manualMacros.c) : '',
   });
   const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => setF((v) => ({ ...v, [k]: e.target.value }));
+  const setSize = (k: 'neckCm' | 'waistCm' | 'hipCm') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setF((v) => ({ ...v, [k]: e.target.value }));
+    setSizesEdited(true);
+  };
   const num = (k: keyof Form) => Number(f[k]);
+
+  // 海軍式で今の体脂肪率 → 除脂肪体重 → 大会時の目標体重の目安
+  const female = sex === 'female';
+  const weightNow = currentKg ?? (num('startWeightKg') >= 30 ? num('startWeightKg') : null);
+  const navyBf =
+    num('heightCm') >= 120 && num('waistCm') > 0 && num('neckCm') > 0 && (!female || num('hipCm') > 0)
+      ? navyBodyFat(sex, num('heightCm'), num('waistCm'), num('neckCm'), female ? num('hipCm') : undefined)
+      : null;
+  const scale = valueAtOrBefore(seriesOf(body, 'bodyFatPct'), today);
+  const scaleBf = bodyFatSource !== 'navy' && scale && scale.date >= addDays(today, -30) ? scale : null;
+  const useNavy = navyBf !== null && bodyFatSource !== 'scale';
+  const bf = useNavy ? navyBf : scaleBf?.value ?? null;
+  const leanKg = bf !== null && weightNow !== null ? Math.round(weightNow * (1 - bf / 100) * 10) / 10 : null;
+  const daysLeft = Math.max(0, daysBetween(today, f.contestDate));
+  const options =
+    leanKg !== null && weightNow !== null && num('maxWeeklyLossPct') > 0
+      ? targetOptions(sex, leanKg, weightNow, daysLeft, num('maxWeeklyLossPct'))
+      : [];
+  const pickTarget = (kg: number) => setF((v) => ({ ...v, targetWeightKg: String(kg) }));
 
   const manualOk = !useManual || (['manualP', 'manualF', 'manualC'] as const).every((k) => f[k] !== '' && num(k) >= 0);
   const valid =
@@ -64,9 +102,7 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
     num('heightCm') >= 120 &&
     num('heightCm') <= 230 &&
     num('startWeightKg') >= 30 &&
-    (targetMode === 'weight'
-      ? num('targetWeightKg') >= 30
-      : num('targetBodyFatPct') >= 3 && num('targetBodyFatPct') <= 30 && (f.targetWeightKg === '' || num('targetWeightKg') >= 30)) &&
+    num('targetWeightKg') >= 30 &&
     num('proteinPerKg') > 0 &&
     num('fatPct') >= 10 &&
     num('fatPct') <= 50 &&
@@ -76,7 +112,10 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
-    onSave({
+    const sizes: NavySizes | null =
+      sizesEdited && navyBf !== null ? { waistCm: num('waistCm'), neckCm: num('neckCm'), ...(female ? { hipCm: num('hipCm') } : {}) } : null;
+    onSave(
+      {
       sex,
       age: num('age'),
       heightCm: num('heightCm'),
@@ -84,9 +123,7 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
       contestDate: f.contestDate,
       prepStartDate: f.prepStartDate,
       startWeightKg: num('startWeightKg'),
-      targetWeightKg: f.targetWeightKg === '' ? 0 : num('targetWeightKg'),
-      targetMode,
-      targetBodyFatPct: num('targetBodyFatPct'),
+      targetWeightKg: num('targetWeightKg'),
       bodyFatSource,
       activityFactor: activity,
       proteinPerKg: num('proteinPerKg'),
@@ -94,7 +131,9 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
       maxWeeklyLossPct: num('maxWeeklyLossPct'),
       tdeeMode,
       manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
-    });
+      },
+      sizes,
+    );
   };
 
   return (
@@ -134,49 +173,85 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
         </label>
       </div>
       <label>
-        開始時の体重 (kg)
+        {initial ? '減量開始時の体重 (kg)' : '今の体重 (kg)'}
         <input type="number" inputMode="decimal" step="0.1" value={f.startWeightKg} onChange={set('startWeightKg')} />
       </label>
 
-      <div className="label">大会時の目標</div>
-      <div className="seg">
-        <button type="button" className={targetMode === 'weight' ? 'on' : ''} onClick={() => setTargetMode('weight')}>
-          体重で決める
-        </button>
-        <button type="button" className={targetMode === 'bodyFat' ? 'on' : ''} onClick={() => setTargetMode('bodyFat')}>
-          体脂肪率で決める
-        </button>
-      </div>
-      {targetMode === 'weight' ? (
-        <label>
-          大会時の目標体重 (kg)
-          <input type="number" inputMode="decimal" step="0.1" value={f.targetWeightKg} onChange={set('targetWeightKg')} />
+      <h3>今の体脂肪率（米海軍式）</h3>
+      <p className="muted">
+        首は喉仏のすぐ下、ウエストは{female ? '一番細いところ、ヒップは一番太いところ' : 'へその高さ'}で測ります。
+        {lastSizes && !sizesEdited && ` ${formatJa(lastSizes.date)}の記録を入れています。`}
+      </p>
+      <div className="row">
+        <label className="grow">
+          首 (cm)
+          <input type="number" inputMode="decimal" step="0.1" value={f.neckCm} onChange={setSize('neckCm')} />
         </label>
-      ) : (
-        <>
-          <div className="row">
-            <label className="grow">
-              目標体脂肪率 (%)
-              <input type="number" inputMode="decimal" step="0.5" value={f.targetBodyFatPct} onChange={set('targetBodyFatPct')} />
-            </label>
-            <label className="grow">
-              予備の目標体重 (kg)
-              <input type="number" inputMode="decimal" step="0.1" value={f.targetWeightKg} onChange={set('targetWeightKg')} placeholder="任意" />
-            </label>
+        <label className="grow">
+          ウエスト (cm)
+          <input type="number" inputMode="decimal" step="0.1" value={f.waistCm} onChange={setSize('waistCm')} />
+        </label>
+        {female && (
+          <label className="grow">
+            ヒップ (cm)
+            <input type="number" inputMode="decimal" step="0.1" value={f.hipCm} onChange={setSize('hipCm')} />
+          </label>
+        )}
+      </div>
+      {bf !== null && leanKg !== null ? (
+        <div className="stats">
+          <div className="stat">
+            <div className="stat-label">体脂肪率</div>
+            <div className="stat-value">{bf.toFixed(1)} %</div>
+            <div className="stat-sub">{useNavy ? '海軍式' : `体組成計 · ${formatJa(scaleBf!.date)}`}</div>
           </div>
-          <p className="muted">
-            今の除脂肪体重を保ったまま目標の体脂肪率になる体重を、大会時の目標体重にします。体脂肪率がまだないときは予備の目標体重を使います。
-          </p>
-        </>
+          <div className="stat">
+            <div className="stat-label">除脂肪体重</div>
+            <div className="stat-value">{leanKg.toFixed(1)} kg</div>
+            <div className="stat-sub">FFMI {ffmi(leanKg, num('heightCm') || 170).normalized}（身長補正）</div>
+          </div>
+        </div>
+      ) : (
+        <p className="muted">身長・体重と、首・ウエスト{female ? '・ヒップ' : ''}を入れると計算します。</p>
       )}
       <label>
         体脂肪率に使う値
         <select value={bodyFatSource} onChange={(e) => setBodyFatSource(e.target.value as BodyFatSource)}>
           <option value="auto">自動（海軍式が出せれば海軍式）</option>
-          <option value="navy">海軍式（身長・首・ウエスト{sex === 'female' ? '・ヒップ' : ''}）</option>
+          <option value="navy">海軍式のみ</option>
           <option value="scale">体組成計の値</option>
         </select>
       </label>
+
+      <h3>大会時の目標体重</h3>
+      {leanKg !== null && (
+        <TargetGuide
+          options={options}
+          leanKg={leanKg}
+          maxWeeklyLossPct={num('maxWeeklyLossPct')}
+          selectedKg={f.targetWeightKg === '' ? null : num('targetWeightKg')}
+          onPick={pickTarget}
+        />
+      )}
+      <label>
+        目標体重 (kg)
+        <input
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          value={f.targetWeightKg}
+          onChange={set('targetWeightKg')}
+          placeholder={leanKg !== null ? '上の目安を見て入力' : ''}
+        />
+      </label>
+      {f.targetWeightKg !== '' && leanKg !== null && num('targetWeightKg') > leanKg && (
+        <p className="muted">
+          この体重だと体脂肪率は約 {Math.round((1 - leanKg / num('targetWeightKg')) * 1000) / 10}%（除脂肪体重を保った場合）
+          {daysLeft > 0 && weightNow !== null && num('targetWeightKg') < weightNow
+            ? `、必要なペースは週 ${(((weightNow - num('targetWeightKg')) / daysLeft) * 7).toFixed(2)} kg です。`
+            : '。'}
+        </p>
+      )}
       <label>
         活動量
         <select value={activity} onChange={(e) => setActivity(Number(e.target.value))}>

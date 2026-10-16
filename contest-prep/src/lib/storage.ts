@@ -7,17 +7,21 @@ const KEY = 'contest-prep:v1';
 export const EMPTY: AppData = { profile: null, logs: [], body: [], myFoods: [] };
 
 /** 後から増えた設定項目の初期値（古い保存データを読むときに補う） */
-const PROFILE_DEFAULTS: Pick<Profile, 'targetMode' | 'targetBodyFatPct' | 'bodyFatSource'> = {
-  targetMode: 'weight',
-  targetBodyFatPct: 6,
+const PROFILE_DEFAULTS: Pick<Profile, 'bodyFatSource'> = {
   bodyFatSource: 'auto',
 };
+
+/** 以前の版にあった設定項目（目標を体脂肪率で決めるモード）を取り除く */
+function withoutRemoved(p: Profile & { targetMode?: unknown; targetBodyFatPct?: unknown }): Profile {
+  const { targetMode: _mode, targetBodyFatPct: _bf, ...rest } = p;
+  return rest;
+}
 
 /** 保存データやバックアップを読み込む（壊れた項目は空にする） */
 export function normalizeData(raw: unknown): AppData {
   const d = (raw ?? {}) as Partial<AppData>;
   return {
-    profile: d.profile ? { ...PROFILE_DEFAULTS, ...d.profile } : null,
+    profile: d.profile ? withoutRemoved({ ...PROFILE_DEFAULTS, ...d.profile }) : null,
     logs: Array.isArray(d.logs) ? d.logs : [],
     body: Array.isArray(d.body) ? d.body : [],
     myFoods: Array.isArray(d.myFoods) ? d.myFoods : [],

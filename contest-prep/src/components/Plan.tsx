@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import type { BodyRecord, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf, valueAtOrBefore } from '../lib/analysis';
-import { ffmi, navyBodyFat, navySeries } from '../lib/navy';
+import { ffmi, navyBodyFat, navySeries, targetOptions } from '../lib/navy';
+import { TargetGuide } from './TargetGuide';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 
 interface Props {
@@ -11,6 +12,7 @@ interface Props {
   body: BodyRecord[];
   today: string;
   onSaveSizes: (sizes: Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>) => void;
+  onSetTarget: (weightKg: number) => void;
 }
 
 interface Milestone {
@@ -25,7 +27,7 @@ interface Milestone {
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
-export function Plan({ profile, targets: t, body, today, onSaveSizes }: Props) {
+export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarget }: Props) {
   const navy = useMemo(() => navySeries(body, profile), [body, profile]);
   const latestNavy = navy.at(-1);
   const latestScale = seriesOf(body, 'bodyFatPct').at(-1);
@@ -92,16 +94,10 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes }: Props) {
             <span>目標体重</span>
             <span>
               <b>{t.targetWeightKg.toFixed(1)} kg</b>
-              <small>
-                {profile.targetMode === 'bodyFat' && !t.targetFallback
-                  ? `除脂肪 ${lean}kg を保って体脂肪率 ${profile.targetBodyFatPct}%`
-                  : t.targetFallback
-                    ? '体脂肪率がないため予備の目標体重'
-                    : '設定した目標体重'}
-              </small>
+
             </span>
           </li>
-          {targetBf !== null && profile.targetMode === 'weight' && (
+          {targetBf !== null && (
             <li>
               <span>その時の体脂肪率</span>
               <span>約 {targetBf}%</span>
@@ -126,13 +122,9 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes }: Props) {
             <span>{t.projectedKg.toFixed(1)} kg</span>
           </li>
         </ul>
-        {t.targetFallback && (
-          <p className="status warn">
-            体脂肪率で目標を決める設定ですが、直近30日の体脂肪率がありません。下で首とウエスト{profile.sex === 'female' ? '・ヒップ' : ''}を測ると計算できます。
-          </p>
-        )}
         {t.tooFast && <p className="status warn">上限ペースでは大会までに目標に届きません。大会日・目標・上限ペースの見直しを検討してください。</p>}
         <p className="muted">除脂肪体重が変わらない前提の計算です。減量中は筋量も多少落ちるため、実際の大会時体重はこれより軽くなることが多いです。</p>
+        <TargetEditor profile={profile} targets={t} onSetTarget={onSetTarget} />
       </section>
 
       <NavyForm profile={profile} today={today} todayRecord={body.find((r) => r.date === today)} onSave={onSaveSizes} />
@@ -173,6 +165,51 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes }: Props) {
         </p>
       </section>
     </div>
+  );
+}
+
+/** 今の除脂肪体重から出した目安を見ながら、目標体重を変える */
+function TargetEditor({ profile, targets: t, onSetTarget }: { profile: Profile; targets: Targets; onSetTarget: (kg: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(String(t.targetWeightKg));
+  if (!open) {
+    return (
+      <button className="ghost wide" onClick={() => setOpen(true)}>
+        目安を見て目標体重を変える
+      </button>
+    );
+  }
+  const kg = Number(value);
+  const options = t.leanKg !== null ? targetOptions(profile.sex, t.leanKg, t.currentKg, t.daysLeft, profile.maxWeeklyLossPct) : [];
+  return (
+    <form
+      className="form target-editor"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (kg >= 30) {
+          onSetTarget(Math.round(kg * 10) / 10);
+          setOpen(false);
+        }
+      }}
+    >
+      {t.leanKg !== null ? (
+        <TargetGuide options={options} leanKg={t.leanKg} maxWeeklyLossPct={profile.maxWeeklyLossPct} selectedKg={kg} onPick={(w) => setValue(String(w))} />
+      ) : (
+        <p className="muted">直近30日の体脂肪率がないため目安を出せません。下で首とウエスト{profile.sex === 'female' ? '・ヒップ' : ''}を測ると表示されます。</p>
+      )}
+      <div className="row">
+        <label className="grow">
+          目標体重 (kg)
+          <input type="number" inputMode="decimal" step="0.1" value={value} onChange={(e) => setValue(e.target.value)} />
+        </label>
+        <button type="submit" className="primary" disabled={!(kg >= 30)}>
+          保存
+        </button>
+      </div>
+      <button type="button" className="ghost wide" onClick={() => setOpen(false)}>
+        閉じる
+      </button>
+    </form>
   );
 }
 

@@ -5,7 +5,8 @@ import { addDays } from './date';
 import { applyMapping, autoMap, decodeText, mergeBody, parseDateTime, prepareImport } from './importer';
 import { kcalOf, scaleMacros } from './macros';
 import { bmrKatch, bmrMifflin, calcTargets, macrosFor } from './nutrition';
-import { bodyFatSeries, ffmi, leanSeries, navyBodyFat, weightAtBodyFat } from './navy';
+import { bodyFatSeries, ffmi, leanSeries, navyBodyFat, recommendedOption, targetOptions, weightAtBodyFat } from './navy';
+import { normalizeData } from './storage';
 import { listZip, parseRecordTag, pickExportXml, readHealthExport, rowsToRecords, scanRecords } from './health';
 
 const profile: Profile = {
@@ -17,8 +18,6 @@ const profile: Profile = {
   prepStartDate: '2026-10-16',
   startWeightKg: 80,
   targetWeightKg: 72,
-  targetMode: 'weight',
-  targetBodyFatPct: 5,
   bodyFatSource: 'auto',
   activityFactor: 1.55,
   proteinPerKg: 2.5,
@@ -268,17 +267,26 @@ describe('navy', () => {
     expect(weightAtBodyFat(68, 5)).toBe(71.6);
   });
 
-  it('sets the target weight from body fat', () => {
-    const p: Profile = { ...profile, targetMode: 'bodyFat', targetBodyFatPct: 5 };
-    const body: BodyRecord[] = [{ date: '2026-10-16', weightKg: 80, bodyFatPct: 15 }];
-    const t = calcTargets(p, body, new Map(), '2026-10-16');
-    expect(t.bodyFat).toEqual({ pct: 15, date: '2026-10-16', source: 'scale' });
-    expect(t.targetWeightKg).toBe(71.6);
-    expect(t.remainingKg).toBe(8.4);
-    expect(t.targetFallback).toBe(false);
-    const none = calcTargets(p, [], new Map(), '2026-10-16');
-    expect(none.targetFallback).toBe(true);
-    expect(none.targetWeightKg).toBe(72);
+  it('suggests stage weights with the pace each needs', () => {
+    // 除脂肪 68kg、今 80kg、大会まで 91日（13週）、上限 1%/週
+    const options = targetOptions('male', 68, 80, 91, 1);
+    expect(options.map((o) => o.bodyFatPct)).toEqual([4, 5, 6, 8, 10]);
+    expect(options[1]).toEqual({ bodyFatPct: 5, weightKg: 71.6, kgPerWeek: 0.65, pctPerWeek: 0.8, withinCap: true });
+    expect(options[0].withinCap).toBe(true);
+    expect(recommendedOption(options)?.bodyFatPct).toBe(4);
+    // 大会まで短いと低い体脂肪率は上限を超える
+    const short = targetOptions('male', 68, 80, 56, 1);
+    expect(short.filter((o) => !o.withinCap).map((o) => o.bodyFatPct)).toEqual([4, 5, 6]);
+    expect(recommendedOption(short)?.bodyFatPct).toBe(8);
+    // 今より重くなる目安は出さない
+    expect(targetOptions('male', 68, 73, 91, 1).map((o) => o.bodyFatPct)).toEqual([4, 5, 6]);
+  });
+
+  it('drops the removed body-fat target mode from saved data', () => {
+    const old = { profile: { ...profile, targetMode: 'bodyFat', targetBodyFatPct: 5, targetWeightKg: 0 } };
+    const p = normalizeData(old).profile as Profile & { targetMode?: string };
+    expect(p.targetMode).toBeUndefined();
+    expect(p.targetWeightKg).toBe(0);
   });
 
   it('ignores body fat older than 30 days', () => {

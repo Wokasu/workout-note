@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { EMPTY, newId, useAppData } from './lib/storage';
 import { calcTargets } from './lib/nutrition';
-import { kcalByDate, recentRate, seriesOf } from './lib/analysis';
+import { kcalByDate, movingAverage, recentRate, seriesOf, valueAtOrBefore } from './lib/analysis';
 import { mergeBody } from './lib/importer';
 import { sumMacros } from './lib/macros';
 import { todayKey } from './lib/date';
-import { ProfileForm } from './components/ProfileForm';
+import { ProfileForm, type NavySizes } from './components/ProfileForm';
 import { Today } from './components/Today';
 import { Meals } from './components/Meals';
 import { Body } from './components/Body';
@@ -41,10 +41,17 @@ export function App() {
   const intake = useMemo(() => kcalByDate(logs), [logs]);
   const weights = useMemo(() => seriesOf(body, 'weightKg'), [body]);
 
-  const saveProfile = (p: Profile) => setData((d) => ({ ...d, profile: p }));
+  const saveProfile = (p: Profile, sizes: NavySizes | null = null) =>
+    setData((d) => ({
+      ...d,
+      profile: p,
+      body: sizes ? upsertBody(d.body, { ...d.body.find((r) => r.date === today), date: today, ...sizes }) : d.body,
+    }));
   const importBody = (records: BodyRecord[]) => setData((d) => ({ ...d, body: mergeBody(d.body, records) }));
 
-  if (!profile) {
+  // 目標体重が決まっていない（初回、または以前の版で体脂肪率から決めていた）ときは設定画面から
+  if (!profile || !(profile.targetWeightKg >= 30)) {
+    const avg = valueAtOrBefore(movingAverage(weights), today)?.value;
     return (
       <div className="app">
         <header className="hero">
@@ -53,12 +60,14 @@ export function App() {
         </header>
         <div className="stack">
           <Importer onImport={importBody} />
-          {weights.length > 0 && <p className="muted center">{weights.length}日分の体重を取り込み済み。最新の値を開始体重に入れています。</p>}
+          {weights.length > 0 && <p className="muted center">{weights.length}日分の体重を取り込み済み。最新の値を今の体重に入れています。</p>}
+          {profile && <p className="status warn">目標体重の決め方が変わりました。海軍式の目安を見て、目標体重を入れ直してください。</p>}
           <ProfileForm
-            key={weights.length}
-            initial={null}
+            key={body.length}
+            initial={profile}
             today={today}
-            latestWeight={weights.at(-1)?.value ?? null}
+            body={body}
+            currentKg={profile && avg !== undefined ? Math.round(avg * 10) / 10 : null}
             onSave={saveProfile}
             submitLabel="はじめる"
           />
@@ -116,11 +125,12 @@ export function App() {
             body={body}
             today={today}
             onSaveSizes={(sizes) => setData((d) => ({ ...d, body: upsertBody(d.body, { ...d.body.find((r) => r.date === today), date: today, ...sizes }) }))}
+            onSetTarget={(kg) => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, targetWeightKg: kg } }))}
           />
         )}
         {tab === 'analysis' && <Analysis profile={profile} targetWeightKg={targets.targetWeightKg} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
-          <Settings data={data} sync={sync} today={today} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
+          <Settings data={data} sync={sync} today={today} currentKg={targets.currentKg} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}
       </main>
       <nav className="tabbar">

@@ -9,7 +9,7 @@ import {
 } from './analysis';
 import { addDays, daysBetween } from './date';
 import { kcalOf } from './macros';
-import { bodyFatSeries, weightAtBodyFat } from './navy';
+import { bodyFatSeries } from './navy';
 
 export const ACTIVITY_OPTIONS = [
   { value: 1.4, label: 'デスクワーク＋週3〜4回トレ' },
@@ -35,10 +35,7 @@ export interface Targets extends Macros {
   /** 計算に使った体脂肪率（直近30日以内の値がなければ null） */
   bodyFat: { pct: number; date: string; source: 'navy' | 'scale' } | null;
   leanKg: number | null;
-  /** 大会当日の目標体重（体脂肪率で決める場合は除脂肪量から計算） */
   targetWeightKg: number;
-  /** 体脂肪率で目標を決める設定だが、体脂肪率がないので予備の目標体重を使っている */
-  targetFallback: boolean;
   bmr: number;
   formulaTdee: number;
   estimate: TdeeEstimate | null;
@@ -83,10 +80,7 @@ export function calcTargets(
       ? { pct: fatPoint.value, date: fatPoint.date, source: fatSeries.source }
       : null;
   const leanKg = bodyFat ? Math.round(currentKg * (1 - bodyFat.pct / 100) * 10) / 10 : null;
-
-  const byBodyFat = profile.targetMode === 'bodyFat';
-  const targetFallback = byBodyFat && leanKg === null;
-  const targetWeightKg = byBodyFat && leanKg !== null ? weightAtBodyFat(leanKg, profile.targetBodyFatPct) : profile.targetWeightKg;
+  const targetWeightKg = profile.targetWeightKg;
 
   const bmr = leanKg !== null ? bmrKatch(leanKg) : bmrMifflin(profile.sex, currentKg, profile.heightCm, profile.age);
   const formulaTdee = Math.round(bmr * profile.activityFactor);
@@ -116,7 +110,6 @@ export function calcTargets(
     bodyFat,
     leanKg,
     targetWeightKg,
-    targetFallback,
     bmr,
     formulaTdee,
     estimate,

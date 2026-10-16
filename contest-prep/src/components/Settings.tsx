@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { AppData, Profile } from '../types';
 import { normalizeData, type SyncState } from '../lib/storage';
 import { getCapability } from '../lib/cloud';
-import { ProfileForm } from './ProfileForm';
+import { ProfileForm, type NavySizes } from './ProfileForm';
 
 interface Downloads {
   save(req: { filename: string; data: string }): Promise<unknown>;
@@ -20,12 +20,13 @@ interface Props {
   data: AppData;
   sync: SyncState;
   today: string;
-  onSaveProfile: (p: Profile) => void;
+  currentKg: number;
+  onSaveProfile: (p: Profile, sizes: NavySizes | null) => void;
   onRestore: (d: AppData) => void;
   onReset: () => void;
 }
 
-export function Settings({ data, sync, today, onSaveProfile, onRestore, onReset }: Props) {
+export function Settings({ data, sync, today, currentKg, onSaveProfile, onRestore, onReset }: Props) {
   const [saved, setSaved] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [message, setMessage] = useState('');
@@ -68,10 +69,11 @@ export function Settings({ data, sync, today, onSaveProfile, onRestore, onReset 
       <ProfileForm
         initial={data.profile}
         today={today}
-        latestWeight={null}
+        body={data.body}
+        currentKg={currentKg}
         submitLabel={saved ? '保存しました' : '保存'}
-        onSave={(p) => {
-          onSaveProfile(p);
+        onSave={(p, sizes) => {
+          onSaveProfile(p, sizes);
           setSaved(true);
           setTimeout(() => setSaved(false), 1500);
         }}
