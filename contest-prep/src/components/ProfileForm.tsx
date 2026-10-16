@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { BodyFatSource, BodyRecord, BulkSettings, Profile, Sex } from '../types';
 import { ACTIVITY_OPTIONS } from '../lib/nutrition';
 import { seriesOf, valueAtOrBefore } from '../lib/analysis';
-import { ffmi, navyBodyFat, targetOptions } from '../lib/navy';
+import { contestRange, ffmi, formatContestRange, navyBodyFat, targetOptions } from '../lib/navy';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 import { TargetGuide } from './TargetGuide';
 import { bulkLimits, defaultBulkSettings } from '../lib/bulk';
@@ -289,9 +289,11 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
           {limits ? (
             <div className="stats">
               <div className="stat">
-                <div className="stat-label">コンテスト体重</div>
-                <div className="stat-value">{limits.contestKg.toFixed(1)} kg</div>
-                <div className="stat-sub">除脂肪 {limits.leanKg} kg から</div>
+                <div className="stat-label">推定コンテスト体重</div>
+                <div className="stat-value">{formatContestRange(contestRange(limits.leanKg, bn('stageBodyFatPct')))}</div>
+                <div className="stat-sub">
+                  除脂肪 {limits.leanKg} kg・体脂肪率 {Math.max(1, bn('stageBodyFatPct') - 1)}〜{bn('stageBodyFatPct') + 1}%
+                </div>
               </div>
               <div className="stat">
                 <div className="stat-label">増量の上限</div>

@@ -123,3 +123,22 @@ export function targetOptions(
 export function recommendedOption(options: TargetOption[]): TargetOption | undefined {
   return options.find((o) => o.withinCap);
 }
+
+export interface ContestRange {
+  /** 絞れた側（体脂肪率が低い方）の体脂肪率と体重 */
+  lowBf: number;
+  minKg: number;
+  highBf: number;
+  maxKg: number;
+}
+
+/** 推定コンテスト体重の幅：大会時の体脂肪率 ±1%（標準なら男性 4〜6%） */
+export function contestRange(leanKg: number, centerBf: number): ContestRange {
+  const lowBf = Math.max(1, centerBf - 1);
+  const highBf = centerBf + 1;
+  return { lowBf, minKg: weightAtBodyFat(leanKg, lowBf), highBf, maxKg: weightAtBodyFat(leanKg, highBf) };
+}
+
+export function formatContestRange(r: ContestRange): string {
+  return `${r.minKg.toFixed(1)}〜${r.maxKg.toFixed(1)} kg`;
+}

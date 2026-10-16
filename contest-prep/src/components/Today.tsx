@@ -5,6 +5,7 @@ import type { Rate } from '../lib/analysis';
 import { formatJa } from '../lib/date';
 import { MacroBars } from './MacroBars';
 import { PhaseLine } from './BulkPlan';
+import { contestRange, formatContestRange } from '../lib/navy';
 
 interface Props {
   profile: Profile;
@@ -123,11 +124,12 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
               value={rate ? `${rate.kgPerWeek > 0 ? '+' : ''}${rate.kgPerWeek.toFixed(2)} kg/週` : '—'}
               sub={rate ? `${rate.pctPerWeek}%/週` : undefined}
             />
-            <Stat
-              label="コンテスト体重"
-              value={t.bulk.limits ? `${t.bulk.limits.contestKg.toFixed(1)} kg` : '—'}
-              sub={`体脂肪率 ${profile.bulk.stageBodyFatPct}%`}
-            />
+            {(() => {
+              const r = t.bulk.limits ? contestRange(t.bulk.limits.leanKg, profile.bulk.stageBodyFatPct) : null;
+              return (
+                <Stat label="推定コンテスト体重" value={r ? formatContestRange(r) : '—'} sub={r ? `体脂肪率 ${r.lowBf}〜${r.highBf}%` : undefined} />
+              );
+            })()}
           </div>
           {(() => {
             const st = bulkPaceStatus(rate, t);

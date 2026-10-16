@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { BodyRecord, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf, valueAtOrBefore } from '../lib/analysis';
-import { ffmi, navyBodyFat, navySeries, targetOptions, weightAtBodyFat } from '../lib/navy';
+import { contestRange, ffmi, formatContestRange, navyBodyFat, navySeries, targetOptions } from '../lib/navy';
 import { TargetGuide } from './TargetGuide';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 
@@ -250,8 +250,7 @@ export function NavyForm({
   const ready = w > 0 && n > 0 && (!female || h > 0);
   const bf = ready ? navyBodyFat(profile.sex, profile.heightCm, w, n, female ? h : undefined) : null;
   const leanKg = bf !== null ? r1(weightKg * (1 - bf / 100)) : null;
-  const stageBf = profile.bulk.stageBodyFatPct;
-  const contestKg = leanKg !== null ? weightAtBodyFat(leanKg, stageBf) : null;
+  const contest = leanKg !== null ? contestRange(leanKg, profile.bulk.stageBodyFatPct) : null;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -279,7 +278,7 @@ export function NavyForm({
           </label>
         )}
       </div>
-      {bf !== null && leanKg !== null && contestKg !== null ? (
+      {bf !== null && leanKg !== null && contest !== null ? (
         <div className="navy-result">
           <div>
             <div className="stat-label">体脂肪率</div>
@@ -289,12 +288,14 @@ export function NavyForm({
             <div className="stat-label">除脂肪体重</div>
             <b>{leanKg.toFixed(1)} kg</b>
           </div>
-          <div>
-            <div className="stat-label">推定コンテスト体重</div>
-            <b>{contestKg.toFixed(1)} kg</b>
+          <div className="navy-contest">
+            <div className="stat-label">
+              推定コンテスト体重（体脂肪率 {contest.lowBf}〜{contest.highBf}%）
+            </div>
+            <b>{formatContestRange(contest)}</b>
           </div>
           <small className="muted navy-basis">
-            身長 {profile.heightCm}cm・体重 {weightKg.toFixed(1)}kg（7日平均）から。コンテスト体重は除脂肪体重を保って体脂肪率 {stageBf}% になる体重
+            身長 {profile.heightCm}cm・体重 {weightKg.toFixed(1)}kg（7日平均）から。コンテスト体重は除脂肪体重を保ってその体脂肪率になる体重
             {showingOld && `。${formatJa(last!.date)}に測ったサイズで計算しています`}
           </small>
         </div>

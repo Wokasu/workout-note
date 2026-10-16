@@ -3,7 +3,7 @@ import type { BodyRecord, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf } from '../lib/analysis';
 import { projectBulk, surplusFor } from '../lib/bulk';
-import { ffmi } from '../lib/navy';
+import { contestRange, ffmi, formatContestRange } from '../lib/navy';
 import { addDays, formatJa } from '../lib/date';
 import { Chart } from './Chart';
 import { NavyForm } from './Plan';
@@ -24,6 +24,7 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
   const s = profile.bulk;
   const lim = st.limits;
   const f = t.leanKg !== null ? ffmi(t.leanKg, profile.heightCm) : null;
+  const range = lim ? contestRange(lim.leanKg, s.stageBodyFatPct) : null;
 
   const weights = useMemo(() => seriesOf(body, 'weightKg'), [body]);
   const average = useMemo(() => movingAverage(weights), [weights]);
@@ -43,11 +44,7 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
           <Stat label="体重（7日平均）" value={`${t.currentKg.toFixed(1)} kg`} />
           <Stat label="上限まで" value={st.roomKg !== null ? `${st.roomKg.toFixed(1)} kg` : '—'} sub={lim ? `上限 ${lim.ceilingKg.toFixed(1)} kg` : '体脂肪率が必要'} />
           <Stat label="除脂肪体重" value={t.leanKg !== null ? `${t.leanKg.toFixed(1)} kg` : '—'} sub={f ? `FFMI ${f.ffmi}（補正 ${f.normalized}）` : undefined} />
-          <Stat
-            label="コンテスト体重"
-            value={lim ? `${lim.contestKg.toFixed(1)} kg` : '—'}
-            sub={lim ? `体脂肪率 ${s.stageBodyFatPct}% の場合` : undefined}
-          />
+          <Stat label="推定コンテスト体重" value={range ? formatContestRange(range) : '—'} sub={range ? `体脂肪率 ${range.lowBf}〜${range.highBf}%` : undefined} />
         </div>
         {!lim && (
           <p className="status warn">

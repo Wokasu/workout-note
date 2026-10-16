@@ -5,7 +5,7 @@ import { addDays } from './date';
 import { applyMapping, autoMap, decodeText, mergeBody, parseDateTime, prepareImport } from './importer';
 import { kcalOf, scaleMacros } from './macros';
 import { bmrKatch, bmrMifflin, calcTargets, macrosFor } from './nutrition';
-import { bodyFatSeries, ffmi, leanSeries, navyBodyFat, recommendedOption, targetOptions, weightAtBodyFat } from './navy';
+import { bodyFatSeries, contestRange, ffmi, formatContestRange, leanSeries, navyBodyFat, recommendedOption, targetOptions, weightAtBodyFat } from './navy';
 import { normalizeData } from './storage';
 import { defaultBulkSettings } from './bulk';
 import { listZip, parseRecordTag, pickExportXml, readHealthExport, rowsToRecords, scanRecords } from './health';
@@ -268,6 +268,13 @@ describe('navy', () => {
     expect(leanSeries(body, fat)).toEqual([{ date: '2026-10-14', value: Math.round(80 * (1 - fat[0].value / 100) * 10) / 10 }]);
     expect(ffmi(68, 172)).toEqual({ ffmi: 23, normalized: 23.5 });
     expect(weightAtBodyFat(68, 5)).toBe(71.6);
+  });
+
+  it('gives the contest weight as a ±1% body fat range', () => {
+    const r = contestRange(68, 5);
+    expect(r).toEqual({ lowBf: 4, minKg: 70.8, highBf: 6, maxKg: 72.3 });
+    expect(formatContestRange(r)).toBe('70.8〜72.3 kg');
+    expect(contestRange(68, 1).lowBf).toBe(1);
   });
 
   it('suggests stage weights with the pace each needs', () => {
