@@ -111,7 +111,7 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
         </p>
       </section>
 
-      <NavyForm profile={profile} today={today} todayRecord={body.find((r) => r.date === today)} onSave={onSaveSizes} />
+      <NavyForm profile={profile} today={today} body={body} weightKg={t.currentKg} onSave={onSaveSizes} />
     </div>
   );
 }

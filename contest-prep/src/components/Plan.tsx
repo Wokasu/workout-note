@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { BodyRecord, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf, valueAtOrBefore } from '../lib/analysis';
-import { ffmi, navyBodyFat, navySeries, targetOptions } from '../lib/navy';
+import { ffmi, navyBodyFat, navySeries, targetOptions, weightAtBodyFat } from '../lib/navy';
 import { TargetGuide } from './TargetGuide';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 
@@ -127,7 +127,7 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
         <TargetEditor profile={profile} targets={t} onSetTarget={onSetTarget} />
       </section>
 
-      <NavyForm profile={profile} today={today} todayRecord={body.find((r) => r.date === today)} onSave={onSaveSizes} />
+      <NavyForm profile={profile} today={today} body={body} weightKg={t.currentKg} onSave={onSaveSizes} />
 
       <section className="card">
         <h3>週ごとの計画</h3>
@@ -216,30 +216,42 @@ function TargetEditor({ profile, targets: t, onSetTarget }: { profile: Profile; 
 export function NavyForm({
   profile,
   today,
-  todayRecord,
+  body,
+  weightKg,
   onSave,
 }: {
   profile: Profile;
   today: string;
-  todayRecord: BodyRecord | undefined;
+  body: BodyRecord[];
+  /** 除脂肪体重の計算に使う体重（7日平均） */
+  weightKg: number;
   onSave: Props['onSaveSizes'];
 }) {
   const female = profile.sex === 'female';
+  // 首とウエストを測った一番新しい記録を初期値にする
+  const last = [...body].sort((a, b) => b.date.localeCompare(a.date)).find((r) => r.waistCm !== undefined && r.neckCm !== undefined);
   const init = (v: number | undefined) => (v !== undefined ? String(v) : '');
-  const [waist, setWaist] = useState(init(todayRecord?.waistCm));
-  const [neck, setNeck] = useState(init(todayRecord?.neckCm));
-  const [hip, setHip] = useState(init(todayRecord?.hipCm));
+  const [waist, setWaist] = useState(init(last?.waistCm));
+  const [neck, setNeck] = useState(init(last?.neckCm));
+  const [hip, setHip] = useState(init(last?.hipCm));
   const [saved, setSaved] = useState(false);
+  const [edited, setEdited] = useState(false);
   const edit = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setter(e.target.value);
     setSaved(false);
+    setEdited(true);
   };
+  // 前の日の値を表示しているだけのときは、今日の記録として保存しない
+  const showingOld = !edited && last !== undefined && last.date !== today;
 
   const w = Number(waist);
   const n = Number(neck);
   const h = Number(hip);
   const ready = w > 0 && n > 0 && (!female || h > 0);
   const bf = ready ? navyBodyFat(profile.sex, profile.heightCm, w, n, female ? h : undefined) : null;
+  const leanKg = bf !== null ? r1(weightKg * (1 - bf / 100)) : null;
+  const stageBf = profile.bulk.stageBodyFatPct;
+  const contestKg = leanKg !== null ? weightAtBodyFat(leanKg, stageBf) : null;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -267,17 +279,32 @@ export function NavyForm({
           </label>
         )}
       </div>
-      <div className="navy-result">
-        {bf !== null ? (
-          <>
-            体脂肪率 <b>{bf.toFixed(1)}%</b> <small className="muted">身長 {profile.heightCm}cm</small>
-          </>
-        ) : (
+      {bf !== null && leanKg !== null && contestKg !== null ? (
+        <div className="navy-result">
+          <div>
+            <div className="stat-label">体脂肪率</div>
+            <b>{bf.toFixed(1)}%</b>
+          </div>
+          <div>
+            <div className="stat-label">除脂肪体重</div>
+            <b>{leanKg.toFixed(1)} kg</b>
+          </div>
+          <div>
+            <div className="stat-label">推定コンテスト体重</div>
+            <b>{contestKg.toFixed(1)} kg</b>
+          </div>
+          <small className="muted navy-basis">
+            身長 {profile.heightCm}cm・体重 {weightKg.toFixed(1)}kg（7日平均）から。コンテスト体重は除脂肪体重を保って体脂肪率 {stageBf}% になる体重
+            {showingOld && `。${formatJa(last!.date)}に測ったサイズで計算しています`}
+          </small>
+        </div>
+      ) : (
+        <div className="navy-result">
           <span className="muted">{ready ? 'この組み合わせでは計算できません（ウエストが首より大きい値か確認してください）' : 'サイズを入れると計算します'}</span>
-        )}
-      </div>
-      <button type="submit" className="primary wide" disabled={bf === null || saved}>
-        {saved ? `${formatJa(today)}の記録に保存しました` : `${formatJa(today)}の記録に保存`}
+        </div>
+      )}
+      <button type="submit" className="primary wide" disabled={bf === null || saved || showingOld}>
+        {saved ? `${formatJa(today)}の記録に保存しました` : showingOld ? '測り直したら今日の記録に保存できます' : `${formatJa(today)}の記録に保存`}
       </button>
       <p className="muted">
         測り方：首は喉仏のすぐ下を、やや下向きに斜めに。

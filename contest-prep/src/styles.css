@@ -715,9 +715,25 @@ label.file input {
   background: var(--tint);
   font-variant-numeric: tabular-nums;
 }
+.navy-result:has(b) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.navy-result:has(b) > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 2px;
+}
 .navy-result b {
-  font-size: 22px;
+  font-size: 20px;
   color: var(--accent);
+}
+.navy-basis {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .table tr.current td {
   background: var(--tint);
