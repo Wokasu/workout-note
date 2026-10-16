@@ -1,0 +1,12 @@
+{
+  "name": "Contest Prep",
+  "short_name": "Prep",
+  "description": "ボディビル大会に向けた減量・PFC管理",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#16181d",
+  "theme_color": "#16181d",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
