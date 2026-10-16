@@ -11,6 +11,7 @@ import { Meals } from './components/Meals';
 import { Body } from './components/Body';
 import { Analysis } from './components/Analysis';
 import { Plan } from './components/Plan';
+import { BulkPlan } from './components/BulkPlan';
 import { Settings } from './components/Settings';
 import { Importer } from './components/Importer';
 import type { BodyRecord, Profile } from './types';
@@ -50,7 +51,7 @@ export function App() {
   const importBody = (records: BodyRecord[]) => setData((d) => ({ ...d, body: mergeBody(d.body, records) }));
 
   // 目標体重が決まっていない（初回、または以前の版で体脂肪率から決めていた）ときは設定画面から
-  if (!profile || !(profile.targetWeightKg >= 30)) {
+  if (!profile || (profile.phase === 'cut' && !(profile.targetWeightKg >= 30))) {
     const avg = valueAtOrBefore(movingAverage(weights), today)?.value;
     return (
       <div className="app">
@@ -118,7 +119,16 @@ export function App() {
             onRemove={(date) => setData((d) => ({ ...d, body: d.body.filter((r) => r.date !== date) }))}
           />
         )}
-        {tab === 'plan' && (
+        {tab === 'plan' && profile.phase === 'bulk' && (
+          <BulkPlan
+            profile={profile}
+            targets={targets}
+            body={body}
+            today={today}
+            onSaveSizes={(sizes) => setData((d) => ({ ...d, body: upsertBody(d.body, { ...d.body.find((r) => r.date === today), date: today, ...sizes }) }))}
+          />
+        )}
+        {tab === 'plan' && profile.phase === 'cut' && (
           <Plan
             profile={profile}
             targets={targets}
@@ -128,7 +138,7 @@ export function App() {
             onSetTarget={(kg) => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, targetWeightKg: kg } }))}
           />
         )}
-        {tab === 'analysis' && <Analysis profile={profile} targetWeightKg={targets.targetWeightKg} body={body} logs={logs} today={today} />}
+        {tab === 'analysis' && <Analysis profile={profile} targetWeightKg={profile.phase === 'cut' ? targets.targetWeightKg : null} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
           <Settings data={data} sync={sync} today={today} currentKg={targets.currentKg} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}

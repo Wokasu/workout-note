@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import type { BodyFatSource, BodyRecord, Profile, Sex } from '../types';
+import type { BodyFatSource, BodyRecord, BulkSettings, Profile, Sex } from '../types';
 import { ACTIVITY_OPTIONS } from '../lib/nutrition';
 import { seriesOf, valueAtOrBefore } from '../lib/analysis';
 import { ffmi, navyBodyFat, targetOptions } from '../lib/navy';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 import { TargetGuide } from './TargetGuide';
+import { bulkLimits, defaultBulkSettings } from '../lib/bulk';
 
 export type NavySizes = Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>;
 
@@ -50,6 +51,13 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const [bodyFatSource, setBodyFatSource] = useState<BodyFatSource>(initial?.bodyFatSource ?? 'auto');
   const [tdeeMode, setTdeeMode] = useState<Profile['tdeeMode']>(initial?.tdeeMode ?? 'auto');
   const [useManual, setUseManual] = useState(initial?.manualMacros != null);
+  const [phase, setPhase] = useState<Profile['phase']>(initial?.phase ?? 'cut');
+  const bulkInit = initial?.bulk ?? defaultBulkSettings(initial?.sex ?? 'male', today);
+  const [b, setB] = useState<Record<keyof BulkSettings, string>>(
+    Object.fromEntries(Object.entries(bulkInit).map(([k, v]) => [k, String(v)])) as Record<keyof BulkSettings, string>,
+  );
+  const setBulk = (k: keyof BulkSettings) => (e: React.ChangeEvent<HTMLInputElement>) => setB((v) => ({ ...v, [k]: e.target.value }));
+  const bn = (k: Exclude<keyof BulkSettings, 'startDate'>) => Number(b[k]);
   const [f, setF] = useState<Form>({
     contestName: initial?.contestName ?? '',
     contestDate: initial?.contestDate ?? addDays(today, 112),
@@ -85,7 +93,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const scale = valueAtOrBefore(seriesOf(body, 'bodyFatPct'), today);
   const scaleBf = bodyFatSource !== 'navy' && scale && scale.date >= addDays(today, -30) ? scale : null;
   const useNavy = navyBf !== null && bodyFatSource !== 'scale';
-  const bf = useNavy ? navyBf : scaleBf?.value ?? null;
+  const bf = useNavy ? navyBf : (scaleBf?.value ?? null);
   const leanKg = bf !== null && weightNow !== null ? Math.round(weightNow * (1 - bf / 100) * 10) / 10 : null;
   const daysLeft = Math.max(0, daysBetween(today, f.contestDate));
   const options =
@@ -95,14 +103,42 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const pickTarget = (kg: number) => setF((v) => ({ ...v, targetWeightKg: String(kg) }));
 
   const manualOk = !useManual || (['manualP', 'manualF', 'manualC'] as const).every((k) => f[k] !== '' && num(k) >= 0);
+  const bulking = phase === 'bulk';
+  const bulkOk =
+    !bulking ||
+    (b.startDate !== '' &&
+      bn('stageBodyFatPct') >= 3 &&
+      bn('stageBodyFatPct') <= 30 &&
+      bn('ceilingMarginKg') > 0 &&
+      bn('returnKg') > 0 &&
+      bn('returnKg') < bn('ceilingMarginKg') &&
+      bn('startSurplusKcal') >= 0 &&
+      bn('rampKcal') >= 0 &&
+      bn('maxSurplusKcal') >= bn('startSurplusKcal') &&
+      bn('miniCutPct') > 0 &&
+      bn('miniCutPct') <= 2);
+  const limits = bulking && leanKg !== null && bn('stageBodyFatPct') > 0 ? bulkLimits(leanKg, { ...bulkInit, ...numericBulk() }) : null;
+  function numericBulk(): BulkSettings {
+    return {
+      startDate: b.startDate,
+      stageBodyFatPct: bn('stageBodyFatPct'),
+      ceilingMarginKg: bn('ceilingMarginKg'),
+      returnKg: bn('returnKg'),
+      startSurplusKcal: bn('startSurplusKcal'),
+      rampKcal: bn('rampKcal'),
+      maxSurplusKcal: bn('maxSurplusKcal'),
+      miniCutPct: bn('miniCutPct'),
+    };
+  }
   const valid =
-    f.contestDate > f.prepStartDate &&
+    (bulking || f.contestDate > f.prepStartDate) &&
+    bulkOk &&
     num('age') >= 10 &&
     num('age') <= 100 &&
     num('heightCm') >= 120 &&
     num('heightCm') <= 230 &&
     num('startWeightKg') >= 30 &&
-    num('targetWeightKg') >= 30 &&
+    (bulking || num('targetWeightKg') >= 30) &&
     num('proteinPerKg') > 0 &&
     num('fatPct') >= 10 &&
     num('fatPct') <= 50 &&
@@ -113,24 +149,28 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
     e.preventDefault();
     if (!valid) return;
     const sizes: NavySizes | null =
-      sizesEdited && navyBf !== null ? { waistCm: num('waistCm'), neckCm: num('neckCm'), ...(female ? { hipCm: num('hipCm') } : {}) } : null;
+      sizesEdited && navyBf !== null
+        ? { waistCm: num('waistCm'), neckCm: num('neckCm'), ...(female ? { hipCm: num('hipCm') } : {}) }
+        : null;
     onSave(
       {
-      sex,
-      age: num('age'),
-      heightCm: num('heightCm'),
-      contestName: f.contestName.trim(),
-      contestDate: f.contestDate,
-      prepStartDate: f.prepStartDate,
-      startWeightKg: num('startWeightKg'),
-      targetWeightKg: num('targetWeightKg'),
-      bodyFatSource,
-      activityFactor: activity,
-      proteinPerKg: num('proteinPerKg'),
-      fatPct: num('fatPct'),
-      maxWeeklyLossPct: num('maxWeeklyLossPct'),
-      tdeeMode,
-      manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
+        phase,
+        bulk: numericBulk(),
+        sex,
+        age: num('age'),
+        heightCm: num('heightCm'),
+        contestName: f.contestName.trim(),
+        contestDate: f.contestDate,
+        prepStartDate: f.prepStartDate,
+        startWeightKg: num('startWeightKg'),
+        targetWeightKg: num('targetWeightKg') || (initial?.targetWeightKg ?? 0),
+        bodyFatSource,
+        activityFactor: activity,
+        proteinPerKg: num('proteinPerKg'),
+        fatPct: num('fatPct'),
+        maxWeeklyLossPct: num('maxWeeklyLossPct'),
+        tdeeMode,
+        manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
       },
       sizes,
     );
@@ -138,7 +178,17 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
 
   return (
     <form className="card form" onSubmit={submit}>
-      <h3>大会</h3>
+      <h3>今の時期</h3>
+      <div className="seg">
+        <button type="button" className={phase === 'cut' ? 'on' : ''} onClick={() => setPhase('cut')}>
+          コンテスト減量
+        </button>
+        <button type="button" className={phase === 'bulk' ? 'on' : ''} onClick={() => setPhase('bulk')}>
+          増量期（オフ）
+        </button>
+      </div>
+
+      <h3>{bulking ? '次の大会（決まっていれば）' : '大会'}</h3>
       <label>
         大会名
         <input value={f.contestName} onChange={set('contestName')} placeholder="例：〇〇ボディビル選手権" />
@@ -223,34 +273,105 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         </select>
       </label>
 
-      <h3>大会時の目標体重</h3>
-      {leanKg !== null && (
-        <TargetGuide
-          options={options}
-          leanKg={leanKg}
-          maxWeeklyLossPct={num('maxWeeklyLossPct')}
-          selectedKg={f.targetWeightKg === '' ? null : num('targetWeightKg')}
-          onPick={pickTarget}
-        />
-      )}
-      <label>
-        目標体重 (kg)
-        <input
-          type="number"
-          inputMode="decimal"
-          step="0.1"
-          value={f.targetWeightKg}
-          onChange={set('targetWeightKg')}
-          placeholder={leanKg !== null ? '上の目安を見て入力' : ''}
-        />
-      </label>
-      {f.targetWeightKg !== '' && leanKg !== null && num('targetWeightKg') > leanKg && (
-        <p className="muted">
-          この体重だと体脂肪率は約 {Math.round((1 - leanKg / num('targetWeightKg')) * 1000) / 10}%（除脂肪体重を保った場合）
-          {daysLeft > 0 && weightNow !== null && num('targetWeightKg') < weightNow
-            ? `、必要なペースは週 ${(((weightNow - num('targetWeightKg')) / daysLeft) * 7).toFixed(2)} kg です。`
-            : '。'}
-        </p>
+      {bulking ? (
+        <>
+          <h3>増量の上限</h3>
+          <div className="row">
+            <label className="grow">
+              コンテスト時の体脂肪率 (%)
+              <input type="number" inputMode="decimal" step="0.5" value={b.stageBodyFatPct} onChange={setBulk('stageBodyFatPct')} />
+            </label>
+            <label className="grow">
+              コンテスト体重からの幅 (kg)
+              <input type="number" inputMode="decimal" step="0.5" value={b.ceilingMarginKg} onChange={setBulk('ceilingMarginKg')} />
+            </label>
+          </div>
+          {limits ? (
+            <div className="stats">
+              <div className="stat">
+                <div className="stat-label">コンテスト体重</div>
+                <div className="stat-value">{limits.contestKg.toFixed(1)} kg</div>
+                <div className="stat-sub">除脂肪 {limits.leanKg} kg から</div>
+              </div>
+              <div className="stat">
+                <div className="stat-label">増量の上限</div>
+                <div className="stat-value">{limits.ceilingKg.toFixed(1)} kg</div>
+                <div className="stat-sub">超えたら {limits.lowerKg.toFixed(1)} kg までプチダイエット</div>
+              </div>
+            </div>
+          ) : (
+            <p className="muted">
+              体脂肪率がわかると、上限を計算します（上の首・ウエストを入れてください）。それまでは上限なしで増量します。
+            </p>
+          )}
+          <details className="advanced">
+            <summary>増量の進め方</summary>
+            <label>
+              増量を始めた日
+              <input type="date" value={b.startDate} onChange={setBulk('startDate')} />
+            </label>
+            <div className="row">
+              <label className="grow">
+                最初の余剰 (kcal/日)
+                <input type="number" inputMode="numeric" value={b.startSurplusKcal} onChange={setBulk('startSurplusKcal')} />
+              </label>
+              <label className="grow">
+                毎週増やす量 (kcal)
+                <input type="number" inputMode="numeric" value={b.rampKcal} onChange={setBulk('rampKcal')} />
+              </label>
+              <label className="grow">
+                余剰の上限 (kcal)
+                <input type="number" inputMode="numeric" value={b.maxSurplusKcal} onChange={setBulk('maxSurplusKcal')} />
+              </label>
+            </div>
+            <div className="row">
+              <label className="grow">
+                プチダイエットで戻す幅 (kg)
+                <input type="number" inputMode="decimal" step="0.5" value={b.returnKg} onChange={setBulk('returnKg')} />
+              </label>
+              <label className="grow">
+                プチダイエットのペース (%/週)
+                <input type="number" inputMode="decimal" step="0.05" value={b.miniCutPct} onChange={setBulk('miniCutPct')} />
+              </label>
+            </div>
+            <p className="muted">
+              維持カロリーに余剰を足して増量します。余剰は「最初の余剰」から毎週少しずつ増え、体重（7日平均）が上限に達したらプチダイエットに切り替えて「上限
+              − 戻す幅」まで落とし、また最初の余剰から増量を再開します。
+            </p>
+          </details>
+        </>
+      ) : (
+        <>
+          <h3>大会時の目標体重</h3>
+          {leanKg !== null && (
+            <TargetGuide
+              options={options}
+              leanKg={leanKg}
+              maxWeeklyLossPct={num('maxWeeklyLossPct')}
+              selectedKg={f.targetWeightKg === '' ? null : num('targetWeightKg')}
+              onPick={pickTarget}
+            />
+          )}
+          <label>
+            目標体重 (kg)
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.1"
+              value={f.targetWeightKg}
+              onChange={set('targetWeightKg')}
+              placeholder={leanKg !== null ? '上の目安を見て入力' : ''}
+            />
+          </label>
+          {f.targetWeightKg !== '' && leanKg !== null && num('targetWeightKg') > leanKg && (
+            <p className="muted">
+              この体重だと体脂肪率は約 {Math.round((1 - leanKg / num('targetWeightKg')) * 1000) / 10}%（除脂肪体重を保った場合）
+              {daysLeft > 0 && weightNow !== null && num('targetWeightKg') < weightNow
+                ? `、必要なペースは週 ${(((weightNow - num('targetWeightKg')) / daysLeft) * 7).toFixed(2)} kg です。`
+                : '。'}
+            </p>
+          )}
+        </>
       )}
       <label>
         活動量
@@ -279,9 +400,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
           減量ペースの上限（体重の %/週）
           <input type="number" inputMode="decimal" step="0.1" value={f.maxWeeklyLossPct} onChange={set('maxWeeklyLossPct')} />
         </label>
-        <p className="muted">
-          筋量を守るには週0.5〜1.0%が目安。炭水化物は残りのカロリーで決まります。
-        </p>
+        <p className="muted">筋量を守るには週0.5〜1.0%が目安。炭水化物は残りのカロリーで決まります。</p>
 
         <div className="label">消費カロリーの決め方</div>
         <div className="seg">

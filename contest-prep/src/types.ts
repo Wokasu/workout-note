@@ -1,6 +1,9 @@
 export type Sex = 'male' | 'female';
 
 export interface Profile {
+  /** cut：コンテストに向けた減量、bulk：増量期（オフ） */
+  phase: 'cut' | 'bulk';
+  bulk: BulkSettings;
   sex: Sex;
   age: number;
   heightCm: number;
@@ -30,6 +33,26 @@ export interface Profile {
 }
 
 export type BodyFatSource = 'auto' | 'navy' | 'scale';
+
+/** 増量期の進め方 */
+export interface BulkSettings {
+  /** 増量を始めた日（YYYY-MM-DD） */
+  startDate: string;
+  /** コンテスト体重の計算に使う、大会時の体脂肪率（%） */
+  stageBodyFatPct: number;
+  /** コンテスト体重から何 kg まで増やしてよいか */
+  ceilingMarginKg: number;
+  /** 上限に達したら、上限から何 kg 下がるまでプチダイエットするか */
+  returnKg: number;
+  /** 増量を始めた週の余剰カロリー（kcal/日） */
+  startSurplusKcal: number;
+  /** 余剰カロリーを毎週いくつ増やすか（kcal/日） */
+  rampKcal: number;
+  /** 余剰カロリーの上限（kcal/日） */
+  maxSurplusKcal: number;
+  /** プチダイエットの減量ペース（体重の %/週） */
+  miniCutPct: number;
+}
 
 export interface Macros {
   p: number;

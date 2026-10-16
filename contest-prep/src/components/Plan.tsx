@@ -213,7 +213,7 @@ function TargetEditor({ profile, targets: t, onSetTarget }: { profile: Profile; 
   );
 }
 
-function NavyForm({
+export function NavyForm({
   profile,
   today,
   todayRecord,

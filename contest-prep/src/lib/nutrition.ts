@@ -10,6 +10,7 @@ import {
 import { addDays, daysBetween } from './date';
 import { kcalOf } from './macros';
 import { bodyFatSeries } from './navy';
+import { bulkStatus, type BulkStatus } from './bulk';
 
 export const ACTIVITY_OPTIONS = [
   { value: 1.4, label: 'デスクワーク＋週3〜4回トレ' },
@@ -53,6 +54,8 @@ export interface Targets extends Macros {
   tooFast: boolean;
   belowBmr: boolean;
   manual: boolean;
+  /** 増量期のときの状態（減量期は null） */
+  bulk: BulkStatus | null;
 }
 
 export function macrosFor(kcal: number, weightKg: number, proteinPerKg: number, fatPct: number): Macros {
@@ -93,9 +96,10 @@ export function calcTargets(
   const requiredKgPerWeek = daysLeft > 0 ? Math.max(0, (remainingKg / daysLeft) * 7) : 0;
   const capKgPerWeek = (currentKg * profile.maxWeeklyLossPct) / 100;
   const plannedKgPerWeek = Math.min(requiredKgPerWeek, capKgPerWeek);
-  const deficit = Math.round((plannedKgPerWeek * KCAL_PER_KG) / 7);
+  const bulk = profile.phase === 'bulk' ? bulkStatus(profile, body, currentKg, today, leanKg) : null;
+  const deficit = bulk ? Math.max(0, -bulk.adjustKcal) : Math.round((plannedKgPerWeek * KCAL_PER_KG) / 7);
 
-  let kcal = tdee - deficit;
+  let kcal = bulk ? tdee + bulk.adjustKcal : tdee - deficit;
   let macros = macrosFor(kcal, currentKg, profile.proteinPerKg, profile.fatPct);
   const manual = profile.manualMacros !== null;
   if (profile.manualMacros) {
@@ -121,8 +125,9 @@ export function calcTargets(
     plannedKgPerWeek: Math.round(plannedKgPerWeek * 100) / 100,
     deficit,
     projectedKg: Math.round((currentKg - (plannedKgPerWeek * daysLeft) / 7) * 10) / 10,
-    tooFast: requiredKgPerWeek > capKgPerWeek + 1e-9,
+    tooFast: !bulk && requiredKgPerWeek > capKgPerWeek + 1e-9,
     belowBmr: kcal < bmr,
     manual,
+    bulk,
   };
 }

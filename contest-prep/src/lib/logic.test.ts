@@ -7,9 +7,12 @@ import { kcalOf, scaleMacros } from './macros';
 import { bmrKatch, bmrMifflin, calcTargets, macrosFor } from './nutrition';
 import { bodyFatSeries, ffmi, leanSeries, navyBodyFat, recommendedOption, targetOptions, weightAtBodyFat } from './navy';
 import { normalizeData } from './storage';
+import { defaultBulkSettings } from './bulk';
 import { listZip, parseRecordTag, pickExportXml, readHealthExport, rowsToRecords, scanRecords } from './health';
 
 const profile: Profile = {
+  phase: 'cut',
+  bulk: defaultBulkSettings('male', '2026-10-16'),
   sex: 'male',
   age: 30,
   heightCm: 172,

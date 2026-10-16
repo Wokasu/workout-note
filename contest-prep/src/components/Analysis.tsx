@@ -8,7 +8,8 @@ import { Chart } from './Chart';
 
 interface Props {
   profile: Profile;
-  targetWeightKg: number;
+  /** 減量期の目標体重（増量期は計画線を出さないので null） */
+  targetWeightKg: number | null;
   body: BodyRecord[];
   logs: FoodLog[];
   today: string;
@@ -50,10 +51,12 @@ export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) 
   const average = useMemo(() => movingAverage(points), [points]);
   const weeks = useMemo(() => weeklySummary(body, logs, today), [body, logs, today]);
 
-  const from = range === 'prep' ? (profile.prepStartDate < today ? profile.prepStartDate : addDays(today, -28)) : addDays(today, -range);
-  const to = range === 'prep' && profile.contestDate > today ? profile.contestDate : today;
+  const bulking = profile.phase === 'bulk';
+  const periodStart = bulking ? profile.bulk.startDate : profile.prepStartDate;
+  const from = range === 'prep' ? (periodStart < today ? periodStart : addDays(today, -28)) : addDays(today, -range);
+  const to = range === 'prep' && !bulking && profile.contestDate > today ? profile.contestDate : today;
   const plan: [Point, Point] | undefined =
-    metric === 'weightKg' && range === 'prep'
+    metric === 'weightKg' && range === 'prep' && targetWeightKg !== null
       ? [
           { date: profile.prepStartDate, value: profile.startWeightKg },
           { date: profile.contestDate, value: targetWeightKg },
@@ -77,7 +80,7 @@ export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) 
         <div className="seg">
           {(
             [
-              ['prep', '減量期間'],
+              ['prep', bulking ? '増量期間' : '減量期間'],
               [28, '4週'],
               [84, '12週'],
             ] as const

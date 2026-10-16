@@ -6,6 +6,10 @@ interface Props {
   average?: Point[];
   /** 計画線（開始点→大会） */
   plan?: [Point, Point];
+  /** これからの見込み（点線） */
+  projection?: Point[];
+  /** 上限などの水平線 */
+  lines?: { value: number; label: string; cls: string }[];
   from: string;
   to: string;
   digits?: number;
@@ -20,14 +24,14 @@ function ms(date: string): number {
   return Date.parse(`${date}T00:00:00Z`);
 }
 
-export function Chart({ points, average, plan, from, to, digits = 1, label }: Props) {
+export function Chart({ points, average, plan, projection, lines, from, to, digits = 1, label }: Props) {
   const visible = points.filter((p) => p.date >= from && p.date <= to);
-  if (visible.length < 2) return <p className="muted">この期間の記録が2日分以上あるとグラフを表示します</p>;
+  if (visible.length < 2 && !projection?.length) return <p className="muted">この期間の記録が2日分以上あるとグラフを表示します</p>;
 
   const t0 = ms(from);
   const t1 = Math.max(ms(to), t0 + 86_400_000);
   const planValues = plan ? plan.map((p) => p.value) : [];
-  const values = [...visible.map((p) => p.value), ...planValues];
+  const values = [...visible.map((p) => p.value), ...planValues, ...(projection ?? []).map((p) => p.value), ...(lines ?? []).map((l) => l.value)];
   const span = Math.max(...values) - Math.min(...values) || 1;
   const lo = Math.min(...values) - span * 0.08;
   const hi = Math.max(...values) + span * 0.08;
@@ -52,6 +56,15 @@ export function Chart({ points, average, plan, from, to, digits = 1, label }: Pr
           <title>計画線</title>
         </line>
       )}
+      {lines?.map((l) => (
+        <g key={l.label}>
+          <line x1={PAD.l} x2={W - PAD.r} y1={y(l.value)} y2={y(l.value)} className={`hline ${l.cls}`} />
+          <text x={W - PAD.r - 2} y={y(l.value) - 3} className={`axis hlabel ${l.cls}`} textAnchor="end">
+            {l.label} {l.value.toFixed(digits)}
+          </text>
+        </g>
+      ))}
+      {projection && projection.length > 1 && <path d={path(projection)} className="proj-line" />}
       {visible.map((p) => (
         <circle key={p.date} cx={x(p.date)} cy={y(p.value)} r={2.2} className="dot">
           <title>
@@ -60,7 +73,7 @@ export function Chart({ points, average, plan, from, to, digits = 1, label }: Pr
         </circle>
       ))}
       {avgVisible.length > 1 && <path d={path(avgVisible)} className="avg-line" />}
-      {avgVisible.length <= 1 && <path d={path(visible)} className="avg-line" />}
+      {avgVisible.length <= 1 && visible.length > 1 && <path d={path(visible)} className="avg-line" />}
       <text x={PAD.l} y={H - 6} className="axis">
         {formatJa(from)}
       </text>
