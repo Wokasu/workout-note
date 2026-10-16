@@ -12,6 +12,7 @@ interface Props {
 
 export function Settings({ profile, plan, onSave, onReset }: Props) {
   const [editing, setEditing] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   if (editing) {
     return (
@@ -62,14 +63,23 @@ export function Settings({ profile, plan, onSave, onReset }: Props) {
       <section className="card">
         <h3>データ</h3>
         <p className="muted">記録はこの端末のブラウザにだけ保存されます。</p>
-        <button
-          className="danger wide"
-          onClick={() => {
-            if (confirm('すべての記録を削除して最初からやり直しますか？')) onReset();
-          }}
-        >
-          すべてリセット
-        </button>
+        {confirmReset ? (
+          <>
+            <p className="error">食事・体重・プロフィールの記録がすべて消えます。元に戻せません。</p>
+            <div className="confirm-row">
+              <button className="ghost" onClick={() => setConfirmReset(false)}>
+                やめる
+              </button>
+              <button className="danger" onClick={onReset}>
+                削除する
+              </button>
+            </div>
+          </>
+        ) : (
+          <button className="danger wide" onClick={() => setConfirmReset(true)}>
+            すべてリセット
+          </button>
+        )}
       </section>
     </div>
   );

@@ -22,6 +22,7 @@ npm install
 npm run dev       # 開発サーバー
 npm test          # ユニットテスト（vitest）
 npm run build     # 型チェック + 本番ビルド（dist/）
+npm run build:single  # 1ファイルにまとめた dist/oshi-diet.html を作る
 ```
 
 React 18 + TypeScript + Vite。`dist/` は相対パスでビルドされるので、GitHub Pages などの静的ホスティングにそのまま置けます。
