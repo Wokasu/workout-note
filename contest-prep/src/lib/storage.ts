@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
-import type { AppData } from '../types';
+import type { AppData, Profile } from '../types';
 
 const KEY = 'contest-prep:v1';
 
 export const EMPTY: AppData = { profile: null, logs: [], body: [], myFoods: [] };
 
 /** 保存データやバックアップを読み込む（壊れた項目は空にする） */
+/** 後から増えた設定項目の初期値（古い保存データを読むときに補う） */
+const PROFILE_DEFAULTS: Pick<Profile, 'targetMode' | 'targetBodyFatPct' | 'bodyFatSource'> = {
+  targetMode: 'weight',
+  targetBodyFatPct: 6,
+  bodyFatSource: 'auto',
+};
+
 export function normalizeData(raw: unknown): AppData {
   const d = (raw ?? {}) as Partial<AppData>;
   return {
-    profile: d.profile ?? null,
+    profile: d.profile ? { ...PROFILE_DEFAULTS, ...d.profile } : null,
     logs: Array.isArray(d.logs) ? d.logs : [],
     body: Array.isArray(d.body) ? d.body : [],
     myFoods: Array.isArray(d.myFoods) ? d.myFoods : [],

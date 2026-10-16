@@ -707,3 +707,25 @@ label.file input {
 .tab-icon {
   font-size: 20px;
 }
+
+/* 計画 */
+.navy-result {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--tint);
+  font-variant-numeric: tabular-nums;
+}
+.navy-result b {
+  font-size: 22px;
+  color: var(--accent);
+}
+.table tr.current td {
+  background: var(--tint);
+  font-weight: 700;
+}
+.table tr.future td {
+  color: var(--muted);
+}
+.fill.progress {
+  background: var(--accent);
+}

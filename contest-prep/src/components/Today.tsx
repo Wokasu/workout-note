@@ -78,7 +78,7 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
         <h3>減量の進み具合</h3>
         <div className="stats">
           <Stat label="今の体重（7日平均）" value={`${t.currentKg.toFixed(1)} kg`} />
-          <Stat label="目標まで" value={t.remainingKg > 0 ? `${t.remainingKg.toFixed(1)} kg` : '到達'} />
+          <Stat label="目標まで" value={t.remainingKg > 0 ? `${t.remainingKg.toFixed(1)} kg` : '到達'} sub={`目標 ${t.targetWeightKg.toFixed(1)} kg`} />
           <Stat label="必要なペース" value={`${t.requiredKgPerWeek.toFixed(2)} kg/週`} />
           <Stat label="直近の実績" value={rate ? `${rate.kgPerWeek > 0 ? '+' : ''}${rate.kgPerWeek.toFixed(2)} kg/週` : '—'} sub={rate ? `${rate.pctPerWeek}%/週` : undefined} />
         </div>
@@ -96,7 +96,7 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
           <li>
             <span>基礎代謝</span>
             <span>
-              {t.bmr} kcal <small>{t.leanKg !== null ? `除脂肪量 ${t.leanKg}kg から` : '身長・体重・年齢から'}</small>
+              {t.bmr} kcal <small>{t.leanKg !== null && t.bodyFat ? `除脂肪量 ${t.leanKg}kg（${t.bodyFat.source === 'navy' ? '海軍式' : '体組成計'}）から` : '身長・体重・年齢から'}</small>
             </span>
           </li>
           <li>

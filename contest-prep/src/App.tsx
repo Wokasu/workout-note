@@ -10,15 +10,17 @@ import { Today } from './components/Today';
 import { Meals } from './components/Meals';
 import { Body } from './components/Body';
 import { Analysis } from './components/Analysis';
+import { Plan } from './components/Plan';
 import { Settings } from './components/Settings';
 import { Importer } from './components/Importer';
 import type { BodyRecord, Profile } from './types';
 
-type Tab = 'today' | 'meals' | 'body' | 'analysis' | 'settings';
+type Tab = 'today' | 'meals' | 'plan' | 'body' | 'analysis' | 'settings';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'today', label: '今日', icon: '🏁' },
   { id: 'meals', label: '食事', icon: '🍚' },
+  { id: 'plan', label: '計画', icon: '🎯' },
   { id: 'body', label: '身体', icon: '⚖️' },
   { id: 'analysis', label: '分析', icon: '📈' },
   { id: 'settings', label: '設定', icon: '⚙️' },
@@ -107,7 +109,16 @@ export function App() {
             onRemove={(date) => setData((d) => ({ ...d, body: d.body.filter((r) => r.date !== date) }))}
           />
         )}
-        {tab === 'analysis' && <Analysis profile={profile} body={body} logs={logs} today={today} />}
+        {tab === 'plan' && (
+          <Plan
+            profile={profile}
+            targets={targets}
+            body={body}
+            today={today}
+            onSaveSizes={(sizes) => setData((d) => ({ ...d, body: upsertBody(d.body, { ...d.body.find((r) => r.date === today), date: today, ...sizes }) }))}
+          />
+        )}
+        {tab === 'analysis' && <Analysis profile={profile} targetWeightKg={targets.targetWeightKg} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
           <Settings data={data} today={today} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}

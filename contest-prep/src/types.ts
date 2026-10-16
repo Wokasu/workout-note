@@ -11,8 +11,14 @@ export interface Profile {
   prepStartDate: string;
   /** 減量開始時の体重 */
   startWeightKg: number;
-  /** 大会当日の目標体重 */
+  /** 大会当日の目標体重（目標を体脂肪率で決める場合は、体脂肪率が出せないときの予備） */
   targetWeightKg: number;
+  /** 目標を体重で決めるか、体脂肪率で決めるか */
+  targetMode: 'weight' | 'bodyFat';
+  /** 大会当日の目標体脂肪率（%） */
+  targetBodyFatPct: number;
+  /** 体脂肪率に使う値（auto は海軍式が出せれば海軍式） */
+  bodyFatSource: BodyFatSource;
   /** 活動係数（トレーニング込み） */
   activityFactor: number;
   /** 体重1kgあたりのたんぱく質（g） */
@@ -26,6 +32,8 @@ export interface Profile {
   /** コーチ等から指定された PFC を使う場合 */
   manualMacros: Macros | null;
 }
+
+export type BodyFatSource = 'auto' | 'navy' | 'scale';
 
 export interface Macros {
   p: number;

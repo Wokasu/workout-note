@@ -9,6 +9,7 @@ import {
 } from './analysis';
 import { addDays, daysBetween } from './date';
 import { kcalOf } from './macros';
+import { bodyFatSeries, weightAtBodyFat } from './navy';
 
 export const ACTIVITY_OPTIONS = [
   { value: 1.4, label: 'デスクワーク＋週3〜4回トレ' },
@@ -31,7 +32,13 @@ export function bmrKatch(leanKg: number): number {
 export interface Targets extends Macros {
   kcal: number;
   currentKg: number;
+  /** 計算に使った体脂肪率（直近30日以内の値がなければ null） */
+  bodyFat: { pct: number; date: string; source: 'navy' | 'scale' } | null;
   leanKg: number | null;
+  /** 大会当日の目標体重（体脂肪率で決める場合は除脂肪量から計算） */
+  targetWeightKg: number;
+  /** 体脂肪率で目標を決める設定だが、体脂肪率がないので予備の目標体重を使っている */
+  targetFallback: boolean;
   bmr: number;
   formulaTdee: number;
   estimate: TdeeEstimate | null;
@@ -69,8 +76,17 @@ export function calcTargets(
   const currentKg = Math.round((valueAtOrBefore(movingAverage(weights), today)?.value ?? profile.startWeightKg) * 10) / 10;
 
   // 体脂肪率は直近30日以内の値だけ使う
-  const fat = valueAtOrBefore(seriesOf(body, 'bodyFatPct'), today);
-  const leanKg = fat && fat.date >= addDays(today, -30) ? Math.round(currentKg * (1 - fat.value / 100) * 10) / 10 : null;
+  const fatSeries = bodyFatSeries(body, profile, profile.bodyFatSource);
+  const fatPoint = valueAtOrBefore(fatSeries.points, today);
+  const bodyFat =
+    fatPoint && fatSeries.source && fatPoint.date >= addDays(today, -30)
+      ? { pct: fatPoint.value, date: fatPoint.date, source: fatSeries.source }
+      : null;
+  const leanKg = bodyFat ? Math.round(currentKg * (1 - bodyFat.pct / 100) * 10) / 10 : null;
+
+  const byBodyFat = profile.targetMode === 'bodyFat';
+  const targetFallback = byBodyFat && leanKg === null;
+  const targetWeightKg = byBodyFat && leanKg !== null ? weightAtBodyFat(leanKg, profile.targetBodyFatPct) : profile.targetWeightKg;
 
   const bmr = leanKg !== null ? bmrKatch(leanKg) : bmrMifflin(profile.sex, currentKg, profile.heightCm, profile.age);
   const formulaTdee = Math.round(bmr * profile.activityFactor);
@@ -79,7 +95,7 @@ export function calcTargets(
   const tdee = useEstimate ? estimate.tdee : formulaTdee;
 
   const daysLeft = Math.max(0, daysBetween(today, profile.contestDate));
-  const remainingKg = Math.round((currentKg - profile.targetWeightKg) * 10) / 10;
+  const remainingKg = Math.round((currentKg - targetWeightKg) * 10) / 10;
   const requiredKgPerWeek = daysLeft > 0 ? Math.max(0, (remainingKg / daysLeft) * 7) : 0;
   const capKgPerWeek = (currentKg * profile.maxWeeklyLossPct) / 100;
   const plannedKgPerWeek = Math.min(requiredKgPerWeek, capKgPerWeek);
@@ -97,7 +113,10 @@ export function calcTargets(
     ...macros,
     kcal,
     currentKg,
+    bodyFat,
     leanKg,
+    targetWeightKg,
+    targetFallback,
     bmr,
     formulaTdee,
     estimate,

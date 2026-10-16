@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { BodyField, BodyRecord, FoodLog, Profile } from '../types';
+import { bodyFatSeries, leanSeries, navySeries } from '../lib/navy';
 import { movingAverage, seriesOf, weeklySummary, type Point } from '../lib/analysis';
 import { FIELD_BY_KEY, FIELD_DEFS, formatValue } from '../lib/fields';
 import { addDays, formatJa } from '../lib/date';
@@ -7,6 +8,7 @@ import { Chart } from './Chart';
 
 interface Props {
   profile: Profile;
+  targetWeightKg: number;
   body: BodyRecord[];
   logs: FoodLog[];
   today: string;
@@ -14,18 +16,37 @@ interface Props {
 
 type Range = 28 | 84 | 'prep';
 
+/** 記録から計算して出す項目 */
+type Derived = 'navyBf' | 'leanKg';
+type Metric = BodyField | Derived;
+
+const DERIVED: Record<Derived, { label: string; unit: string }> = {
+  navyBf: { label: '体脂肪率（海軍式）', unit: '%' },
+  leanKg: { label: '除脂肪体重', unit: 'kg' },
+};
+
 function fmtChange(v: number | null, unit: string): string {
   if (v === null) return '—';
   return `${v > 0 ? '+' : ''}${v}${unit}`;
 }
 
-export function Analysis({ profile, body, logs, today }: Props) {
-  const available = FIELD_DEFS.filter((f) => body.some((r) => r[f.key] !== undefined));
-  const [metric, setMetric] = useState<BodyField>('weightKg');
+export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) {
+  const navy = useMemo(() => navySeries(body, profile), [body, profile]);
+  const lean = useMemo(() => leanSeries(body, bodyFatSeries(body, profile, profile.bodyFatSource).points), [body, profile]);
+  const available: { key: Metric; label: string }[] = [
+    ...FIELD_DEFS.filter((f) => body.some((r) => r[f.key] !== undefined)),
+    ...(navy.length ? [{ key: 'navyBf' as const, label: DERIVED.navyBf.label }] : []),
+    ...(lean.length ? [{ key: 'leanKg' as const, label: DERIVED.leanKg.label }] : []),
+  ];
+  const [metric, setMetric] = useState<Metric>('weightKg');
   const [range, setRange] = useState<Range>('prep');
-  const def = FIELD_BY_KEY[metric];
+  const def = metric in DERIVED ? DERIVED[metric as Derived] : FIELD_BY_KEY[metric as BodyField];
+  const fmt = (v: number) => (metric in DERIVED ? `${v.toFixed(1)} ${def.unit}` : formatValue(metric as BodyField, v));
 
-  const points = useMemo(() => seriesOf(body, metric), [body, metric]);
+  const points = useMemo(
+    () => (metric === 'navyBf' ? navy : metric === 'leanKg' ? lean : seriesOf(body, metric)),
+    [body, metric, navy, lean],
+  );
   const average = useMemo(() => movingAverage(points), [points]);
   const weeks = useMemo(() => weeklySummary(body, logs, today), [body, logs, today]);
 
@@ -35,7 +56,7 @@ export function Analysis({ profile, body, logs, today }: Props) {
     metric === 'weightKg' && range === 'prep'
       ? [
           { date: profile.prepStartDate, value: profile.startWeightKg },
-          { date: profile.contestDate, value: profile.targetWeightKg },
+          { date: profile.contestDate, value: targetWeightKg },
         ]
       : undefined;
 
@@ -47,7 +68,7 @@ export function Analysis({ profile, body, logs, today }: Props) {
     <div className="stack">
       <section className="card">
         <div className="chips metric-chips">
-          {(available.length ? available : [FIELD_BY_KEY.weightKg]).map((f) => (
+          {(available.length ? available : [{ key: 'weightKg' as const, label: '体重' }]).map((f) => (
             <button key={f.key} className={`chip ${metric === f.key ? 'on' : ''}`} onClick={() => setMetric(f.key)}>
               {f.label}
             </button>
@@ -74,7 +95,7 @@ export function Analysis({ profile, body, logs, today }: Props) {
         </div>
         {first && last && first.date !== last.date && visible.length > 1 && (
           <p className="muted">
-            7日平均で {formatJa(first.date)} {formatValue(metric, first.value)} → {formatJa(last.date)} {formatValue(metric, last.value)}（
+            7日平均で {formatJa(first.date)} {fmt(first.value)} → {formatJa(last.date)} {fmt(last.value)}（
             {fmtChange(Math.round((last.value - first.value) * 10) / 10, def.unit)}）
           </p>
         )}

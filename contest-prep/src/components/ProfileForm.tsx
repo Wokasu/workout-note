@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Profile, Sex } from '../types';
+import type { BodyFatSource, Profile, Sex } from '../types';
 import { ACTIVITY_OPTIONS } from '../lib/nutrition';
 import { addDays } from '../lib/date';
 
@@ -20,6 +20,7 @@ type Form = Record<
   | 'heightCm'
   | 'startWeightKg'
   | 'targetWeightKg'
+  | 'targetBodyFatPct'
   | 'proteinPerKg'
   | 'fatPct'
   | 'maxWeeklyLossPct'
@@ -32,6 +33,8 @@ type Form = Record<
 export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel }: Props) {
   const [sex, setSex] = useState<Sex>(initial?.sex ?? 'male');
   const [activity, setActivity] = useState(initial?.activityFactor ?? 1.55);
+  const [targetMode, setTargetMode] = useState<Profile['targetMode']>(initial?.targetMode ?? 'weight');
+  const [bodyFatSource, setBodyFatSource] = useState<BodyFatSource>(initial?.bodyFatSource ?? 'auto');
   const [tdeeMode, setTdeeMode] = useState<Profile['tdeeMode']>(initial?.tdeeMode ?? 'auto');
   const [useManual, setUseManual] = useState(initial?.manualMacros != null);
   const [f, setF] = useState<Form>({
@@ -41,7 +44,8 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
     age: initial ? String(initial.age) : '',
     heightCm: initial ? String(initial.heightCm) : '',
     startWeightKg: initial ? String(initial.startWeightKg) : latestWeight ? String(latestWeight) : '',
-    targetWeightKg: initial ? String(initial.targetWeightKg) : '',
+    targetWeightKg: initial?.targetWeightKg ? String(initial.targetWeightKg) : '',
+    targetBodyFatPct: String(initial?.targetBodyFatPct ?? 6),
     proteinPerKg: String(initial?.proteinPerKg ?? 2.4),
     fatPct: String(initial?.fatPct ?? 20),
     maxWeeklyLossPct: String(initial?.maxWeeklyLossPct ?? 1),
@@ -60,7 +64,9 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
     num('heightCm') >= 120 &&
     num('heightCm') <= 230 &&
     num('startWeightKg') >= 30 &&
-    num('targetWeightKg') >= 30 &&
+    (targetMode === 'weight'
+      ? num('targetWeightKg') >= 30
+      : num('targetBodyFatPct') >= 3 && num('targetBodyFatPct') <= 30 && (f.targetWeightKg === '' || num('targetWeightKg') >= 30)) &&
     num('proteinPerKg') > 0 &&
     num('fatPct') >= 10 &&
     num('fatPct') <= 50 &&
@@ -78,7 +84,10 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
       contestDate: f.contestDate,
       prepStartDate: f.prepStartDate,
       startWeightKg: num('startWeightKg'),
-      targetWeightKg: num('targetWeightKg'),
+      targetWeightKg: f.targetWeightKg === '' ? 0 : num('targetWeightKg'),
+      targetMode,
+      targetBodyFatPct: num('targetBodyFatPct'),
+      bodyFatSource,
       activityFactor: activity,
       proteinPerKg: num('proteinPerKg'),
       fatPct: num('fatPct'),
@@ -124,16 +133,50 @@ export function ProfileForm({ initial, today, latestWeight, onSave, submitLabel 
           <input type="number" inputMode="decimal" value={f.heightCm} onChange={set('heightCm')} />
         </label>
       </div>
-      <div className="row">
-        <label className="grow">
-          開始時の体重 (kg)
-          <input type="number" inputMode="decimal" step="0.1" value={f.startWeightKg} onChange={set('startWeightKg')} />
-        </label>
-        <label className="grow">
+      <label>
+        開始時の体重 (kg)
+        <input type="number" inputMode="decimal" step="0.1" value={f.startWeightKg} onChange={set('startWeightKg')} />
+      </label>
+
+      <div className="label">大会時の目標</div>
+      <div className="seg">
+        <button type="button" className={targetMode === 'weight' ? 'on' : ''} onClick={() => setTargetMode('weight')}>
+          体重で決める
+        </button>
+        <button type="button" className={targetMode === 'bodyFat' ? 'on' : ''} onClick={() => setTargetMode('bodyFat')}>
+          体脂肪率で決める
+        </button>
+      </div>
+      {targetMode === 'weight' ? (
+        <label>
           大会時の目標体重 (kg)
           <input type="number" inputMode="decimal" step="0.1" value={f.targetWeightKg} onChange={set('targetWeightKg')} />
         </label>
-      </div>
+      ) : (
+        <>
+          <div className="row">
+            <label className="grow">
+              目標体脂肪率 (%)
+              <input type="number" inputMode="decimal" step="0.5" value={f.targetBodyFatPct} onChange={set('targetBodyFatPct')} />
+            </label>
+            <label className="grow">
+              予備の目標体重 (kg)
+              <input type="number" inputMode="decimal" step="0.1" value={f.targetWeightKg} onChange={set('targetWeightKg')} placeholder="任意" />
+            </label>
+          </div>
+          <p className="muted">
+            今の除脂肪体重を保ったまま目標の体脂肪率になる体重を、大会時の目標体重にします。体脂肪率がまだないときは予備の目標体重を使います。
+          </p>
+        </>
+      )}
+      <label>
+        体脂肪率に使う値
+        <select value={bodyFatSource} onChange={(e) => setBodyFatSource(e.target.value as BodyFatSource)}>
+          <option value="auto">自動（海軍式が出せれば海軍式）</option>
+          <option value="navy">海軍式（身長・首・ウエスト{sex === 'female' ? '・ヒップ' : ''}）</option>
+          <option value="scale">体組成計の値</option>
+        </select>
+      </label>
       <label>
         活動量
         <select value={activity} onChange={(e) => setActivity(Number(e.target.value))}>

@@ -5,6 +5,8 @@ import { addDays } from './date';
 import { applyMapping, autoMap, decodeText, mergeBody, parseDateTime, prepareImport } from './importer';
 import { kcalOf, scaleMacros } from './macros';
 import { bmrKatch, bmrMifflin, calcTargets, macrosFor } from './nutrition';
+import { bodyFatSeries, ffmi, leanSeries, navyBodyFat, weightAtBodyFat } from './navy';
+import { listZip, parseRecordTag, pickExportXml, readHealthExport, rowsToRecords, scanRecords } from './health';
 
 const profile: Profile = {
   sex: 'male',
@@ -15,6 +17,9 @@ const profile: Profile = {
   prepStartDate: '2026-10-16',
   startWeightKg: 80,
   targetWeightKg: 72,
+  targetMode: 'weight',
+  targetBodyFatPct: 5,
+  bodyFatSource: 'auto',
   activityFactor: 1.55,
   proteinPerKg: 2.5,
   fatPct: 20,
@@ -233,5 +238,128 @@ describe('importer', () => {
       { date: '2026-10-13', weightKg: 80.5 },
       { date: '2026-10-14', weightKg: 80.2, waistCm: 80 },
     ]);
+  });
+});
+
+describe('navy', () => {
+  it('matches the Hodgdon-Beckett formula', () => {
+    expect(navyBodyFat('male', 178, 80, 38)).toBe(12.4);
+    expect(navyBodyFat('female', 160, 68, 32, 92)).toBe(23.6);
+    expect(navyBodyFat('female', 160, 68, 32)).toBeNull();
+    expect(navyBodyFat('male', 178, 36, 38)).toBeNull();
+  });
+
+  it('prefers navy in auto mode and falls back to the scale', () => {
+    const body: BodyRecord[] = [
+      { date: '2026-10-14', weightKg: 80, bodyFatPct: 15, waistCm: 82, neckCm: 39 },
+      { date: '2026-10-15', weightKg: 79.8, bodyFatPct: 14.8 },
+    ];
+    expect(bodyFatSeries(body, profile, 'auto').source).toBe('navy');
+    expect(bodyFatSeries(body, profile, 'scale').points.map((p) => p.value)).toEqual([15, 14.8]);
+    expect(bodyFatSeries([body[1]], profile, 'auto').source).toBe('scale');
+    expect(bodyFatSeries([body[1]], profile, 'navy').source).toBeNull();
+  });
+
+  it('computes lean mass, FFMI and stage weight', () => {
+    const body: BodyRecord[] = [{ date: '2026-10-14', weightKg: 80, waistCm: 82, neckCm: 39 }];
+    const fat = bodyFatSeries(body, profile, 'navy').points;
+    expect(leanSeries(body, fat)).toEqual([{ date: '2026-10-14', value: Math.round(80 * (1 - fat[0].value / 100) * 10) / 10 }]);
+    expect(ffmi(68, 172)).toEqual({ ffmi: 23, normalized: 23.5 });
+    expect(weightAtBodyFat(68, 5)).toBe(71.6);
+  });
+
+  it('sets the target weight from body fat', () => {
+    const p: Profile = { ...profile, targetMode: 'bodyFat', targetBodyFatPct: 5 };
+    const body: BodyRecord[] = [{ date: '2026-10-16', weightKg: 80, bodyFatPct: 15 }];
+    const t = calcTargets(p, body, new Map(), '2026-10-16');
+    expect(t.bodyFat).toEqual({ pct: 15, date: '2026-10-16', source: 'scale' });
+    expect(t.targetWeightKg).toBe(71.6);
+    expect(t.remainingKg).toBe(8.4);
+    expect(t.targetFallback).toBe(false);
+    const none = calcTargets(p, [], new Map(), '2026-10-16');
+    expect(none.targetFallback).toBe(true);
+    expect(none.targetWeightKg).toBe(72);
+  });
+
+  it('ignores body fat older than 30 days', () => {
+    const body: BodyRecord[] = [{ date: '2026-09-01', weightKg: 80, bodyFatPct: 15 }];
+    expect(calcTargets(profile, body, new Map(), '2026-10-16').bodyFat).toBeNull();
+  });
+});
+
+const XML = `<?xml version="1.0" encoding="UTF-8"?>
+<HealthData locale="ja_JP">
+ <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Health Planet" unit="kg" creationDate="2026-10-14 07:20:00 +0900" startDate="2026-10-14 07:10:00 +0900" endDate="2026-10-14 07:10:00 +0900" value="80.2"/>
+ <Record type="HKQuantityTypeIdentifierBodyMass" sourceName="Health Planet" unit="kg" startDate="2026-10-14 21:10:00 +0900" endDate="2026-10-14 21:10:00 +0900" value="81"/>
+ <Record type="HKQuantityTypeIdentifierBodyFatPercentage" sourceName="Health Planet" unit="%" startDate="2026-10-14 07:10:00 +0900" value="0.151"/>
+ <Record type="HKQuantityTypeIdentifierStepCount" unit="count" startDate="2026-10-14 08:00:00 +0900" value="120"/>
+ <Record type="HKQuantityTypeIdentifierBodyMass" unit="lb" startDate="2026-10-15 07:00:00 +0900" value="176"/>
+ <Record type="HKQuantityTypeIdentifierWaistCircumference" unit="in" startDate="2026-10-15 07:00:00 +0900" value="32"/>
+</HealthData>`;
+
+/** 1ファイルだけの zip を作る（CRC は読み取り側で見ないので 0） */
+async function makeZip(name: string, text: string): Promise<Uint8Array> {
+  const raw = new TextEncoder().encode(text);
+  const data = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+  const nameBytes = new TextEncoder().encode(name);
+  const header = (size: number, fill: (v: DataView) => void) => {
+    const b = new Uint8Array(size);
+    fill(new DataView(b.buffer));
+    return b;
+  };
+  const local = header(30, (v) => {
+    v.setUint32(0, 0x04034b50, true);
+    v.setUint16(8, 8, true);
+    v.setUint32(18, data.length, true);
+    v.setUint32(22, raw.length, true);
+    v.setUint16(26, nameBytes.length, true);
+  });
+  const central = header(46, (v) => {
+    v.setUint32(0, 0x02014b50, true);
+    v.setUint16(10, 8, true);
+    v.setUint32(20, data.length, true);
+    v.setUint32(24, raw.length, true);
+    v.setUint16(28, nameBytes.length, true);
+  });
+  const eocd = header(22, (v) => {
+    v.setUint32(0, 0x06054b50, true);
+    v.setUint16(8, 1, true);
+    v.setUint16(10, 1, true);
+    v.setUint32(12, 46 + nameBytes.length, true);
+    v.setUint32(16, 30 + nameBytes.length + data.length, true);
+  });
+  return new Uint8Array(await new Blob([local, nameBytes, data, central, nameBytes, eocd]).arrayBuffer());
+}
+
+describe('health export', () => {
+  it('parses a record tag with unit conversion', () => {
+    expect(parseRecordTag('<Record type="HKQuantityTypeIdentifierBodyMass" unit="lb" startDate="2026-10-15 07:00:00 +0900" value="176"/>')).toEqual({
+      dateTime: '2026-10-15 07:00',
+      field: 'weightKg',
+      value: 79.83,
+    });
+    expect(parseRecordTag('<Record type="HKQuantityTypeIdentifierStepCount" value="1"/>')).toBeNull();
+  });
+
+  it('scans across chunk boundaries and keeps the morning value', async () => {
+    async function* chunks() {
+      for (let i = 0; i < XML.length; i += 37) yield XML.slice(i, i + 37);
+    }
+    const rows = await scanRecords(chunks());
+    expect(rows).toHaveLength(5);
+    expect(rowsToRecords(rows).records).toEqual([
+      { date: '2026-10-14', weightKg: 80.2, bodyFatPct: 15.1 },
+      { date: '2026-10-15', weightKg: 79.83, waistCm: 81.28 },
+    ]);
+  });
+
+  it('reads export.zip with a Japanese file name', async () => {
+    const zip = await makeZip('apple_health_export/書き出したデータ.xml', XML);
+    const file = new File([zip], 'export.zip');
+    const entry = pickExportXml(await listZip(file));
+    expect(entry?.name).toBe('apple_health_export/書き出したデータ.xml');
+    const result = await readHealthExport(file);
+    expect(result.rows).toBe(5);
+    expect(result.records).toHaveLength(2);
   });
 });
