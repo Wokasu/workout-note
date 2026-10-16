@@ -4,6 +4,7 @@ import { PRESET_FOODS } from '../lib/foods';
 import { kcalOf, scaleMacros, sumMacros } from '../lib/macros';
 import { addDays, formatJa } from '../lib/date';
 import { MacroBars } from './MacroBars';
+import { TextEntry } from './TextEntry';
 
 const SLOTS = [1, 2, 3, 4, 5, 6];
 
@@ -27,7 +28,7 @@ function pfc(m: Macros): string {
 export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood, onRemoveFood }: Props) {
   const [date, setDate] = useState(today);
   const [slot, setSlot] = useState(1);
-  const [mode, setMode] = useState<'pick' | 'manual'>('pick');
+  const [mode, setMode] = useState<'text' | 'pick' | 'manual'>('text');
 
   const dayLogs = useMemo(() => logs.filter((l) => l.date === date), [logs, date]);
   const eaten = sumMacros(dayLogs);
@@ -92,6 +93,9 @@ export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood
         )}
 
         <div className="seg">
+          <button type="button" className={mode === 'text' ? 'on' : ''} onClick={() => setMode('text')}>
+            文章で入力
+          </button>
           <button type="button" className={mode === 'pick' ? 'on' : ''} onClick={() => setMode('pick')}>
             食品から選ぶ
           </button>
@@ -99,7 +103,9 @@ export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood
             PFC を直接入力
           </button>
         </div>
-        {mode === 'pick' ? (
+        {mode === 'text' ? (
+          <TextEntry myFoods={myFoods} onAdd={(items) => onAdd(items.map((i) => ({ date, slot, ...i })))} onAddFood={onAddFood} />
+        ) : mode === 'pick' ? (
           <FoodPicker myFoods={myFoods} onPick={addOne} onRemoveFood={onRemoveFood} />
         ) : (
           <ManualEntry onAdd={addOne} onAddFood={onAddFood} />

@@ -788,3 +788,68 @@ label.file input {
 .target-editor {
   margin-top: 12px;
 }
+
+/* 文章で入力 */
+textarea {
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 100%;
+  resize: vertical;
+  line-height: 1.5;
+}
+textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.parsed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.parsed-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+}
+.parsed-item.off {
+  opacity: 0.5;
+}
+.parsed-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.parsed-top input[type='checkbox'] {
+  width: auto;
+}
+.parsed-top input:not([type]) {
+  padding: 6px 8px;
+  font-weight: 700;
+  background: var(--card);
+}
+.parsed-macros {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.parsed-macros input {
+  padding: 6px 4px 6px 6px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  background: var(--card);
+}
+.parsed-note {
+  font-size: 12px;
+}
+label.check.small {
+  font-size: 13px;
+}
