@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { BodyRecord, Macros, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import type { Rate } from '../lib/analysis';
@@ -51,14 +51,31 @@ function bulkPaceStatus(rate: Rate | null, t: Targets, gainKgPerMonth: number): 
 }
 
 export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, todayBody, onSaveWeight, onGoMeals }: Props) {
-  const [kg, setKg] = useState(todayBody?.weightKg !== undefined ? String(todayBody.weightKg) : '');
+  const savedKg = todayBody?.weightKg;
+  const [kg, setKg] = useState(savedKg !== undefined ? String(savedKg) : '');
+  const [edited, setEdited] = useState(false);
+  const [message, setMessage] = useState<{ cls: string; text: string } | null>(null);
+  // 保存領域や取り込みで今日の体重が後から入ったときも、入力中でなければ欄に反映する
+  useEffect(() => {
+    if (!edited) setKg(savedKg !== undefined ? String(savedKg) : '');
+  }, [savedKg, edited]);
+  const parsed = Number(kg.replace(/[０-９．]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0)).replace(',', '.'));
+  const unchanged = savedKg !== undefined && parsed === savedKg;
   const weeks = Math.floor(t.daysLeft / 7);
   const status = paceStatus(rate, t, profile.maxWeeklyLossPct);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const v = Number(kg);
-    if (v >= 25 && v <= 250) onSaveWeight(Math.round(v * 10) / 10);
+    if (!(parsed >= 25 && parsed <= 250)) {
+      setMessage({ cls: 'warn', text: '体重は 25〜250 の数値で入れてください（例：78.6）' });
+      return;
+    }
+    const v = Math.round(parsed * 10) / 10;
+    onSaveWeight(v);
+    setKg(String(v));
+    setEdited(false);
+    const time = new Date().toTimeString().slice(0, 5);
+    setMessage({ cls: 'ok', text: `${formatJa(today)} の体重 ${v.toFixed(1)} kg を保存しました（${time}）` });
   };
 
   return (
@@ -113,19 +130,27 @@ export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, today
           <label className="grow">
             体重 (kg)
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              step="0.1"
               value={kg}
-              onChange={(e) => setKg(e.target.value)}
+              onChange={(e) => {
+                setKg(e.target.value);
+                setEdited(true);
+                setMessage(null);
+              }}
               placeholder={String(t.currentKg)}
             />
           </label>
-          <button type="submit" className="primary" disabled={kg === ''}>
-            {todayBody?.weightKg !== undefined ? '更新' : '記録'}
+          <button type="submit" className="primary" disabled={kg === '' || (unchanged && !edited)}>
+            {savedKg === undefined ? '記録' : unchanged && !edited ? '記録済み' : '更新'}
           </button>
         </div>
-        <p className="muted">体組成計のデータは「身体」タブから CSV でまとめて取り込めます。</p>
+        {message ? (
+          <p className={`status ${message.cls}`}>{message.text}</p>
+        ) : (
+          savedKg !== undefined && <p className="muted">今日の記録：{savedKg.toFixed(1)} kg。測り直したら数字を変えて「更新」を押してください。</p>
+        )}
+        <p className="muted">ヘルスケアや体組成計のデータは「身体」タブからまとめて取り込めます。</p>
       </form>
 
       {t.bulk ? (
