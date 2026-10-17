@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import type { BodyField, BodyRecord, FoodLog, Profile } from '../types';
 import { bodyFatSeries, leanSeries, navySeries } from '../lib/navy';
-import { movingAverage, seriesOf, weeklySummary, type Point } from '../lib/analysis';
+import { MAINTENANCE_WINDOW_DAYS, movingAverage, seriesOf, weeklySummary, type Point } from '../lib/analysis';
 import { FIELD_BY_KEY, FIELD_DEFS, formatValue } from '../lib/fields';
 import { addDays, formatJa } from '../lib/date';
 import { Chart } from './Chart';
+import type { Targets } from '../lib/nutrition';
 
 interface Props {
   profile: Profile;
+  targets: Targets;
   /** 減量期の目標体重（増量期は計画線を出さないので null） */
   targetWeightKg: number | null;
   body: BodyRecord[];
@@ -31,7 +33,7 @@ function fmtChange(v: number | null, unit: string): string {
   return `${v > 0 ? '+' : ''}${v}${unit}`;
 }
 
-export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) {
+export function Analysis({ profile, targetWeightKg, body, logs, today, targets }: Props) {
   const navy = useMemo(() => navySeries(body, profile), [body, profile]);
   const lean = useMemo(() => leanSeries(body, bodyFatSeries(body, profile, profile.bodyFatSource).points), [body, profile]);
   const available: { key: Metric; label: string }[] = [
@@ -107,6 +109,8 @@ export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) 
         )}
       </section>
 
+      <MaintenanceCard targets={targets} profile={profile} today={today} />
+
       <section className="card">
         <h3>週ごとのまとめ</h3>
         {weeks.length === 0 ? (
@@ -152,5 +156,73 @@ export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) 
         </p>
       </section>
     </div>
+  );
+}
+
+/** 維持カロリーの推移：毎週の記録から出した値（点）と、それをならした推定値（線） */
+function MaintenanceCard({ targets: t, profile, today }: { targets: Targets; profile: Profile; today: string }) {
+  const h = t.maintenance.history;
+  const weekly = h.filter((x) => x.observed !== null).map((x) => ({ date: x.date, value: x.observed! }));
+  const line = h.map((x) => ({ date: x.date, value: x.tdee }));
+  const recent = [...h].reverse().slice(0, 6);
+  return (
+    <section className="card">
+      <h3>維持カロリーの推移</h3>
+      {t.maintenance.updates === 0 ? (
+        <p className="muted">
+          食事と体重を2週間ほど記録すると、その間の平均摂取と体重の変化から維持カロリーを計算し、毎週更新していきます。今は計算式の値（{t.formulaTdee} kcal）を使っています。
+        </p>
+      ) : (
+        <>
+          <div className="stats">
+            <div className="stat">
+              <div className="stat-label">推定維持カロリー</div>
+              <div className="stat-value">{t.maintenance.tdee} kcal</div>
+              <div className="stat-sub">{profile.tdeeMode === 'auto' ? '目標カロリーの計算に使用中' : '設定で「計算式のみ」のため参考'}</div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">計算式の値</div>
+              <div className="stat-value">{t.formulaTdee} kcal</div>
+              <div className="stat-sub">
+                差 {t.maintenance.tdee - t.formulaTdee >= 0 ? '+' : ''}
+                {t.maintenance.tdee - t.formulaTdee} kcal
+              </div>
+            </div>
+          </div>
+          <Chart
+            points={weekly}
+            average={line}
+            lines={[{ value: t.formulaTdee, label: '計算式', cls: 'contest' }]}
+            from={line[0]?.date ?? addDays(today, -28)}
+            to={today}
+            digits={0}
+            label="維持カロリーの推移"
+          />
+          <div className="legend">
+            <span className="lg dot">その週の記録から計算した値</span>
+            <span className="lg avg">推定維持カロリー</span>
+          </div>
+          <ul className="kv">
+            {recent.map((x) => (
+              <li key={x.date + x.kind}>
+                <span>
+                  {formatJa(x.date)}
+                  {x.kind === 'calibration' ? ' 確認期間' : ''}
+                </span>
+                <span>
+                  {x.tdee} kcal{' '}
+                  <small>
+                    {x.kind === 'calibration' ? '確認期間の実測に合わせ直し' : x.observed !== null ? `その週の計算値 ${x.observed}` : '記録が足りず更新なし'}
+                  </small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="muted">
+        毎週、直近{MAINTENANCE_WINDOW_DAYS}日の「平均摂取 ＋ 体重（7日平均）の変化」から維持カロリーを計算し、推定値をその値へ30%ずつ近づけます。体重は水分でぶれるので、1回の更新では最大±150kcalまでしか動かしません。食事を6割以上記録した週だけ使います。
+      </p>
+    </section>
   );
 }

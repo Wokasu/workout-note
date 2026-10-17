@@ -149,7 +149,7 @@ export function App() {
             onSetTarget={(kg) => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, targetWeightKg: kg } }))}
           />
         )}
-        {tab === 'analysis' && <Analysis profile={profile} targetWeightKg={profile.phase === 'cut' ? targets.targetWeightKg : null} body={body} logs={logs} today={today} />}
+        {tab === 'analysis' && <Analysis profile={profile} targets={targets} targetWeightKg={profile.phase === 'cut' ? targets.targetWeightKg : null} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
           <Settings data={data} sync={sync} today={today} currentKg={targets.currentKg} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}

@@ -2,7 +2,8 @@ import type { BodyRecord, Macros, Profile, Sex } from '../types';
 import {
   KCAL_PER_KG,
   calibratedTdee,
-  estimateTdee,
+  maintenanceEstimate,
+  type MaintenanceEstimate,
   movingAverage,
   seriesOf,
   valueAtOrBefore,
@@ -40,9 +41,11 @@ export interface Targets extends Macros {
   targetWeightKg: number;
   bmr: number;
   formulaTdee: number;
-  estimate: TdeeEstimate | null;
+  /** 記録から毎週更新している推定維持カロリー */
+  maintenance: MaintenanceEstimate;
   tdee: number;
-  tdeeSource: 'formula' | 'estimate' | 'calibration';
+  /** adaptive：記録から更新した推定値、formula：計算式（記録がまだない、または設定で計算式のみ） */
+  tdeeSource: 'formula' | 'adaptive';
   /** キャリブレーション期間（減量前に維持カロリーで食べる期間）。設定がなければ null */
   calibration: {
     start: string;
@@ -101,7 +104,6 @@ export function calcTargets(
 
   const bmr = leanKg !== null ? bmrKatch(leanKg) : bmrMifflin(profile.sex, currentKg, profile.heightCm, profile.age);
   const formulaTdee = Math.round(bmr * profile.activityFactor);
-  const estimate = estimateTdee(weights, intake, today);
   const bulk = profile.phase === 'bulk' ? bulkStatus(profile, body, currentKg, today, leanKg) : null;
 
   // 減量の前に維持カロリーで食べる期間（コンテスト減量は開始日から、増量期は上限に届いたとき）
@@ -111,11 +113,11 @@ export function calcTargets(
       ? { start: profile.prepStartDate, end: addDays(profile.prepStartDate, profile.calibrationDays) }
       : null;
   const calibrating = bulk ? bulk.state === 'calibrate' : !!window && today >= window.start && today < window.end;
-  // 期間が終わってから4週間は、その期間で実測した維持カロリーを基準にする
   const calResult = window && today >= window.end && today < addDays(window.end, 28) ? calibratedTdee(weights, intake, window.start, window.end) : null;
-  const tdeeSource: Targets['tdeeSource'] =
-    profile.tdeeMode !== 'auto' ? 'formula' : calResult ? 'calibration' : estimate ? 'estimate' : 'formula';
-  const tdee = tdeeSource === 'calibration' ? calResult!.tdee : tdeeSource === 'estimate' ? estimate!.tdee : formulaTdee;
+  // 計算式から始めて、記録から毎週更新する（確認期間が終わったらその実測値に合わせ直す）
+  const maintenance = maintenanceEstimate(weights, intake, today, formulaTdee, window && window.end <= today ? [window] : []);
+  const tdeeSource: Targets['tdeeSource'] = profile.tdeeMode === 'auto' && maintenance.updates > 0 ? 'adaptive' : 'formula';
+  const tdee = tdeeSource === 'adaptive' ? maintenance.tdee : formulaTdee;
 
   const daysLeft = Math.max(0, daysBetween(today, profile.contestDate));
   // 減量に使える日数（キャリブレーション中は、その残りを除く）
@@ -144,7 +146,7 @@ export function calcTargets(
     targetWeightKg,
     bmr,
     formulaTdee,
-    estimate,
+    maintenance,
     tdee,
     tdeeSource,
     calibration: window

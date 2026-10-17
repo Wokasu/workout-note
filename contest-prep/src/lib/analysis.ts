@@ -138,6 +138,101 @@ export function calibratedTdee(weights: Point[], intake: Map<string, number>, st
   return { tdee: Math.round(tdee), avgIntake: Math.round(avgIntake), days: span, loggedDays };
 }
 
+/** 決まった期間の「平均摂取 ＋ 体重（7日平均）の変化」から出した維持カロリー。記録が6割未満なら null */
+function windowTdee(ma: Point[], intake: Map<string, number>, start: string, end: string): number | null {
+  const a = valueAtOrBefore(ma, start);
+  const b = valueAtOrBefore(ma, end);
+  if (!a || !b || a.date < addDays(start, -3) || b.date < addDays(end, -3)) return null;
+  const days = daysBetween(a.date, b.date);
+  if (days < 7) return null;
+  let total = 0;
+  let logged = 0;
+  for (let d = addDays(start, 1); d <= end; d = addDays(d, 1)) {
+    const k = intake.get(d);
+    if (k !== undefined && k > 0) {
+      total += k;
+      logged++;
+    }
+  }
+  if (logged < daysBetween(start, end) * 0.6) return null;
+  return total / logged + ((a.value - b.value) * KCAL_PER_KG) / days;
+}
+
+export interface MaintenanceStep {
+  /** この日までの記録で更新した */
+  date: string;
+  /** 更新後の推定維持カロリー */
+  tdee: number;
+  /** その週に記録から計算した値（記録不足なら null） */
+  observed: number | null;
+  /** week：毎週の更新、calibration：確認期間の実測で合わせ直した */
+  kind: 'week' | 'calibration';
+}
+
+export interface MaintenanceEstimate {
+  tdee: number;
+  /** 記録から更新できた週の数（確認期間を含む） */
+  updates: number;
+  /** 最後に更新した日（一度も更新していなければ null） */
+  lastUpdate: string | null;
+  history: MaintenanceStep[];
+}
+
+export const MAINTENANCE_WINDOW_DAYS = 14;
+const SMOOTHING = 0.3;
+const MAX_STEP_KCAL = 500;
+
+/**
+ * 推定維持カロリーを毎週更新する。
+ * 計算式の値から始めて、毎週「直近14日の平均摂取 ＋ 体重（7日平均）の変化」で出した値へ30%ずつ近づける。
+ * 体重は水分でぶれるので、1回の更新では ±500kcal を超えて動かさない。
+ * 確認期間（維持カロリーで食べた期間）が終わった週は、その期間で測った値に合わせ直す。
+ */
+export function maintenanceEstimate(
+  weights: Point[],
+  intake: Map<string, number>,
+  today: string,
+  prior: number,
+  calibrations: { start: string; end: string }[] = [],
+  maxDays = 182,
+): MaintenanceEstimate {
+  const ma = movingAverage(weights);
+  const logged = [...intake.entries()].filter(([, k]) => k > 0).map(([d]) => d).sort();
+  const firstLog = logged.find((d) => d >= addDays(today, -maxDays));
+  const history: MaintenanceStep[] = [];
+  let tdee = prior;
+  let updates = 0;
+  if (!firstLog) return { tdee: Math.round(prior), updates: 0, lastUpdate: null, history };
+
+  // 今日の食事は途中なので、昨日を最後の週の終わりにして7日ずつさかのぼる
+  const ends: string[] = [];
+  for (let end = addDays(today, -1); daysBetween(firstLog, end) >= MAINTENANCE_WINDOW_DAYS - 1; end = addDays(end, -7)) ends.unshift(end);
+
+  let prev = addDays(firstLog, -1);
+  for (const end of ends) {
+    for (const c of calibrations) {
+      if (c.end > prev && addDays(c.end, -1) <= end) {
+        const r = calibratedTdee(weights, intake, c.start, c.end);
+        if (r) {
+          tdee = r.tdee;
+          updates++;
+          history.push({ date: addDays(c.end, -1), tdee: r.tdee, observed: r.tdee, kind: 'calibration' });
+        }
+      }
+    }
+    const observed = windowTdee(ma, intake, addDays(end, -MAINTENANCE_WINDOW_DAYS), end);
+    if (observed !== null) {
+      const clipped = Math.max(tdee - MAX_STEP_KCAL, Math.min(tdee + MAX_STEP_KCAL, observed));
+      tdee += SMOOTHING * (clipped - tdee);
+      updates++;
+    }
+    history.push({ date: end, tdee: Math.round(tdee), observed: observed === null ? null : Math.round(observed), kind: 'week' });
+    prev = end;
+  }
+  const last = [...history].reverse().find((h) => h.observed !== null);
+  return { tdee: Math.round(tdee), updates, lastUpdate: last?.date ?? null, history };
+}
+
 /** その日が属する週の月曜日 */
 export function mondayOf(date: string): string {
   const [y, m, d] = date.split('-').map(Number);

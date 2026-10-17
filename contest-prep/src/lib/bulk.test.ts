@@ -221,8 +221,11 @@ describe('calibration in calcTargets', () => {
     const intake = new Map(Array.from({ length: 14 }, (_, i) => [addDays('2026-10-01', i), 2600] as [string, number]));
     const t = calcTargets(cut, body, intake, '2026-10-18');
     expect(t.calibration?.active).toBe(false);
-    expect(t.tdeeSource).toBe('calibration');
-    expect(t.calibration?.result?.tdee).toBe(t.tdee);
+    expect(t.tdeeSource).toBe('adaptive');
+    // 確認期間の実測値に合わせ直している
+    const step = t.maintenance.history.find((h) => h.kind === 'calibration')!;
+    expect(step.tdee).toBe(t.calibration?.result?.tdee);
+    expect(step.date).toBe('2026-10-14');
     expect(t.tdee).toBeGreaterThan(2700);
     expect(t.tdee).toBeLessThan(2800);
     expect(t.deficit).toBeGreaterThan(0);

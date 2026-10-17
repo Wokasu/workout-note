@@ -197,23 +197,32 @@ export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, today
             </span>
           </li>
           <li>
-            <span>消費カロリー</span>
+            <span>維持カロリー</span>
             <span>
               {t.tdee} kcal{' '}
               <small>
-                {t.tdeeSource === 'calibration'
-                  ? `確認期間（${formatJa(t.calibration!.start)}〜）の実測`
-                  : t.tdeeSource === 'estimate'
-                    ? `直近${t.estimate!.days}日の記録から推定`
-                    : `計算式（×${profile.activityFactor}）`}
+                {t.tdeeSource === 'adaptive'
+                  ? `記録から毎週更新（${t.maintenance.updates}回・最終 ${formatJa(t.maintenance.lastUpdate!)}）`
+                  : `計算式（×${profile.activityFactor}）`}
               </small>
             </span>
           </li>
-          {t.estimate && t.tdeeSource === 'formula' && (
+          {t.tdeeSource === 'adaptive' ? (
             <li>
-              <span>記録からの推定</span>
-              <span>{t.estimate.tdee} kcal</span>
+              <span>計算式の値</span>
+              <span>
+                {t.formulaTdee} kcal <small>推定との差 {t.tdee - t.formulaTdee >= 0 ? '+' : ''}{t.tdee - t.formulaTdee}</small>
+              </span>
             </li>
+          ) : (
+            profile.tdeeMode === 'auto' && (
+              <li>
+                <span>記録からの推定</span>
+                <span>
+                  <small>食事と体重を2週間ほど記録すると、毎週更新が始まります</small>
+                </span>
+              </li>
+            )
           )}
           {t.calibration?.active ? (
             <li>

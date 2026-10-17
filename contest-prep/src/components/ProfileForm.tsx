@@ -443,7 +443,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         </label>
         <p className="muted">筋量を守るには週0.5〜1.0%が目安。炭水化物は残りのカロリーで決まります。</p>
 
-        <div className="label">消費カロリーの決め方</div>
+        <div className="label">維持カロリーの決め方</div>
         <div className="seg">
           <button type="button" className={tdeeMode === 'auto' ? 'on' : ''} onClick={() => setTdeeMode('auto')}>
             記録から推定
@@ -453,7 +453,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
           </button>
         </div>
         <p className="muted">
-          「記録から推定」は、食事を7割以上記録した2〜3週間分のデータがたまると、実際の体重の減り方から消費カロリーを逆算して使います。
+          「記録から推定」は、計算式の値から始めて、毎週の食事量と体重の増減から維持カロリーを計算し直し、少しずつ実際の値に合わせていきます（減量中・増量中どちらでも）。確認期間が終わったときは、その実測値に合わせ直します。
         </p>
 
         <label className="check">

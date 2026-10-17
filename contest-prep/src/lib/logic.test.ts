@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyRecord, FoodLog, Profile } from '../types';
-import { estimateTdee, mondayOf, movingAverage, recentRate, seriesOf, weeklySummary } from './analysis';
+import { estimateTdee, maintenanceEstimate, mondayOf, movingAverage, recentRate, seriesOf, weeklySummary } from './analysis';
 import { addDays } from './date';
 import { applyMapping, autoMap, decodeText, mergeBody, parseDateTime, prepareImport } from './importer';
 import { kcalOf, scaleMacros } from './macros';
@@ -148,10 +148,14 @@ describe('calcTargets', () => {
     expect(t.bmr).toBe(1839);
   });
 
-  it('switches to the estimate in auto mode', () => {
+  it('moves from the formula toward the logged maintenance in auto mode', () => {
+    // 実際の維持は 2760kcal、計算式は 2682kcal
     const body = weightsFrom('2026-10-01', 40, 80, -0.05);
     const intake = new Map(logsFrom('2026-10-01', 40, 2400).map((l) => [l.date, kcalOf(l)]));
-    expect(calcTargets(profile, body, intake, '2026-11-09').tdee).toBe(2760);
+    const t = calcTargets(profile, body, intake, '2026-11-09');
+    expect(t.tdeeSource).toBe('adaptive');
+    expect(t.tdee).toBeGreaterThan(t.formulaTdee);
+    expect(t.tdee).toBeLessThanOrEqual(2760);
     expect(calcTargets({ ...profile, tdeeMode: 'formula' }, body, intake, '2026-11-09').tdeeSource).toBe('formula');
   });
 
@@ -380,5 +384,43 @@ describe('health export', () => {
     const result = await readHealthExport(file);
     expect(result.rows).toBe(5);
     expect(result.records).toHaveLength(2);
+  });
+});
+
+describe('maintenanceEstimate', () => {
+  // 毎日 2400kcal 食べて 1日 0.05kg ずつ減る → 実際の維持は 2760kcal
+  const days = 120;
+  const weights = seriesOf(weightsFrom('2026-06-01', days, 85, -0.05), 'weightKg');
+  const intake = new Map(logsFrom('2026-06-01', days, 2400).map((l) => [l.date, kcalOf(l)] as [string, number]));
+  const today = addDays('2026-06-01', days);
+
+  it('starts from the prior and converges on the logged maintenance week by week', () => {
+    const m = maintenanceEstimate(weights, intake, today, 2400);
+    expect(m.updates).toBeGreaterThan(10);
+    expect(Math.abs(m.tdee - 2760)).toBeLessThan(15);
+    // 更新は少しずつ（1回で最大 ±150kcal）
+    const steps = m.history.map((h) => h.tdee);
+    for (let i = 1; i < steps.length; i++) expect(Math.abs(steps[i] - steps[i - 1])).toBeLessThanOrEqual(151);
+    expect(m.lastUpdate).toBe(addDays(today, -1));
+  });
+
+  it('keeps the prior when nothing is logged', () => {
+    const m = maintenanceEstimate(weights, new Map(), today, 2500);
+    expect(m).toMatchObject({ tdee: 2500, updates: 0, lastUpdate: null });
+  });
+
+  it('skips weeks with too few meals logged', () => {
+    const sparse = new Map([...intake].filter(([d]) => d < '2026-07-15' || d > '2026-08-20' || d.endsWith('5')));
+    const m = maintenanceEstimate(weights, sparse, today, 2400);
+    const gap = m.history.filter((h) => h.date > '2026-08-01' && h.date < '2026-08-20');
+    expect(gap.length).toBeGreaterThan(0);
+    for (const h of gap) expect(h.observed).toBeNull();
+  });
+
+  it('resets to the calibration result when a calibration ends', () => {
+    const m = maintenanceEstimate(weights, intake, today, 2000, [{ start: '2026-08-01', end: '2026-08-15' }]);
+    const cal = m.history.find((h) => h.kind === 'calibration')!;
+    expect(cal.date).toBe('2026-08-14');
+    expect(Math.abs(cal.tdee - 2760)).toBeLessThan(15);
   });
 });
