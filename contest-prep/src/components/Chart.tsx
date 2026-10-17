@@ -4,8 +4,8 @@ import { formatJa } from '../lib/date';
 interface Props {
   points: Point[];
   average?: Point[];
-  /** 計画線（開始点→大会） */
-  plan?: [Point, Point];
+  /** 計画線（開始→確認期間の終わり→大会） */
+  plan?: Point[];
   /** これからの見込み（点線） */
   projection?: Point[];
   /** 上限などの水平線 */
@@ -51,10 +51,10 @@ export function Chart({ points, average, plan, projection, lines, from, to, digi
           </text>
         </g>
       ))}
-      {plan && (
-        <line x1={x(plan[0].date)} y1={y(plan[0].value)} x2={x(plan[1].date)} y2={y(plan[1].value)} className="plan-line">
+      {plan && plan.length > 1 && (
+        <path d={path(plan)} className="plan-line">
           <title>計画線</title>
-        </line>
+        </path>
       )}
       {lines?.map((l) => (
         <g key={l.label}>

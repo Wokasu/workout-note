@@ -23,7 +23,8 @@ export function defaultBulkSettings(sex: Sex, today: string): BulkSettings {
   };
 }
 
-export type BulkState = 'bulk' | 'minicut';
+/** 増量中・維持カロリーの確認中（プチダイエット前）・プチダイエット中 */
+export type BulkState = 'bulk' | 'calibrate' | 'minicut';
 
 export interface BulkLimits {
   leanKg: number;
@@ -62,6 +63,8 @@ export interface BulkStatus {
   adjustKcal: number;
   /** 上限までの残り（kg） */
   roomKg: number | null;
+  /** 一番新しいキャリブレーション期間（終わっていなければ end は予定日） */
+  calibration: { start: string; end: string } | null;
 }
 
 /**
@@ -69,7 +72,7 @@ export interface BulkStatus {
  * 上限はその日までにわかっている除脂肪体重で計算する（筋肉が増えれば上限も上がる）。
  */
 export function bulkStatus(
-  profile: Pick<Profile, 'sex' | 'heightCm' | 'bodyFatSource' | 'bulk'>,
+  profile: Pick<Profile, 'sex' | 'heightCm' | 'bodyFatSource' | 'bulk' | 'calibrationDays'>,
   body: BodyRecord[],
   currentKg: number,
   today: string,
@@ -83,20 +86,32 @@ export function bulkStatus(
     return l ? bulkLimits(l.value, s) : null;
   };
 
+  const cal = profile.calibrationDays;
   let state: BulkState = 'bulk';
   let since = s.startDate;
+  let calibration: BulkStatus['calibration'] = null;
+  // 上限に届いたら、キャリブレーション（あれば）→ プチダイエット → 戻す線で増量に戻る
+  const finishCalibration = (date: string) => {
+    if (state === 'calibrate' && daysBetween(since, date) >= cal) {
+      state = 'minicut';
+      since = addDays(since, cal);
+    }
+  };
   for (const p of movingAverage(seriesOf(body, 'weightKg'))) {
     if (p.date < s.startDate || p.date > today) continue;
+    finishCalibration(p.date);
     const lim = limitsAt(p.date);
     if (!lim) continue;
     if (state === 'bulk' && p.value >= lim.ceilingKg) {
-      state = 'minicut';
+      state = cal > 0 ? 'calibrate' : 'minicut';
       since = p.date;
+      if (cal > 0) calibration = { start: p.date, end: addDays(p.date, cal) };
     } else if (state === 'minicut' && p.value <= lim.lowerKg) {
       state = 'bulk';
       since = p.date;
     }
   }
+  finishCalibration(today);
   const weeksInPhase = Math.max(0, Math.floor(daysBetween(since, today) / 7));
   const limits = leanNow !== null ? bulkLimits(leanNow, s) : limitsAt(today);
   return {
@@ -104,8 +119,9 @@ export function bulkStatus(
     since,
     weeksInPhase,
     limits,
-    adjustKcal: state === 'bulk' ? surplusFor(s, weeksInPhase) : -miniCutDeficit(s, currentKg),
+    adjustKcal: state === 'bulk' ? surplusFor(s, weeksInPhase) : state === 'calibrate' ? 0 : -miniCutDeficit(s, currentKg),
     roomKg: limits ? Math.round((limits.ceilingKg - currentKg) * 10) / 10 : null,
+    calibration,
   };
 }
 
@@ -123,6 +139,7 @@ export interface ProjectionWeek {
  */
 export function projectBulk(
   s: BulkSettings,
+  calibrationDays: number,
   status: BulkStatus,
   currentKg: number,
   tdee: number,
@@ -137,14 +154,19 @@ export function projectBulk(
   for (let day = 0; day <= weeks * 7; day++) {
     const date = addDays(today, day);
     const maintenance = tdee + kcalPerKg * (w - currentKg);
-    const adjust = state === 'bulk' ? surplusFor(s, Math.floor(daysBetween(since, date) / 7)) : -miniCutDeficit(s, w);
+    if (state === 'calibrate' && daysBetween(since, date) >= calibrationDays) {
+      state = 'minicut';
+      since = date;
+    }
+    const adjust =
+      state === 'bulk' ? surplusFor(s, Math.floor(daysBetween(since, date) / 7)) : state === 'calibrate' ? 0 : -miniCutDeficit(s, w);
     const intake = Math.round(maintenance + adjust);
     if (day % 7 === 0) out.push({ date, state, intakeKcal: intake, weightKg: Math.round(w * 10) / 10 });
     w += (intake - maintenance) / KCAL_PER_KG;
     if (status.limits) {
       if (state === 'bulk' && w >= status.limits.ceilingKg) {
-        state = 'minicut';
-        since = date;
+        state = calibrationDays > 0 ? 'calibrate' : 'minicut';
+        since = addDays(date, 1);
       } else if (state === 'minicut' && w <= status.limits.lowerKg) {
         state = 'bulk';
         since = date;

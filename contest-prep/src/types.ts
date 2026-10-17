@@ -28,6 +28,8 @@ export interface Profile {
   maxWeeklyLossPct: number;
   /** 'auto' は記録から推定した消費カロリーが出せればそちらを使う */
   tdeeMode: 'auto' | 'formula';
+  /** 減量（コンテスト減量・プチダイエット）に入る前に、維持カロリーで食べて実際の維持カロリーを測る日数（0 でなし） */
+  calibrationDays: number;
   /** コーチ等から指定された PFC を使う場合 */
   manualMacros: Macros | null;
 }

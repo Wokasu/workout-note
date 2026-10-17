@@ -35,6 +35,7 @@ type Form = Record<
   | 'proteinPerKg'
   | 'fatPct'
   | 'maxWeeklyLossPct'
+  | 'calibrationDays'
   | 'manualP'
   | 'manualF'
   | 'manualC',
@@ -72,6 +73,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
     proteinPerKg: String(initial?.proteinPerKg ?? 2.4),
     fatPct: String(initial?.fatPct ?? 20),
     maxWeeklyLossPct: String(initial?.maxWeeklyLossPct ?? 1),
+    calibrationDays: String(initial?.calibrationDays ?? 14),
     manualP: initial?.manualMacros ? String(initial.manualMacros.p) : '',
     manualF: initial?.manualMacros ? String(initial.manualMacros.f) : '',
     manualC: initial?.manualMacros ? String(initial.manualMacros.c) : '',
@@ -143,6 +145,9 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
     num('fatPct') >= 10 &&
     num('fatPct') <= 50 &&
     num('maxWeeklyLossPct') > 0 &&
+    f.calibrationDays !== '' &&
+    num('calibrationDays') >= 0 &&
+    num('calibrationDays') <= 42 &&
     manualOk;
 
   const submit = (e: React.FormEvent) => {
@@ -169,6 +174,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         proteinPerKg: num('proteinPerKg'),
         fatPct: num('fatPct'),
         maxWeeklyLossPct: num('maxWeeklyLossPct'),
+        calibrationDays: Math.round(num('calibrationDays')),
         tdeeMode,
         manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
       },
@@ -385,6 +391,14 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
           ))}
         </select>
       </label>
+      <label>
+        減量前の維持カロリー確認期間（日）
+        <input type="number" inputMode="numeric" value={f.calibrationDays} onChange={set('calibrationDays')} />
+      </label>
+      <p className="muted">
+        {bulking ? '上限に届いてプチダイエットに入る前' : '減量開始日から'}
+        、この日数は推定の維持カロリーで食べ、その間の摂取と体重の変化から実際の維持カロリーを測ります。終わったら実測値を基準に赤字を決めます。0 にすると確認期間なしですぐ減量に入ります。
+      </p>
 
       <details className="advanced" open={initial !== null}>
         <summary>栄養の設定</summary>

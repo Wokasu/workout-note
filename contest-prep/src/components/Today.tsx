@@ -20,6 +20,8 @@ interface Props {
 
 function paceStatus(rate: Rate | null, t: Targets, maxPct: number): { cls: string; text: string } {
   if (t.daysLeft === 0) return { cls: '', text: '大会おつかれさまでした' };
+  if (t.calibration?.active)
+    return { cls: '', text: '維持カロリーの確認期間です。食事を毎日記録して、体重が大きく動かないか見てください' };
   if (!rate) return { cls: '', text: '体重を2週間ほど記録すると、実際のペースを判定します' };
   const loss = -rate.kgPerWeek;
   if (-rate.pctPerWeek > maxPct * 1.2) return { cls: 'warn', text: '落ちるのが速すぎます。筋量を守るためカロリーを少し戻す検討を' };
@@ -74,6 +76,11 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
             </div>
           ) : (
             <div className="big">大会当日・終了後</div>
+          )}
+          {t.calibration?.active && (
+            <div className="cal-note">
+              減量前の維持カロリー確認期間 あと{t.calibration.daysLeft}日（{formatJa(t.calibration.end)}から減量）
+            </div>
           )}
         </section>
       )}
@@ -182,7 +189,11 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
             <span>
               {t.tdee} kcal{' '}
               <small>
-                {t.tdeeSource === 'estimate' ? `直近${t.estimate!.days}日の記録から推定` : `計算式（×${profile.activityFactor}）`}
+                {t.tdeeSource === 'calibration'
+                  ? `確認期間（${formatJa(t.calibration!.start)}〜）の実測`
+                  : t.tdeeSource === 'estimate'
+                    ? `直近${t.estimate!.days}日の記録から推定`
+                    : `計算式（×${profile.activityFactor}）`}
               </small>
             </span>
           </li>
@@ -192,7 +203,14 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
               <span>{t.estimate.tdee} kcal</span>
             </li>
           )}
-          {t.bulk && t.bulk.adjustKcal > 0 ? (
+          {t.calibration?.active ? (
+            <li>
+              <span>維持カロリーの確認中</span>
+              <span>
+                ±0 kcal <small>あと{t.calibration.daysLeft}日</small>
+              </span>
+            </li>
+          ) : t.bulk && t.bulk.adjustKcal > 0 ? (
             <li>
               <span>増量のための余剰</span>
               <span>+{t.bulk.adjustKcal} kcal</span>

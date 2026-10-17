@@ -55,10 +55,13 @@ export function Analysis({ profile, targetWeightKg, body, logs, today }: Props) 
   const periodStart = bulking ? profile.bulk.startDate : profile.prepStartDate;
   const from = range === 'prep' ? (periodStart < today ? periodStart : addDays(today, -28)) : addDays(today, -range);
   const to = range === 'prep' && !bulking && profile.contestDate > today ? profile.contestDate : today;
-  const plan: [Point, Point] | undefined =
+  // 確認期間（維持カロリーで食べる期間）は体重を保ち、その後大会まで落としていく計画線
+  const calEnd = addDays(profile.prepStartDate, profile.calibrationDays);
+  const plan: Point[] | undefined =
     metric === 'weightKg' && range === 'prep' && targetWeightKg !== null
       ? [
           { date: profile.prepStartDate, value: profile.startWeightKg },
+          ...(profile.calibrationDays > 0 && calEnd < profile.contestDate ? [{ date: calEnd, value: profile.startWeightKg }] : []),
           { date: profile.contestDate, value: targetWeightKg },
         ]
       : undefined;

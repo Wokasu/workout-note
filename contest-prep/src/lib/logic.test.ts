@@ -28,6 +28,7 @@ const profile: Profile = {
   maxWeeklyLossPct: 1,
   tdeeMode: 'auto',
   manualMacros: null,
+  calibrationDays: 0,
 };
 
 /** start から毎日 perDay kg ずつ変わる体重 */

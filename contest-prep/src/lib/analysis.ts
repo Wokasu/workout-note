@@ -110,6 +110,34 @@ export function estimateTdee(
   return { tdee: Math.round(tdee), avgIntake: Math.round(avgIntake), days, loggedDays };
 }
 
+/**
+ * キャリブレーション期間（維持カロリーで食べた期間）の結果から、実際の維持カロリーを出す。
+ * 期間の初めと終わりの体重（7日平均）の差と、期間中の平均摂取カロリーから計算する。
+ * 7日以上たっていて、食事を7割以上記録しているときだけ。
+ */
+export function calibratedTdee(weights: Point[], intake: Map<string, number>, start: string, end: string): TdeeEstimate | null {
+  const ma = movingAverage(weights);
+  const first = ma.find((p) => p.date >= start && p.date <= end);
+  const last = valueAtOrBefore(ma, end);
+  if (!first || !last || last.date < start) return null;
+  const days = daysBetween(first.date, last.date);
+  if (days < 7) return null;
+  let total = 0;
+  let loggedDays = 0;
+  for (let d = start; d < end; d = addDays(d, 1)) {
+    const k = intake.get(d);
+    if (k !== undefined && k > 0) {
+      total += k;
+      loggedDays++;
+    }
+  }
+  const span = daysBetween(start, end);
+  if (loggedDays < span * 0.7) return null;
+  const avgIntake = total / loggedDays;
+  const tdee = avgIntake + ((first.value - last.value) * KCAL_PER_KG) / days;
+  return { tdee: Math.round(tdee), avgIntake: Math.round(avgIntake), days: span, loggedDays };
+}
+
 /** その日が属する週の月曜日 */
 export function mondayOf(date: string): string {
   const [y, m, d] = date.split('-').map(Number);

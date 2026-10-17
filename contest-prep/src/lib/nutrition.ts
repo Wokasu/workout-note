@@ -1,6 +1,7 @@
 import type { BodyRecord, Macros, Profile, Sex } from '../types';
 import {
   KCAL_PER_KG,
+  calibratedTdee,
   estimateTdee,
   movingAverage,
   seriesOf,
@@ -41,7 +42,20 @@ export interface Targets extends Macros {
   formulaTdee: number;
   estimate: TdeeEstimate | null;
   tdee: number;
-  tdeeSource: 'formula' | 'estimate';
+  tdeeSource: 'formula' | 'estimate' | 'calibration';
+  /** キャリブレーション期間（減量前に維持カロリーで食べる期間）。設定がなければ null */
+  calibration: {
+    start: string;
+    end: string;
+    /** upcoming：これから、active：期間中、done：終わって4週間以内（実測値を使う）、expired：それより前 */
+    status: 'upcoming' | 'active' | 'done' | 'expired';
+    /** 今がその期間中か */
+    active: boolean;
+    /** 期間中なら残りの日数 */
+    daysLeft: number;
+    /** 期間が終わっていて、記録が足りていれば実測の維持カロリー */
+    result: TdeeEstimate | null;
+  } | null;
   daysLeft: number;
   remainingKg: number;
   /** 大会までに目標体重へ届くのに必要な週あたり減量（kg） */
@@ -88,16 +102,30 @@ export function calcTargets(
   const bmr = leanKg !== null ? bmrKatch(leanKg) : bmrMifflin(profile.sex, currentKg, profile.heightCm, profile.age);
   const formulaTdee = Math.round(bmr * profile.activityFactor);
   const estimate = estimateTdee(weights, intake, today);
-  const useEstimate = profile.tdeeMode === 'auto' && estimate !== null;
-  const tdee = useEstimate ? estimate.tdee : formulaTdee;
+  const bulk = profile.phase === 'bulk' ? bulkStatus(profile, body, currentKg, today, leanKg) : null;
+
+  // 減量の前に維持カロリーで食べる期間（コンテスト減量は開始日から、増量期は上限に届いたとき）
+  const window = bulk
+    ? bulk.calibration
+    : profile.calibrationDays > 0
+      ? { start: profile.prepStartDate, end: addDays(profile.prepStartDate, profile.calibrationDays) }
+      : null;
+  const calibrating = bulk ? bulk.state === 'calibrate' : !!window && today >= window.start && today < window.end;
+  // 期間が終わってから4週間は、その期間で実測した維持カロリーを基準にする
+  const calResult = window && today >= window.end && today < addDays(window.end, 28) ? calibratedTdee(weights, intake, window.start, window.end) : null;
+  const tdeeSource: Targets['tdeeSource'] =
+    profile.tdeeMode !== 'auto' ? 'formula' : calResult ? 'calibration' : estimate ? 'estimate' : 'formula';
+  const tdee = tdeeSource === 'calibration' ? calResult!.tdee : tdeeSource === 'estimate' ? estimate!.tdee : formulaTdee;
 
   const daysLeft = Math.max(0, daysBetween(today, profile.contestDate));
+  // 減量に使える日数（キャリブレーション中は、その残りを除く）
+  const lossStart = !bulk && window && window.end > today ? window.end : today;
+  const lossDays = Math.max(0, daysBetween(lossStart, profile.contestDate));
   const remainingKg = Math.round((currentKg - targetWeightKg) * 10) / 10;
-  const requiredKgPerWeek = daysLeft > 0 ? Math.max(0, (remainingKg / daysLeft) * 7) : 0;
+  const requiredKgPerWeek = lossDays > 0 ? Math.max(0, (remainingKg / lossDays) * 7) : 0;
   const capKgPerWeek = (currentKg * profile.maxWeeklyLossPct) / 100;
   const plannedKgPerWeek = Math.min(requiredKgPerWeek, capKgPerWeek);
-  const bulk = profile.phase === 'bulk' ? bulkStatus(profile, body, currentKg, today, leanKg) : null;
-  const deficit = bulk ? Math.max(0, -bulk.adjustKcal) : Math.round((plannedKgPerWeek * KCAL_PER_KG) / 7);
+  const deficit = calibrating ? 0 : bulk ? Math.max(0, -bulk.adjustKcal) : Math.round((plannedKgPerWeek * KCAL_PER_KG) / 7);
 
   let kcal = bulk ? tdee + bulk.adjustKcal : tdee - deficit;
   let macros = macrosFor(kcal, currentKg, profile.proteinPerKg, profile.fatPct);
@@ -118,13 +146,22 @@ export function calcTargets(
     formulaTdee,
     estimate,
     tdee,
-    tdeeSource: useEstimate ? 'estimate' : 'formula',
+    tdeeSource,
+    calibration: window
+      ? {
+          ...window,
+          status: calibrating ? 'active' : today < window.start ? 'upcoming' : today < addDays(window.end, 28) ? 'done' : 'expired',
+          active: calibrating,
+          daysLeft: calibrating ? daysBetween(today, window.end) : 0,
+          result: calResult,
+        }
+      : null,
     daysLeft,
     remainingKg,
     requiredKgPerWeek: Math.round(requiredKgPerWeek * 100) / 100,
     plannedKgPerWeek: Math.round(plannedKgPerWeek * 100) / 100,
     deficit,
-    projectedKg: Math.round((currentKg - (plannedKgPerWeek * daysLeft) / 7) * 10) / 10,
+    projectedKg: Math.round((currentKg - (plannedKgPerWeek * lossDays) / 7) * 10) / 10,
     tooFast: !bulk && requiredKgPerWeek > capKgPerWeek + 1e-9,
     belowBmr: kcal < bmr,
     manual,

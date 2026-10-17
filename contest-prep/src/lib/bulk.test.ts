@@ -23,6 +23,7 @@ const profile: Profile = {
   maxWeeklyLossPct: 1,
   tdeeMode: 'formula',
   manualMacros: null,
+  calibrationDays: 0,
 };
 
 /** 除脂肪 68kg（体重 × (1 - 体脂肪率) が 68 になるよう体脂肪率も入れる） */
@@ -83,7 +84,7 @@ describe('bulkStatus', () => {
 describe('projectBulk', () => {
   it('waves between the ceiling and the lower line', () => {
     const st = bulkStatus(profile, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
-    const weeks = projectBulk(settings, st, 79, 2800, 15.5, '2026-09-03', 52);
+    const weeks = projectBulk(settings, 0, st, 79, 2800, 15.5, '2026-09-03', 52);
     const states = weeks.map((w) => w.state);
     expect(states).toContain('minicut');
     expect(states.lastIndexOf('bulk')).toBeGreaterThan(states.indexOf('minicut'));
@@ -101,5 +102,84 @@ describe('calcTargets in bulk', () => {
     expect(t.kcal).toBe(t.tdee + 250);
     expect(t.deficit).toBe(0);
     expect(t.tooFast).toBe(false);
+  });
+});
+
+describe('calibration before a mini cut', () => {
+  const withCal: Profile = { ...profile, calibrationDays: 14 };
+  const up = Array.from({ length: 20 }, (_, i) => 80 + i * 0.1); // 9/1〜9/20、9/16ごろ7日平均が上限81.6を超える
+  const flat = Array.from({ length: 30 }, () => 82);
+
+  it('eats at maintenance for 14 days after hitting the ceiling, then mini cuts', () => {
+    const body = days('2026-09-01', [...up, ...flat]);
+    const during = bulkStatus(withCal, body, 82, '2026-09-25');
+    expect(during.state).toBe('calibrate');
+    expect(during.adjustKcal).toBe(0);
+    const start = during.calibration!.start;
+    expect(during.calibration!.end).toBe(addDays(start, 14));
+    const after = bulkStatus(withCal, body, 82, addDays(start, 15));
+    expect(after.state).toBe('minicut');
+    expect(after.since).toBe(addDays(start, 14));
+    expect(after.adjustKcal).toBeLessThan(0);
+  });
+
+  it('projects bulk → calibrate → minicut → bulk', () => {
+    const st = bulkStatus(withCal, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
+    const weeks = projectBulk(settings, 14, st, 79, 2800, 15.5, '2026-09-03', 52);
+    const order = weeks.map((w) => w.state).filter((s, i, a) => i === 0 || s !== a[i - 1]);
+    expect(order.slice(0, 4)).toEqual(['bulk', 'calibrate', 'minicut', 'bulk']);
+    const cal = weeks.find((w) => w.state === 'calibrate')!;
+    expect(cal.intakeKcal).toBeGreaterThan(2800); // 体重が増えたぶん維持カロリーも上がっている
+  });
+});
+
+describe('calibration in calcTargets', () => {
+  const cut: Profile = {
+    ...profile,
+    phase: 'cut',
+    calibrationDays: 14,
+    prepStartDate: '2026-10-01',
+    contestDate: '2027-01-14',
+    targetWeightKg: 72,
+    tdeeMode: 'auto',
+  };
+
+  it('has no deficit during the calibration and plans the loss after it', () => {
+    const body = days('2026-09-20', Array.from({ length: 16 }, () => 80));
+    const t = calcTargets(cut, body, new Map(), '2026-10-05');
+    expect(t.calibration).toMatchObject({ start: '2026-10-01', end: '2026-10-15', active: true, daysLeft: 10 });
+    expect(t.deficit).toBe(0);
+    expect(t.kcal).toBe(t.tdee);
+    // 8kg を 10/15〜1/14（91日）で
+    expect(t.requiredKgPerWeek).toBeCloseTo(0.62, 2);
+  });
+
+  it('uses the measured maintenance after the calibration', () => {
+    // 期間中 2600kcal 食べて 14日で 0.3kg 減った → 維持は約 2754kcal
+    const weights = Array.from({ length: 30 }, (_, i) => 80 - Math.max(0, Math.min(i - 11, 14)) * (0.3 / 14));
+    const body = days('2026-09-20', weights);
+    const intake = new Map(Array.from({ length: 14 }, (_, i) => [addDays('2026-10-01', i), 2600] as [string, number]));
+    const t = calcTargets(cut, body, intake, '2026-10-18');
+    expect(t.calibration?.active).toBe(false);
+    expect(t.tdeeSource).toBe('calibration');
+    expect(t.calibration?.result?.tdee).toBe(t.tdee);
+    expect(t.tdee).toBeGreaterThan(2700);
+    expect(t.tdee).toBeLessThan(2800);
+    expect(t.deficit).toBeGreaterThan(0);
+  });
+
+  it('reports upcoming / active / done / expired', () => {
+    const body = days('2026-09-20', [80, 80]);
+    const status = (today: string) => calcTargets(cut, body, new Map(), today).calibration?.status;
+    expect(status('2026-09-25')).toBe('upcoming');
+    expect(status('2026-10-01')).toBe('active');
+    expect(status('2026-10-15')).toBe('done');
+    expect(status('2026-11-12')).toBe('expired');
+  });
+
+  it('can be turned off', () => {
+    const t = calcTargets({ ...cut, calibrationDays: 0 }, days('2026-09-20', [80, 80]), new Map(), '2026-10-05');
+    expect(t.calibration).toBeNull();
+    expect(t.deficit).toBeGreaterThan(0);
   });
 });

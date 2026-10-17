@@ -8,9 +8,10 @@ const KEY = 'contest-prep:v1';
 export const EMPTY: AppData = { profile: null, logs: [], body: [], myFoods: [] };
 
 /** 後から増えた設定項目の初期値（古い保存データを読むときに補う） */
-const PROFILE_DEFAULTS: Pick<Profile, 'bodyFatSource' | 'phase'> = {
+const PROFILE_DEFAULTS: Pick<Profile, 'bodyFatSource' | 'phase' | 'calibrationDays'> = {
   bodyFatSource: 'auto',
   phase: 'cut',
+  calibrationDays: 14,
 };
 
 /** 以前の版にあった設定項目（目標を体脂肪率で決めるモード）を取り除く */

@@ -39,7 +39,10 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
 
   const milestones = useMemo<Milestone[]>(() => {
     const ma = movingAverage(seriesOf(body, 'weightKg'));
-    const total = Math.max(1, daysBetween(profile.prepStartDate, profile.contestDate));
+    // 確認期間は体重を保ち、その後大会まで落としていく
+    const calEnd = addDays(profile.prepStartDate, profile.calibrationDays);
+    const lossFrom = calEnd < profile.contestDate ? calEnd : profile.prepStartDate;
+    const total = Math.max(1, daysBetween(lossFrom, profile.contestDate));
     const dates: string[] = [];
     for (let d = profile.prepStartDate; d < profile.contestDate; d = addDays(d, 7)) dates.push(d);
     dates.push(profile.contestDate);
@@ -47,10 +50,10 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
       const past = date <= today;
       // 過去は開始時に立てた計画線、これからは今の体重から上限ペース内で引き直した線
       const plan = past
-        ? profile.startWeightKg + ((t.targetWeightKg - profile.startWeightKg) * daysBetween(profile.prepStartDate, date)) / total
+        ? profile.startWeightKg + ((t.targetWeightKg - profile.startWeightKg) * Math.max(0, daysBetween(lossFrom, date))) / total
         : date === profile.contestDate
           ? t.projectedKg
-          : Math.max(t.targetWeightKg, t.currentKg - (t.plannedKgPerWeek * daysBetween(today, date)) / 7);
+          : Math.max(t.targetWeightKg, t.currentKg - (t.plannedKgPerWeek * Math.max(0, daysBetween(today > lossFrom ? today : lossFrom, date))) / 7);
       const point = past ? valueAtOrBefore(ma, date) : undefined;
       const actual = point && point.date >= addDays(date, -3) ? point.value : null;
       const w = actual ?? plan;
@@ -127,6 +130,8 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
         <TargetEditor profile={profile} targets={t} onSetTarget={onSetTarget} />
       </section>
 
+      <CalibrationCard targets={t} />
+
       <NavyForm profile={profile} today={today} body={body} weightKg={t.currentKg} onSave={onSaveSizes} />
 
       <section className="card">
@@ -165,6 +170,51 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
         </p>
       </section>
     </div>
+  );
+}
+
+/** 減量前に維持カロリーで食べる期間の状態と、そこで測った維持カロリー */
+export function CalibrationCard({ targets: t }: { targets: Targets }) {
+  const c = t.calibration;
+  if (!c || c.status === 'expired') return null;
+  return (
+    <section className="card">
+      <h3>維持カロリーの確認期間</h3>
+      <p className="muted">
+        {formatJa(c.start)}〜{formatJa(addDays(c.end, -1))}（{daysBetween(c.start, c.end)}日間）
+      </p>
+      {c.status === 'upcoming' && (
+        <p className="status">減量開始日から始まります。期間中は推定の維持カロリーで食べ、食事を毎日記録してください。</p>
+      )}
+      {c.status === 'active' && (
+        <p className="status">
+          確認中 · あと{c.daysLeft}日。推定の維持カロリー {t.tdee} kcal で食べ、食事を毎日記録してください。終わったら実際の体重の動きから維持カロリーを測り、それを基準に赤字を決めます。
+        </p>
+      )}
+      {c.status === 'done' && c.result && (
+        <ul className="kv">
+          <li>
+            <span>実測の維持カロリー</span>
+            <span>
+              <b>{c.result.tdee} kcal</b>
+              <small>
+                計算式より {c.result.tdee - t.formulaTdee >= 0 ? '+' : ''}
+                {c.result.tdee - t.formulaTdee} kcal
+              </small>
+            </span>
+          </li>
+          <li>
+            <span>期間中の平均摂取</span>
+            <span>
+              {c.result.avgIntake} kcal <small>記録 {c.result.loggedDays}/{c.result.days}日</small>
+            </span>
+          </li>
+        </ul>
+      )}
+      {c.status === 'done' && !c.result && (
+        <p className="status warn">期間中の食事の記録が足りないため（7割以上必要）、維持カロリーを実測できませんでした。記録からの推定か計算式を使っています。</p>
+      )}
+    </section>
   );
 }
 

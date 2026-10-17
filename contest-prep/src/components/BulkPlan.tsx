@@ -2,11 +2,11 @@ import { useMemo } from 'react';
 import type { BodyRecord, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf } from '../lib/analysis';
-import { projectBulk, surplusFor } from '../lib/bulk';
+import { projectBulk, surplusFor, type BulkState } from '../lib/bulk';
 import { contestRange, ffmi, formatContestRange } from '../lib/navy';
 import { addDays, formatJa } from '../lib/date';
 import { Chart } from './Chart';
-import { NavyForm } from './Plan';
+import { CalibrationCard, NavyForm } from './Plan';
 
 interface Props {
   profile: Profile;
@@ -17,6 +17,13 @@ interface Props {
 }
 
 const WEEKS = 26;
+
+const STATE_LABEL: Record<BulkState, string> = { bulk: '増量', calibrate: '維持（確認）', minicut: 'プチダイエット' };
+const SWITCH_TEXT: Record<BulkState, string> = {
+  bulk: '戻す線まで下がって増量を再開',
+  calibrate: '上限に届いて維持カロリーの確認期間',
+  minicut: 'プチダイエット',
+};
 
 /** 増量期の計画：上限・戻す線と、これからの増量とプチダイエットの波 */
 export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Props) {
@@ -30,8 +37,8 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
   const average = useMemo(() => movingAverage(weights), [weights]);
   // 維持カロリーは体重 1kg あたり「10kcal × 活動係数」ずつ変わるとみる（Mifflin-St Jeor 式の傾き）
   const projection = useMemo(
-    () => projectBulk(s, st, t.currentKg, t.tdee, 10 * profile.activityFactor, today, WEEKS),
-    [s, st, t.currentKg, t.tdee, profile.activityFactor, today],
+    () => projectBulk(s, profile.calibrationDays, st, t.currentKg, t.tdee, 10 * profile.activityFactor, today, WEEKS),
+    [s, profile.calibrationDays, st, t.currentKg, t.tdee, profile.activityFactor, today],
   );
   const firstSwitch = projection.find((w, i) => i > 0 && w.state !== projection[i - 1].state);
 
@@ -52,6 +59,8 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
           </p>
         )}
       </section>
+
+      {st.calibration && <CalibrationCard targets={t} />}
 
       <section className="card">
         <h3>これから{WEEKS}週の見込み</h3>
@@ -77,8 +86,7 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
         </div>
         {firstSwitch && (
           <p className="muted">
-            このペースだと {formatJa(firstSwitch.date)} ごろに{firstSwitch.state === 'minicut' ? '上限に届いてプチダイエット' : '戻す線まで下がって増量を再開'}
-            になる見込みです。
+            このペースだと {formatJa(firstSwitch.date)} ごろに{SWITCH_TEXT[firstSwitch.state]}になる見込みです。
           </p>
         )}
         <div className="table-wrap">
@@ -95,7 +103,7 @@ export function BulkPlan({ profile, targets: t, body, today, onSaveSizes }: Prop
               {projection.slice(0, -1).map((w, i) => (
                 <tr key={w.date} className={`${w.state} ${i > 0 && w.state !== projection[i - 1].state ? 'switch' : ''}`}>
                   <td>{formatJa(w.date)}〜</td>
-                  <td>{w.state === 'bulk' ? '増量' : 'プチダイエット'}</td>
+                  <td>{STATE_LABEL[w.state]}</td>
                   <td>{w.intakeKcal} kcal</td>
                   <td>{w.weightKg.toFixed(1)}</td>
                 </tr>
@@ -122,6 +130,14 @@ export function PhaseLine({ targets: t, profile }: { targets: Targets; profile: 
       <p className="phase-line">
         <span className="pill">増量中 {st.weeksInPhase + 1}週目</span> 維持 +{st.adjustKcal} kcal/日
         {next > st.adjustKcal ? `（来週 +${next}）` : '（余剰は上限）'}
+      </p>
+    );
+  }
+  if (st.state === 'calibrate') {
+    return (
+      <p className="phase-line">
+        <span className="pill calibrate">維持カロリーの確認中</span> 維持カロリーで食べる期間 あと{t.calibration?.daysLeft ?? 0}日
+        （終わったらプチダイエット）
       </p>
     );
   }
