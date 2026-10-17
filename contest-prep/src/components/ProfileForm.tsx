@@ -118,7 +118,11 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
       bn('rampKcal') >= 0 &&
       bn('maxSurplusKcal') >= bn('startSurplusKcal') &&
       bn('miniCutPct') > 0 &&
-      bn('miniCutPct') <= 2);
+      bn('miniCutPct') <= 2 &&
+      bn('gainKgPerMonth') > 0 &&
+      bn('gainKgPerMonth') <= 5 &&
+      bn('prepPaceMinKg') > 0 &&
+      bn('prepPaceMaxKg') >= bn('prepPaceMinKg'));
   const limits = bulking && leanKg !== null && bn('stageBodyFatPct') > 0 ? bulkLimits(leanKg, { ...bulkInit, ...numericBulk() }) : null;
   function numericBulk(): BulkSettings {
     return {
@@ -130,6 +134,9 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
       rampKcal: bn('rampKcal'),
       maxSurplusKcal: bn('maxSurplusKcal'),
       miniCutPct: bn('miniCutPct'),
+      gainKgPerMonth: bn('gainKgPerMonth'),
+      prepPaceMinKg: bn('prepPaceMinKg'),
+      prepPaceMaxKg: bn('prepPaceMaxKg'),
     };
   }
   const valid =
@@ -312,6 +319,25 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
               体脂肪率がわかると、上限を計算します（上の首・ウエストを入れてください）。それまでは上限なしで増量します。
             </p>
           )}
+          <h3>ペース</h3>
+          <label>
+            増量の目標ペース（kg/月）
+            <input type="number" inputMode="decimal" step="0.1" value={b.gainKgPerMonth} onChange={setBulk('gainKgPerMonth')} />
+          </label>
+          <p className="muted">
+            余剰カロリーは毎週、直近2週間の増え方を見て調整します。目標の3/4に届かなければ増やし、1.5倍を超えたら減らし、その間なら据え置きます。
+          </p>
+          <div className="row">
+            <label className="grow">
+              大会に向けた減量（kg/月）
+              <input type="number" inputMode="decimal" step="0.5" value={b.prepPaceMinKg} onChange={setBulk('prepPaceMinKg')} />
+            </label>
+            <label className="grow">
+              〜（kg/月）
+              <input type="number" inputMode="decimal" step="0.5" value={b.prepPaceMaxKg} onChange={setBulk('prepPaceMaxKg')} />
+            </label>
+          </div>
+          <p className="muted">上の「次の大会」の日付から、このペースで落とすとしたら減量にいつ入ればよいかを計画タブに出します。</p>
           <details className="advanced">
             <summary>増量の進め方</summary>
             <label>
@@ -324,7 +350,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
                 <input type="number" inputMode="numeric" value={b.startSurplusKcal} onChange={setBulk('startSurplusKcal')} />
               </label>
               <label className="grow">
-                毎週増やす量 (kcal)
+                毎週の調整幅 (kcal)
                 <input type="number" inputMode="numeric" value={b.rampKcal} onChange={setBulk('rampKcal')} />
               </label>
               <label className="grow">
@@ -343,8 +369,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
               </label>
             </div>
             <p className="muted">
-              維持カロリーに余剰を足して増量します。余剰は「最初の余剰」から毎週少しずつ増え、体重（7日平均）が上限に達したらプチダイエットに切り替えて「上限
-              − 戻す幅」まで落とし、また最初の余剰から増量を再開します。
+              維持カロリーに余剰を足して増量します。余剰は「最初の余剰」から始め、毎週「調整幅」ずつ目標ペースに合わせて増減します（「余剰の上限」まで）。体重（7日平均）が上限に達したらプチダイエットに切り替えて「上限 − 戻す幅」まで落とし、また最初の余剰から増量を再開します。
             </p>
           </details>
         </>

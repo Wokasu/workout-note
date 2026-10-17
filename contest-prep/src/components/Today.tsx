@@ -2,12 +2,14 @@ import { useState } from 'react';
 import type { BodyRecord, Macros, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import type { Rate } from '../lib/analysis';
-import { formatJa } from '../lib/date';
+import { daysBetween, formatJa } from '../lib/date';
+import type { bulkPlanFor } from '../lib/bulk';
 import { MacroBars } from './MacroBars';
 import { PhaseLine } from './BulkPlan';
 import { contestRange, formatContestRange } from '../lib/navy';
 
 interface Props {
+  bulkPlan: ReturnType<typeof bulkPlanFor>;
   profile: Profile;
   targets: Targets;
   today: string;
@@ -30,7 +32,7 @@ function paceStatus(rate: Rate | null, t: Targets, maxPct: number): { cls: strin
   return { cls: 'ok', text: '計画どおりのペースです' };
 }
 
-function bulkPaceStatus(rate: Rate | null, t: Targets): { cls: string; text: string } {
+function bulkPaceStatus(rate: Rate | null, t: Targets, gainKgPerMonth: number): { cls: string; text: string } {
   const st = t.bulk!;
   if (!rate) return { cls: '', text: '体重を2週間ほど記録すると、実際のペースを判定します' };
   if (st.state === 'minicut') {
@@ -38,13 +40,17 @@ function bulkPaceStatus(rate: Rate | null, t: Targets): { cls: string; text: str
       ? { cls: 'ok', text: 'プチダイエットで順調に下がっています' }
       : { cls: 'warn', text: 'まだ下がっていません。摂取量を確かめてください' };
   }
-  if (rate.pctPerWeek > 0.5) return { cls: 'warn', text: '増え方が速めです（週0.5%超）。脂肪がつきやすいので余剰の上限を下げる検討を' };
-  if (rate.kgPerWeek <= 0 && st.weeksInPhase >= 2)
-    return { cls: 'warn', text: '体重が増えていません。余剰は毎週自動で増えますが、食べきれているか確かめてください' };
-  return { cls: 'ok', text: 'ゆるやかに増えています' };
+  if (st.state === 'calibrate') return { cls: '', text: '維持カロリーの確認中です。体重が大きく動かないか見ています' };
+  const perMonth = Math.round(((rate.kgPerWeek * 30.4) / 7) * 10) / 10;
+  const target = (gainKgPerMonth * 7) / 30.4;
+  if (rate.kgPerWeek > target * 1.5)
+    return { cls: 'warn', text: `月+${perMonth}kg のペースで、目標（月+${gainKgPerMonth}kg）より速めです。余剰カロリーを自動で減らしています` };
+  if (rate.kgPerWeek < target * 0.75 && st.weeksInPhase >= 2)
+    return { cls: 'warn', text: `月${perMonth >= 0 ? '+' : ''}${perMonth}kg で、目標（月+${gainKgPerMonth}kg）より遅めです。余剰を自動で増やしているので、食べきれているか確かめてください` };
+  return { cls: 'ok', text: `月+${perMonth}kg のペースで、目標（月+${gainKgPerMonth}kg）どおり増えています` };
 }
 
-export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSaveWeight, onGoMeals }: Props) {
+export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, todayBody, onSaveWeight, onGoMeals }: Props) {
   const [kg, setKg] = useState(todayBody?.weightKg !== undefined ? String(todayBody.weightKg) : '');
   const weeks = Math.floor(t.daysLeft / 7);
   const status = paceStatus(rate, t, profile.maxWeeklyLossPct);
@@ -61,6 +67,12 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
         <section className="card countdown bulk-head">
           <div className="contest">増量期（オフ）</div>
           <PhaseLine targets={t} profile={profile} />
+          {bulkPlan?.contest && (
+            <div className="cal-note">
+              大会減量の開始目安 {formatJa(bulkPlan.contest.early.date)}〜{formatJa(bulkPlan.contest.late.date)}
+              {today < bulkPlan.contest.early.date ? `（あと${Math.ceil(daysBetween(today, bulkPlan.contest.early.date) / 7)}週）` : '（減量に入る時期です）'}
+            </div>
+          )}
         </section>
       ) : (
         <section className="card countdown">
@@ -139,7 +151,7 @@ export function Today({ profile, targets: t, today, eaten, rate, todayBody, onSa
             })()}
           </div>
           {(() => {
-            const st = bulkPaceStatus(rate, t);
+            const st = bulkPaceStatus(rate, t, profile.bulk.gainKgPerMonth);
             return <p className={`status ${st.cls}`}>{st.text}</p>;
           })()}
         </section>

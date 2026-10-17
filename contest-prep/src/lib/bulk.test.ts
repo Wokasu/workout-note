@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyRecord, Profile } from '../types';
-import { bulkLimits, bulkStatus, defaultBulkSettings, miniCutDeficit, projectBulk, surplusFor } from './bulk';
+import { bulkLimits, bulkStatus, bulkSurplus, defaultBulkSettings, findPrepStart, miniCutDeficit, paceSurplus, planAhead, weeklyRows } from './bulk';
+import { seriesOf } from './analysis';
 import { addDays } from './date';
 import { calcTargets } from './nutrition';
 
@@ -36,9 +37,33 @@ describe('bulk limits', () => {
     expect(bulkLimits(68, settings)).toEqual({ leanKg: 68, contestKg: 71.6, ceilingKg: 81.6, lowerKg: 78.6 });
   });
 
-  it('ramps the surplus weekly up to the max', () => {
-    expect([0, 1, 2, 8, 20].map((w) => surplusFor(settings, w))).toEqual([100, 150, 200, 500, 500]);
+  it('knows the surplus for the target pace and the mini cut deficit', () => {
+    expect(paceSurplus(settings)).toBe(237); // 月1kg
     expect(miniCutDeficit(settings, 82)).toBe(633);
+  });
+});
+
+describe('bulkSurplus', () => {
+  const weightsOf = (perDay: number) => seriesOf(days('2026-08-01', Array.from({ length: 80 }, (_, i) => 78 + i * perDay)), 'weightKg');
+
+  it('keeps ramping while the gain is too slow, up to the max', () => {
+    expect(bulkSurplus(settings, weightsOf(0), '2026-09-01', '2026-09-22')).toEqual({ kcal: 250, move: 'up' });
+    expect(bulkSurplus(settings, weightsOf(0), '2026-09-01', '2026-10-27')).toEqual({ kcal: 500, move: 'max' });
+  });
+
+  it('holds once the gain reaches the target pace', () => {
+    // 1日0.033kg ≒ 月1kg
+    expect(bulkSurplus(settings, weightsOf(0.033), '2026-09-01', '2026-09-29')).toEqual({ kcal: 100, move: 'hold' });
+  });
+
+  it('steps down when the gain is far too fast', () => {
+    // 1日0.1kg ≒ 月3kg
+    expect(bulkSurplus(settings, weightsOf(0.1), '2026-09-01', '2026-09-15')).toEqual({ kcal: 0, move: 'down' });
+  });
+
+  it('follows a faster target pace', () => {
+    const fast = { ...settings, gainKgPerMonth: 2 };
+    expect(bulkSurplus(fast, weightsOf(0.033), '2026-09-01', '2026-09-29').move).toBe('up');
   });
 });
 
@@ -48,7 +73,9 @@ describe('bulkStatus', () => {
     const st = bulkStatus(profile, body, 78.6, '2026-09-22');
     expect(st.state).toBe('bulk');
     expect(st.weeksInPhase).toBe(3);
-    expect(st.adjustKcal).toBe(250);
+    // 1〜2週目は増え方がまだ目標に届かず +50 ずつ、3週目は目標ペース（月1kg）前後で増えているので据え置き
+    expect(st.adjustKcal).toBe(200);
+    expect(st.surplusMove).toBe('hold');
     expect(st.limits?.ceilingKg).toBeCloseTo(81.6, 0);
     expect(st.roomKg).toBeGreaterThan(2);
   });
@@ -81,16 +108,49 @@ describe('bulkStatus', () => {
   });
 });
 
-describe('projectBulk', () => {
-  it('waves between the ceiling and the lower line', () => {
-    const st = bulkStatus(profile, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
-    const weeks = projectBulk(settings, 0, st, 79, 2800, 15.5, '2026-09-03', 52);
-    const states = weeks.map((w) => w.state);
+describe('planAhead', () => {
+  const base = { s: settings, calibrationDays: 0, currentKg: 79, tdee: 2800, kcalPerKg: 15.5, today: '2026-09-03' };
+  const st = () => bulkStatus(profile, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
+
+  it('waves between the ceiling and the lower line when there is no contest', () => {
+    const { days: d, contest } = planAhead({ ...base, status: st() }, 52);
+    expect(contest).toBeNull();
+    const states = d.map((w) => w.state);
     expect(states).toContain('minicut');
     expect(states.lastIndexOf('bulk')).toBeGreaterThan(states.indexOf('minicut'));
-    for (const w of weeks) expect(w.weightKg).toBeLessThanOrEqual(81.6 + 0.2);
-    // 増量中は摂取が週ごとに増えていく
-    expect(weeks[1].intakeKcal).toBeGreaterThan(weeks[0].intakeKcal);
+    for (const w of d) expect(w.weightKg).toBeLessThanOrEqual(81.6 + 0.2);
+    // 増量中は摂取が週ごとに増えていく（目標ペースの量まで）
+    const rows = weeklyRows(d);
+    expect(rows[1].intakeKcal).toBeGreaterThan(rows[0].intakeKcal);
+  });
+
+  it('ends the bulk in time to reach the contest weight at 2-3kg a month', () => {
+    const { days: d, contest } = planAhead({ ...base, calibrationDays: 14, status: st(), contestDate: '2027-06-01', contestKg: 71.6 });
+    expect(contest).not.toBeNull();
+    const { early, late } = contest!;
+    expect(early.date < late.date).toBe(true);
+    expect(early.overdue).toBe(false);
+    // 早めの日：月2kgで、維持確認14日を除いた日数で落としきれる
+    const lossDays = (Date.parse('2027-06-01') - Date.parse(early.date)) / 86_400_000 - 14;
+    expect(early.lossKg).toBeLessThanOrEqual((2 / 30.4) * lossDays + 0.1);
+    // 見込みは 増量… → 維持確認 → 大会減量 で終わり、大会当日にコンテスト体重
+    const order = d.map((x) => x.state).filter((s, i, a) => i === 0 || s !== a[i - 1]);
+    expect(order.slice(-2)).toEqual(['prepCalibrate', 'prep']);
+    expect(d.find((x) => x.state === 'prepCalibrate')!.date).toBe(early.date);
+    expect(d.at(-1)!.date).toBe('2027-06-01');
+    expect(d.at(-1)!.weightKg).toBeCloseTo(71.6, 0);
+  });
+
+  it('is overdue when the contest is too close for the needed loss', () => {
+    const p = findPrepStart(
+      [{ date: '2026-09-03', state: 'bulk', intakeKcal: 3000, weightKg: 85 }],
+      71.6,
+      '2026-11-01',
+      14,
+      3,
+    );
+    expect(p?.overdue).toBe(true);
+    expect(p?.date).toBe('2026-09-03');
   });
 });
 
@@ -125,7 +185,7 @@ describe('calibration before a mini cut', () => {
 
   it('projects bulk → calibrate → minicut → bulk', () => {
     const st = bulkStatus(withCal, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
-    const weeks = projectBulk(settings, 14, st, 79, 2800, 15.5, '2026-09-03', 52);
+    const { days: weeks } = planAhead({ s: settings, calibrationDays: 14, status: st, currentKg: 79, tdee: 2800, kcalPerKg: 15.5, today: '2026-09-03' }, 52);
     const order = weeks.map((w) => w.state).filter((s, i, a) => i === 0 || s !== a[i - 1]);
     expect(order.slice(0, 4)).toEqual(['bulk', 'calibrate', 'minicut', 'bulk']);
     const cal = weeks.find((w) => w.state === 'calibrate')!;

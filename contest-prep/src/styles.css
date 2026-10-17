@@ -940,3 +940,43 @@ label.check.small {
   padding: 4px 12px;
   display: inline-block;
 }
+.prep-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+.prep-dates b {
+  font-size: 24px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.prep-dates small {
+  color: var(--muted);
+}
+.events li {
+  font-size: 13px;
+}
+.events li > span:first-child {
+  white-space: nowrap;
+  color: var(--muted);
+}
+.events li.minicut > span:last-child {
+  color: var(--warn);
+}
+.events li.calibrate > span:last-child,
+.events li.prepCalibrate > span:last-child {
+  color: var(--good);
+}
+.events li.prep > span:last-child {
+  color: var(--accent);
+  font-weight: 700;
+}
+.table tr.prepCalibrate td:nth-child(2) {
+  color: var(--good);
+  font-weight: 700;
+}
+.table tr.prep td:nth-child(2) {
+  color: var(--accent);
+  font-weight: 700;
+}

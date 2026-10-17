@@ -54,6 +54,11 @@ export interface BulkSettings {
   maxSurplusKcal: number;
   /** プチダイエットの減量ペース（体重の %/週） */
   miniCutPct: number;
+  /** 増量の目標ペース（kg/月）。実際の増え方を見て余剰カロリーを増やす・据え置く・減らす */
+  gainKgPerMonth: number;
+  /** 大会に向けた減量のペースの幅（kg/月）。減量に入る時期の計算に使う */
+  prepPaceMinKg: number;
+  prepPaceMaxKg: number;
 }
 
 export interface Macros {

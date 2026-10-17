@@ -12,6 +12,7 @@ import { Body } from './components/Body';
 import { Analysis } from './components/Analysis';
 import { Plan } from './components/Plan';
 import { BulkPlan } from './components/BulkPlan';
+import { bulkPlanFor } from './lib/bulk';
 import { Settings } from './components/Settings';
 import { Importer } from './components/Importer';
 import type { BodyRecord, Profile } from './types';
@@ -62,7 +63,7 @@ export function App() {
         <div className="stack">
           <Importer onImport={importBody} />
           {weights.length > 0 && <p className="muted center">{weights.length}日分の体重を取り込み済み。最新の値を今の体重に入れています。</p>}
-          {profile && <p className="status warn">目標体重の決め方が変わりました。海軍式の目安を見て、目標体重を入れ直してください。</p>}
+          {profile && <p className="status warn">大会時の目標体重を決めてください。海軍式の目安を見て入力できます。</p>}
           <ProfileForm
             key={body.length}
             initial={profile}
@@ -78,6 +79,13 @@ export function App() {
   }
 
   const targets = calcTargets(profile, body, intake, today);
+  const bulkPlan = bulkPlanFor(profile, targets, today);
+  // 増量期から大会に向けた減量へ：今日を減量開始日にして、目標体重は設定画面で決め直す
+  const switchToCut = () =>
+    setData((d) => ({
+      ...d,
+      profile: d.profile && { ...d.profile, phase: 'cut', prepStartDate: today, startWeightKg: targets.currentKg, targetWeightKg: 0 },
+    }));
   const rate = recentRate(weights, today);
   const eaten = sumMacros(logs.filter((l) => l.date === today));
 
@@ -86,6 +94,7 @@ export function App() {
       <main>
         {tab === 'today' && (
           <Today
+            bulkPlan={bulkPlan}
             profile={profile}
             targets={targets}
             today={today}
@@ -121,6 +130,8 @@ export function App() {
         )}
         {tab === 'plan' && profile.phase === 'bulk' && (
           <BulkPlan
+            plan={bulkPlan!}
+            onSwitchToCut={switchToCut}
             profile={profile}
             targets={targets}
             body={body}
