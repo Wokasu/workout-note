@@ -1,0 +1,175 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//workout-note//akb48-calendar//JA
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AKB48 奥本カイリ・渡邊きこ
+X-WR-TIMEZONE:Asia/Tokyo
+X-APPLE-CALENDAR-COLOR:#5AC8FA
+REFRESH-INTERVAL;VALUE=DURATION:PT6H
+X-PUBLISHED-TTL:PT6H
+BEGIN:VEVENT
+UID:20261018-1830--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261018T093000Z
+DTEND:20261018T113000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/\n※
+ 出演メンバーは変更になる場合があります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/
+END:VEVENT
+BEGIN:VEVENT
+UID:20261022-1300--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261022T040000Z
+DTEND:20261022T060000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/\n※
+ 出演メンバーは変更になる場合があります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/
+END:VEVENT
+BEGIN:VEVENT
+UID:20261023-1730--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261023T083000Z
+DTEND:20261023T103000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/\n※
+ 出演メンバーは変更になる場合があります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/
+END:VEVENT
+BEGIN:VEVENT
+UID:20261023-1830--e3808ce38193e38193e3818b@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261023T093000Z
+DTEND:20261023T113000Z
+SUMMARY:「ここからだ」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/\n※
+ 出演メンバーは変更になる場合があります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/
+END:VEVENT
+BEGIN:VEVENT
+UID:20261025-1300--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261025T040000Z
+DTEND:20261025T060000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489357510\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489357510
+END:VEVENT
+BEGIN:VEVENT
+UID:20261102-1830--e3808ce38193e38193e3818b@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261102T093000Z
+DTEND:20261102T113000Z
+SUMMARY:「ここからだ」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261105-1830--e3808ce38193e38193e3818b@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261105T093000Z
+DTEND:20261105T113000Z
+SUMMARY:「ここからだ」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261106-1830--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261106T093000Z
+DTEND:20261106T113000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261108-1730--e3808ce38193e38193e3818b@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261108T083000Z
+DTEND:20261108T103000Z
+SUMMARY:「ここからだ」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261113-1830--e3808ce5a4a2e381aee3839d@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261113T093000Z
+DTEND:20261113T113000Z
+SUMMARY:「夢のポップスター」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261115-1400--e58a87e5a0b4e585ace6bc94@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261115T050000Z
+DTEND:20261115T070000Z
+SUMMARY:劇場公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261123-1300--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261123T040000Z
+DTEND:20261123T060000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261126-1830--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261126T093000Z
+DTEND:20261126T113000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261130-1830--e3808ce6898be38292e381a4@akb48-calendar
+DTSTAMP:20261018T084021Z
+DTSTART:20261130T093000Z
+DTEND:20261130T113000Z
+SUMMARY:「手をつなぎながら」公演（奥本カイリ）
+DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
+ etailpage/489596266\n※出演メンバーは変更になる場合があ
+ ります
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+END:VCALENDAR
