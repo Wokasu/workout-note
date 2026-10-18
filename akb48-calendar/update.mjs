@@ -98,7 +98,7 @@ const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
 const afterStart = (s) => s.year * 10000 + s.month * 100 + s.day >= sy * 10000 + sm * 100 + sd;
 const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found])
   .filter(afterStart)
-  .map((s) => ({ ...s, applyUrl: applyUrl(s, config.zaikoSlugs ?? {}) }));
+  .map((s) => ({ ...s, applyUrl: applyUrl(s, config.zaikoUrls ?? {}) }));
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
@@ -112,11 +112,12 @@ for (const cal of config.calendars) {
   console.log(`${cal.id}.ics: ${shows.length} 件`);
 }
 
-// 申込ランチャー（Windows）が読む一覧: 今日以降の公演
+// 申込ランチャー（Windows）が読む一覧: 今日以降の公演（launcherExclude の公演は除く）
 const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).replace(/-/g, ''));
 const pad = (n) => String(n).padStart(2, '0');
 const links = events
   .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
+  .filter((s) => !(config.launcherExclude ?? []).includes(s.title))
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,

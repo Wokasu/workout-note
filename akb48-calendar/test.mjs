@@ -95,6 +95,10 @@ test('ICSは日本時間をUTCに直し、色とカレンダー名を入れる',
 
 test('申込ページのURLを日付・開演時刻・公演名から作る', () => {
   const show = { year: 2026, month: 10, day: 23, hour: 18, minute: 30, title: '「RESET」公演' };
-  assert.equal(applyUrl(show, config.zaikoSlugs), 'https://akb48.zaiko.io/ja/e/2026-reset-1023-1830');
-  assert.equal(applyUrl({ ...show, title: '「ここからだ」公演' }, {}), null);
+  const u = config.zaikoUrls;
+  assert.equal(applyUrl(show, u), 'https://akb48.zaiko.io/ja/e/2026-reset-1023-1830');
+  assert.equal(applyUrl({ ...show, day: 25, hour: 13, minute: 0, title: '「手をつなぎながら」公演' }, u), 'https://akb48.zaiko.io/ja/e/te2026-1025-1300');
+  assert.equal(applyUrl({ ...show, day: 27, title: '「ここからだ」公演' }, u), 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830');
+  assert.equal(applyUrl({ ...show, day: 31, hour: 17, title: '「夢のポップスター」公演' }, u), 'https://akb48.zaiko.io/ja/e/p2026-1031');
+  assert.equal(applyUrl({ ...show, title: '「M.T.に捧ぐ」公演' }, u), null);
 });
