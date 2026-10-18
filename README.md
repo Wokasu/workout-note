@@ -28,3 +28,45 @@ npm run build:single  # 1ファイルにまとめた dist/oshi-diet.html を作�
 React 18 + TypeScript + Vite。`dist/` は相対パスでビルドされるので、GitHub Pages などの静的ホスティングにそのまま置けます。
 
 > カロリーや体重の数値は目安です。持病のある方や体調に不安がある方は医師に相談してください。
+
+---
+
+# AKB48 劇場公演カレンダー 📅
+
+推しメンが出演する AKB48 劇場公演を、iPhone のカレンダーに自動で入れる仕組みです（`akb48-calendar/`）。
+
+| カレンダー | 対象メンバー | 色 |
+| --- | --- | --- |
+| AKB48 伊藤百花 | 伊藤百花 | 紫 |
+| AKB48 奥本カイリ・渡邊きこ | 奥本カイリ、渡邊きこ | 水色 |
+
+GitHub Actions（`.github/workflows/akb48-calendar.yml`）が3時間ごとに AKB48 公式サイトの劇場スケジュールと公演のお知らせを読み、
+推しメンの名前がある公演だけを `.ics` にして `akb48-calendar-feed` ブランチに置きます。
+iPhone はこの `.ics` を「照会するカレンダー」として購読するので、一度登録すれば後は自動で更新されます。
+
+## iPhone への登録
+
+1. 「設定」→「カレンダー」→「アカウント」→「アカウントを追加」→「その他」→「照会するカレンダーを追加」
+2. サーバに次の URL を入れて「次へ」→「保存」（2つとも登録）
+   - 伊藤百花: `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/momoka.ics`
+   - 奥本カイリ・渡邊きこ: `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/kairi-kiko.ics`
+3. カレンダーアプリ →「カレンダー」→ 各カレンダーの ⓘ で色を **紫** / **水色** に設定
+   （iPhone は購読カレンダーの色指定を無視することが多いので、ここで一度だけ設定します）
+
+更新頻度は「設定」→「カレンダー」→「アカウント」→「照会するカレンダー」から変えられます。
+
+## しくみ・注意
+
+- 推しメンが複数出る公演（例：伊藤百花と渡邊きこ）は、両方のカレンダーに入ります
+- 予定のタイトルは `「公演名」公演（出演した推しメン）`。メモに出典 URL が入ります。終了時刻は開演の2時間後で仮置き
+- 出演メンバーの変更でサイトから名前が消えると、次の更新で予定も消えます。過去の公演は残ります
+- サイトに取りに行けなかったときは前回の予定をそのまま残し、Actions を失敗にして知らせます
+- メンバーや色・読みに行くページは `akb48-calendar/config.json` で変えられます
+
+```bash
+node --test akb48-calendar/test.mjs                       # テスト
+node akb48-calendar/update.mjs --out feed --dump dump    # 手元で .ics を作る（dump/ に読み取ったテキスト）
+```
+
+公式サイトのページ構成が変わって予定が入らなくなったときは、Actions の実行結果にある `fetched-text`（サイトから読み取ったテキスト）を見て
+`akb48-calendar/lib.mjs` の読み取りルールを直してください。
