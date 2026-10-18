@@ -1,11 +1,13 @@
 {
   "sources": [
+    "https://www.akb48.co.jp/",
     "https://www.akb48.co.jp/theater",
-    "https://www.akb48.co.jp/"
+    "https://www.akb48.co.jp/news"
   ],
   "followLinkPattern": "/news/detailpage/",
-  "followLinkTextPattern": "公演",
-  "maxFollowLinks": 30,
+  "followLinkTextPattern": "公演|出演メンバー",
+  "followLinkExcludePattern": "配信",
+  "maxFollowLinks": 40,
   "durationMinutes": 120,
   "location": "AKB48劇場（ドン・キホーテ秋葉原店8F）",
   "calendars": [
@@ -14,7 +16,10 @@
       "name": "AKB48 伊藤百花",
       "color": "#AF52DE",
       "members": [
-        { "name": "伊藤百花", "aliases": [] }
+        {
+          "name": "伊藤百花",
+          "aliases": []
+        }
       ]
     },
     {
@@ -22,8 +27,19 @@
       "name": "AKB48 奥本カイリ・渡邊きこ",
       "color": "#5AC8FA",
       "members": [
-        { "name": "奥本カイリ", "aliases": [] },
-        { "name": "渡邊きこ", "aliases": ["渡辺きこ"] }
+        {
+          "name": "奥本カイリ",
+          "aliases": []
+        },
+        {
+          "name": "渡邊きこ",
+          "aliases": [
+            "渡邉葵心",
+            "渡辺きこ",
+            "渡邊葵心",
+            "渡辺葵心"
+          ]
+        }
       ]
     }
   ]

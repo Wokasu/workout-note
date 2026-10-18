@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildIcs, extractShows, htmlToLines, matchMembers, mergeShows } from './lib.mjs';
+import { buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -29,12 +29,19 @@ function collectLinks(html, baseUrl) {
   for (const m of html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     const href = new URL(m[1], baseUrl).href;
     const text = m[2].replace(/<[^>]+>/g, '');
-    if (href.includes(config.followLinkPattern) && new RegExp(config.followLinkTextPattern).test(text)) links.push(href);
+    if (
+      href.includes(config.followLinkPattern) &&
+      new RegExp(config.followLinkTextPattern).test(text) &&
+      !new RegExp(config.followLinkExcludePattern).test(text)
+    ) {
+      links.push(href);
+    }
   }
   return links;
 }
 
-const found = [];
+const schedule = [];
+const casts = [];
 let fetchedPages = 0;
 const queue = [...config.sources];
 const seen = new Set();
@@ -56,13 +63,10 @@ while (queue.length) {
     await mkdir(dumpDir, { recursive: true });
     await writeFile(join(dumpDir, `${seen.size}.txt`), `${url}\n\n${lines.join('\n')}\n`);
   }
-  const shows = extractShows(lines, { today, sourceUrl: url });
-  for (const s of shows) {
-    const members = matchMembers(s.text, allMembers);
-    if (members.length) found.push({ ...s, members, text: undefined });
-  }
-  console.log(`${url}: 公演候補 ${shows.length} 件`);
+  const sch = extractSchedule(lines);
+  schedule.push(...sch);
   if (config.sources.includes(url)) {
+    console.log(`${url}: 劇場スケジュール ${sch.length} 件`);
     for (const link of collectLinks(html, url)) {
       if (followed >= config.maxFollowLinks) break;
       if (!seen.has(link) && !queue.includes(link)) {
@@ -70,22 +74,29 @@ while (queue.length) {
         followed++;
       }
     }
+  } else {
+    // 出演メンバーはお知らせ記事からだけ読む（トップページには日付のないメンバー表もあって紛らわしいため）
+    const c = extractCasts(lines, { today, sourceUrl: url });
+    casts.push(...c);
+    console.log(`${url}: 出演情報 ${c.length} 件 (${lines.find((l) => /公演|お知らせ/.test(l) && !/^AKB48公式/.test(l)) ?? ''})`);
   }
 }
 
-// 前回の記録: 過去の公演は消さずに残す。今回1ページも取れなかったときは未来の分も残す
+const { shows: found, covered } = buildShows(casts, schedule, allMembers);
+
+// 前回の記録: 今回の記事に出演情報がなかった公演（過去の公演や、一覧から消えたお知らせの分）は前回のまま残す。
+// 出演情報がある公演は今回の内容で置き換える（メンバー変更で推しが外れたら消える）
+// 読み取り方を変えたら STATE_VERSION を上げて、古い読み取り結果を捨てる
+const STATE_VERSION = 2;
 let previous = [];
 try {
-  previous = JSON.parse(await readFile(join(outDir, 'events.json'), 'utf8'));
+  const state = JSON.parse(await readFile(join(outDir, 'events.json'), 'utf8'));
+  if (state.version === STATE_VERSION) previous = state.events;
 } catch {}
-const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).replace(/-/g, ''));
-const dayKey = (s) => s.year * 10000 + s.month * 100 + s.day;
-const kept = fetchedPages === 0 ? previous : previous.filter((s) => dayKey(s) < todayKey);
-const fresh = found.filter((s) => fetchedPages === 0 || dayKey(s) >= todayKey);
-const events = mergeShows([...kept, ...fresh]);
+const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found]);
 
 await mkdir(outDir, { recursive: true });
-await writeFile(join(outDir, 'events.json'), JSON.stringify(events, null, 2) + '\n');
+await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
 for (const cal of config.calendars) {
   const names = cal.members.map((m) => m.name);
   const shows = events

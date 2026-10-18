@@ -1,73 +1,94 @@
 // node --test akb48-calendar/test.mjs で実行
+// fixtures/ は公式サイト（2026年10月18日時点）から読み取ったテキスト
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildIcs, extractShows, htmlToLines, matchMembers, mergeShows } from './lib.mjs';
+import { buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, normalizeWidth } from './lib.mjs';
 
-const today = new Date('2026-10-18T00:00:00Z');
-const members = [
-  { name: '伊藤百花', aliases: [] },
-  { name: '奥本カイリ', aliases: [] },
-  { name: '渡邊きこ', aliases: ['渡辺きこ'] },
-];
+const today = new Date('2026-10-18T09:00:00Z');
+const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
+const members = config.calendars.flatMap((c) => c.members);
+const fixture = (name) =>
+  readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8').split('\n').map(normalizeWidth).filter(Boolean);
+const fmt = (s) => `${s.month}/${s.day} ${s.hour ?? '--'}:${String(s.minute ?? '--').padStart(2, '0')} ${s.title} ${s.members.join(',')}`;
 
-test('日付ごと・公演ごとに分けて出演メンバーを拾う', () => {
-  const html = `
-    <ul>
-      <li><time>10月25日(土)</time></li>
-      <li>13:00開演 「ここからだ」公演</li>
-      <li>【出演メンバー】伊藤 百花、佐藤綺星、山内瑞葵</li>
-      <li>18:30開演 「RESET」公演</li>
-      <li>【出演メンバー】奥本カイリ・渡邊きこ・坂川陽香</li>
-      <li><time>10月26日(日)</time></li>
-      <li>「夢のポップスター」公演</li>
-      <li>開場 17:45 / 開演 18:30</li>
-      <li>出演：渡辺きこ、下尾みう</li>
-    </ul>`;
-  const shows = extractShows(htmlToLines(html), { today });
-  const hits = shows.map((s) => ({ ...s, members: matchMembers(s.text, members) })).filter((s) => s.members.length);
-  assert.deepEqual(
-    hits.map((s) => [s.month, s.day, s.hour, s.minute, s.title, s.members]),
-    [
-      [10, 25, 13, 0, '「ここからだ」公演', ['伊藤百花']],
-      [10, 25, 18, 30, '「RESET」公演', ['奥本カイリ', '渡邊きこ']],
-      [10, 26, 18, 30, '「夢のポップスター」公演', ['渡邊きこ']],
-    ],
-  );
+test('トップページの劇場スケジュール一覧から日付・時刻・公演名を読む', () => {
+  const schedule = extractSchedule(fixture('top-schedule.txt'));
+  assert.deepEqual(schedule[0], { year: 2026, month: 10, day: 18, hour: 13, minute: 0, title: '「RESET」公演' });
+  assert.ok(schedule.some((s) => s.month === 10 && s.day === 25 && s.hour === 17 && s.minute === 30));
+});
+
+test('スケジュール更新のお知らせ: 1日2公演と、時刻ごとに違うメンバー表', () => {
+  const casts = extractCasts(fixture('schedule-notice.txt'), { today });
+  const { shows } = buildShows(casts, [], members);
+  assert.deepEqual(shows.map(fmt), [
+    '11/2 18:30 「ここからだ」公演 奥本カイリ',
+    '11/3 13:00 「ここからだ」公演 渡邊きこ',
+    '11/3 17:30 「ここからだ」公演 渡邊きこ',
+    '11/5 18:30 「ここからだ」公演 奥本カイリ,渡邊きこ',
+    '11/6 18:30 「手をつなぎながら」公演 奥本カイリ,渡邊きこ',
+    '11/8 13:00 「ここからだ」公演 奥本カイリ',
+    '11/8 17:30 「ここからだ」公演 奥本カイリ',
+    '11/9 18:30 「ここからだ」公演 伊藤百花',
+    '11/13 18:30 「夢のポップスター」公演 伊藤百花,奥本カイリ',
+    '11/15 14:00 柱の会限定イベント 渡邊きこ',
+    '11/15 19:00 柱の会限定イベント 伊藤百花,奥本カイリ',
+    '11/23 13:00 「手をつなぎながら」公演 奥本カイリ,渡邊きこ',
+    '11/23 17:30 「手をつなぎながら」公演 奥本カイリ,渡邊きこ',
+    '11/26 18:30 「手をつなぎながら」公演 奥本カイリ,渡邊きこ',
+    '11/29 18:30 「M.T.に捧ぐ」公演 伊藤百花',
+    '11/30 18:30 「手をつなぎながら」公演 奥本カイリ',
+  ]);
+});
+
+test('公演のご案内: 開演時刻がなければ一覧から補い、推しが出ない公演は入れない', () => {
+  const schedule = extractSchedule(fixture('top-schedule.txt'));
+  const casts = [
+    ...extractCasts(fixture('single-notice-1025.txt'), { today }),
+    ...extractCasts(fixture('single-notice-1026.txt'), { today }),
+  ];
+  const { shows, covered } = buildShows(casts, schedule, members);
+  assert.deepEqual(shows.map(fmt), [
+    '10/25 13:00 「手をつなぎながら」公演 奥本カイリ,渡邊きこ',
+    '10/25 17:30 「手をつなぎながら」公演 奥本カイリ,渡邊きこ',
+  ]);
+  assert.ok(covered.has('2026-10-26|「RESET」公演'));
+});
+
+test('同じ公演は「ご案内」の出演メンバーを優先する（メンバー変更）', () => {
+  const monthly = ['11/5(木) 「ここからだ」公演 18:30開演', '【出演メンバー】', '伊藤百花・佐藤綺星'];
+  const single = ['2026年11月5日(木)', '「ここからだ」公演 18:30開演', '【出演メンバー】', '佐藤綺星・渡邉葵心'];
+  const casts = [
+    ...extractCasts(monthly, { today, sourceUrl: 'monthly' }),
+    ...extractCasts(single, { today, sourceUrl: 'single' }),
+  ];
+  const { shows } = buildShows(casts, [], members);
+  assert.deepEqual(shows.map(fmt), ['11/5 18:30 「ここからだ」公演 渡邊きこ']);
 });
 
 test('年が書かれていない1月の予定は翌年として扱う', () => {
-  const shows = extractShows(['1月5日(月)', '18:30開演 「ここからだ」公演', '伊藤百花'], {
+  const casts = extractCasts(['1/5(月) 「RESET」公演 18:30開演', '【出演メンバー】', '伊藤百花・佐藤綺星'], {
     today: new Date('2026-12-20T00:00:00Z'),
   });
-  assert.equal(shows[0].year, 2027);
+  assert.equal(casts[0].year, 2027);
 });
 
-test('全角数字・年つき日付も読める', () => {
-  const shows = extractShows(htmlToLines('<p>２０２６．１１．０３（火）</p><p>１８：３０開演 「RESET」公演 伊藤百花</p>'), {
-    today,
-  });
-  assert.deepEqual([shows[0].year, shows[0].month, shows[0].day, shows[0].hour], [2026, 11, 3, 18]);
-});
-
-test('同じ公演は1つにまとめる', () => {
-  const base = { year: 2026, month: 10, day: 25, hour: 18, minute: 30, title: '「RESET」公演' };
-  const merged = mergeShows([
-    { ...base, members: ['奥本カイリ'] },
-    { ...base, members: ['渡邊きこ'] },
+test('HTMLをテキスト行にし、全角英数字を半角にする', () => {
+  assert.deepEqual(htmlToLines('<p>「ＲＥＳＥＴ」公演&nbsp;１８：３０開演</p><br>【出演メンバー】'), [
+    '「RESET」公演 18:30開演',
+    '【出演メンバー】',
   ]);
-  assert.equal(merged.length, 1);
-  assert.deepEqual(merged[0].members, ['奥本カイリ', '渡邊きこ']);
 });
 
 test('ICSは日本時間をUTCに直し、色とカレンダー名を入れる', () => {
   const ics = buildIcs(
     { name: 'AKB48 伊藤百花', color: '#AF52DE' },
-    [{ year: 2026, month: 10, day: 25, hour: 18, minute: 30, title: '「ここからだ」公演', members: ['伊藤百花'] }],
+    [{ year: 2026, month: 11, day: 9, hour: 18, minute: 30, title: '「ここからだ」公演', members: ['伊藤百花'] }],
     { now: today },
   );
   assert.match(ics, /X-WR-CALNAME:AKB48 伊藤百花/);
   assert.match(ics, /X-APPLE-CALENDAR-COLOR:#AF52DE/);
-  assert.match(ics, /DTSTART:20261025T093000Z/);
-  assert.match(ics, /DTEND:20261025T113000Z/);
+  assert.match(ics, /DTSTART:20261109T093000Z/);
+  assert.match(ics, /DTEND:20261109T113000Z/);
   assert.ok(ics.split('\r\n').every((l) => Buffer.byteLength(l) <= 75));
 });
