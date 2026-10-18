@@ -45,6 +45,10 @@ jobs:
         continue-on-error: true
         run: node akb48-calendar/update.mjs --out feed --dump dump
 
+      - name: Show fetched text (for debugging)
+        if: always()
+        run: for f in dump/*.txt; do echo "::group::$f"; cat "$f"; echo '::endgroup::'; done
+
       - name: Upload fetched text (for debugging)
         if: always()
         uses: actions/upload-artifact@v4
