@@ -1,13 +1,15 @@
 // AKB48劇場の公演情報を公式サイトのHTMLから取り出し、推しメンごとのiCalendar(.ics)を作る。
 //
 // 公式サイトで読める情報は3種類:
-//  - トップページの「劇場スケジュール」一覧 … 日付・開演時刻・公演名（出演メンバーなし）
+//  - トップページの「劇場スケジュール」一覧 … 日付・開演時刻・公演名
+//      ページの後ろの方に、一覧と同じ順番で各公演の詳細（出演メンバー）が日付なしで並んでいる
 //  - 「AKB48劇場 公演スケジュール更新のお知らせ」 … 1か月分の日付・公演名・開演時刻・出演メンバー
 //      例) 11/1(日) 「ＲＥＳＥＴ」公演 13:00開演/17:30開演
 //          【出演メンバー】
 //          太田有紀・工藤華純・…
 //  - 「10月26日 「ＲＥＳＥＴ」公演のご案内」 … 1公演ぶんの最新の出演メンバー（開演時刻がないこともある）
-// 出演メンバーは「ご案内」（新しい）を優先し、開演時刻が書かれていなければ一覧から補う。
+// 出演メンバーは トップページ（劇場の最新データ）＞「ご案内」＞「スケジュール更新」の順に優先し、
+// 開演時刻が書かれていなければ一覧から補う。
 
 const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ensp: ' ', emsp: ' ' };
 
@@ -61,6 +63,49 @@ const SCHEDULE_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S* (\d{1,
 const MONTHLY_RE = /^(\d{1,2})\/(\d{1,2}) ?\(.\) ?(.+?) ((?:\d{1,2}:\d{2}開演 ?\/? ?)+)$/;
 const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\(.\)$/;
 const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
+
+const SCHEDULE_DAY_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S*(?: (\d{1,2}):(\d{2}) ?[~～])?$/;
+
+/**
+ * トップページの出演メンバー。
+ * 劇場スケジュール一覧（休館日も含む）と、その後ろに日付なしで並ぶ詳細を順番に対応させる。
+ * 公演名・開演時刻・休館日が1つでも食い違ったら、対応がずれているので何も返さない。
+ */
+export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
+  const entries = [];
+  let last = -1;
+  lines.forEach((line, i) => {
+    const m = line.match(SCHEDULE_DAY_RE);
+    if (!m || !lines[i + 1]) return;
+    entries.push({
+      year: Number(m[1]), month: Number(m[2]), day: Number(m[3]),
+      hour: m[4] ? Number(m[4]) : null, minute: m[5] ? Number(m[5]) : null,
+      title: m[4] ? normalizeTitle(lines[i + 1]) : null, // 時刻がない日は休館日
+    });
+    last = i + 1;
+  });
+  const details = [];
+  for (let i = last + 1; i < lines.length; i++) {
+    const l = lines[i];
+    const t = l.match(/^(\d{1,2}):(\d{2})開演$/);
+    if (t && /公演|イベント/.test(lines[i - 1])) {
+      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [] });
+    } else if (l === '休館日') {
+      details.push({ title: null, names: [] });
+    } else if (l === '【出演メンバー】' && details.length && !details.at(-1).names.length) {
+      details.at(-1).names = readMembers(lines, i + 1);
+    }
+  }
+  if (!entries.length || entries.length !== details.length) return [];
+  const same = entries.every((e, i) => {
+    const d = details[i];
+    return e.title === null ? d.title === null : e.title === d.title && e.hour === d.hour && e.minute === d.minute;
+  });
+  if (!same) return [];
+  return entries
+    .map((e, i) => ({ ...e, names: details[i].names, kind: 'top', sourceUrl }))
+    .filter((c) => c.title !== null && c.names.length);
+}
 
 /** トップページの劇場スケジュール一覧: 日付・時刻・公演名 */
 export function extractSchedule(lines) {
@@ -138,20 +183,20 @@ const compact = (s) => s.replace(/[\s　]/g, '');
 
 /**
  * 出演情報と一覧を突き合わせて公演の一覧を作る。
- * 同じ日・同じ公演の情報が複数あれば「ご案内」(single) を「スケジュール更新」(monthly) より優先する。
+ * 同じ日・同じ公演の情報が複数あれば トップページ(top)＞「ご案内」(single)＞「スケジュール更新」(monthly) の順に優先する。
  * 返り値: { shows: 推しメンが出る公演, covered: 出演情報が見つかった「日付|公演名」 }
  */
 export function buildShows(casts, schedule, members) {
   const groups = new Map();
   for (const c of casts) {
     const key = performanceKey(c);
-    const g = groups.get(key) ?? { single: [], monthly: [] };
+    const g = groups.get(key) ?? { top: [], single: [], monthly: [] };
     g[c.kind].push(c);
     groups.set(key, g);
   }
   const shows = [];
   for (const g of groups.values()) {
-    for (const c of g.single.length ? g.single : g.monthly) {
+    for (const c of [g.top, g.single, g.monthly].find((list) => list.length)) {
       const hits = members
         .filter((m) => [m.name, ...(m.aliases ?? [])].some((n) => c.names.some((x) => compact(x) === compact(n))))
         .map((m) => m.name);

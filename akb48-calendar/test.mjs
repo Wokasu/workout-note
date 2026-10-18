@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -101,4 +101,26 @@ test('申込ページのURLを日付・開演時刻・公演名から作る', ()
   assert.equal(applyUrl({ ...show, day: 27, title: '「ここからだ」公演' }, u), 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830');
   assert.equal(applyUrl({ ...show, day: 31, hour: 17, title: '「夢のポップスター」公演' }, u), 'https://akb48.zaiko.io/ja/e/p2026-1031');
   assert.equal(applyUrl({ ...show, title: '「M.T.に捧ぐ」公演' }, u), null);
+});
+
+test('トップページ: 一覧と同じ順番に並ぶ詳細から、日付ごとの出演メンバーを読む', () => {
+  const lines = fixture('top-page.txt');
+  const casts = extractTopCasts(lines);
+  assert.equal(casts.length, 36); // 39件のうち休館日3件を除く
+  const { shows } = buildShows(casts, extractSchedule(lines), members);
+  assert.deepEqual(shows.filter((s) => s.month === 10 && s.day >= 18).map(fmt), [
+    '10/19 18:30 「ここからだ」公演 奥本カイリ',
+    '10/21 18:30 「手をつなぎながら」公演 奥本カイリ,渡邉葵心',
+    '10/25 13:00 「手をつなぎながら」公演 奥本カイリ,渡邉葵心',
+    '10/25 17:30 「手をつなぎながら」公演 奥本カイリ,渡邉葵心',
+    '10/27 18:30 「ここからだ」公演 渡邉葵心',
+    '10/29 18:30 「ここからだ」公演 奥本カイリ',
+    '10/31 17:30 「夢のポップスター」公演 伊藤百花',
+  ]);
+});
+
+test('トップページ: 一覧と詳細の対応がずれていたら使わない', () => {
+  const lines = fixture('top-page.txt');
+  const i = lines.indexOf('休館日', lines.indexOf('一覧を見る'));
+  assert.deepEqual(extractTopCasts([...lines.slice(0, i), ...lines.slice(i + 1)]), []);
 });

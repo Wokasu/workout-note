@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -66,7 +66,9 @@ while (queue.length) {
   const sch = extractSchedule(lines);
   schedule.push(...sch);
   if (config.sources.includes(url)) {
-    console.log(`${url}: 劇場スケジュール ${sch.length} 件`);
+    const top = extractTopCasts(lines, { sourceUrl: url });
+    casts.push(...top);
+    console.log(`${url}: 劇場スケジュール ${sch.length} 件、出演情報 ${top.length} 件`);
     for (const link of collectLinks(html, url)) {
       if (followed >= config.maxFollowLinks) break;
       if (!seen.has(link) && !queue.includes(link)) {

@@ -4,7 +4,7 @@
     "https://www.akb48.co.jp/theater",
     "https://www.akb48.co.jp/news"
   ],
-  "startDate": "2026-11-01",
+  "startDate": "2026-10-18",
   "followLinkPattern": "/news/detailpage/",
   "followLinkTextPattern": "公演|出演メンバー",
   "followLinkExcludePattern": "配信",
