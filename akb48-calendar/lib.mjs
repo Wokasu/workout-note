@@ -1,8 +1,15 @@
-// AKB48劇場の公演情報をHTMLから取り出し、推しメンごとのiCalendar(.ics)を作る。
-// 公式サイトのHTML構造に依存しすぎないよう、テキストに直してから
-// 「日付 → 公演タイトル(「…」公演) → 開演時刻 → 出演メンバー」の並びを拾う。
+// AKB48劇場の公演情報を公式サイトのHTMLから取り出し、推しメンごとのiCalendar(.ics)を作る。
+//
+// 公式サイトで読める情報は3種類:
+//  - トップページの「劇場スケジュール」一覧 … 日付・開演時刻・公演名（出演メンバーなし）
+//  - 「AKB48劇場 公演スケジュール更新のお知らせ」 … 1か月分の日付・公演名・開演時刻・出演メンバー
+//      例) 11/1(日) 「ＲＥＳＥＴ」公演 13:00開演/17:30開演
+//          【出演メンバー】
+//          太田有紀・工藤華純・…
+//  - 「10月26日 「ＲＥＳＥＴ」公演のご案内」 … 1公演ぶんの最新の出演メンバー（開演時刻がないこともある）
+// 出演メンバーは「ご案内」（新しい）を優先し、開演時刻が書かれていなければ一覧から補う。
 
-const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ensp: ' ', emsp: ' ' };
 
 export function htmlToLines(html) {
   const text = html
@@ -20,129 +27,144 @@ export function htmlToLines(html) {
     });
   return text
     .split('\n')
-    .map((l) => normalizeWidth(l).replace(/[ \t\u3000]+/g, ' ').trim())
+    .map((l) => normalizeWidth(l).replace(/[ \t　]+/g, ' ').trim())
     .filter(Boolean);
 }
 
-// 全角数字・記号を半角に寄せる（日付や時刻の判定用）
+// 全角英数字・記号（「ＲＥＳＥＴ」「１８：３０」「～」など）を半角に寄せる
 export function normalizeWidth(s) {
-  return s
-    .replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
-    .replace(/：/g, ':')
-    .replace(/／/g, '/')
-    .replace(/．/g, '.')
-    .replace(/（/g, '(')
-    .replace(/）/g, ')');
+  return s.replace(/[！-～]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0));
 }
 
-const DATE_PATTERNS = [
-  // 2026年10月18日 / 2026.10.18 / 2026/10/18 / 2026-10-18
-  { re: /(20\d{2})\s*[年./-]\s*(\d{1,2})\s*[月./-]\s*(\d{1,2})/, y: 1, m: 2, d: 3 },
-  // 10月18日
-  { re: /(\d{1,2})月\s*(\d{1,2})日/, m: 1, d: 2 },
-  // 10/18(土) 10.18(土) — 年がなく区切りが「/」「.」のときは曜日つきに限る
-  { re: /(\d{1,2})[/.](\d{1,2})\s*[(（]\s*[月火水木金土日]/, m: 1, d: 2 },
-];
-
 // 年が書かれていない日付は、基準日に一番近くなる年を選ぶ（12月に翌1月の予定が出ても大丈夫なように）
-function resolveYear(month, day, today) {
+export function resolveYear(month, day, today) {
   const base = today.getUTCFullYear();
   let best = null;
   for (const y of [base - 1, base, base + 1]) {
-    const t = Date.UTC(y, month - 1, day);
-    const diff = Math.abs(t - today.getTime());
+    const diff = Math.abs(Date.UTC(y, month - 1, day) - today.getTime());
     if (!best || diff < best.diff) best = { y, diff };
   }
   return best.y;
 }
 
-export function findDate(line, today) {
-  for (const p of DATE_PATTERNS) {
-    const m = line.match(p.re);
-    if (!m) continue;
-    const month = Number(m[p.m]);
-    const day = Number(m[p.d]);
-    if (month < 1 || month > 12 || day < 1 || day > 31) continue;
-    const year = p.y ? Number(m[p.y]) : resolveYear(month, day, today);
-    return { year, month, day, index: m.index };
+function parseTimes(s) {
+  return [...s.matchAll(/(\d{1,2}):(\d{2})/g)].map((m) => ({ hour: Number(m[1]), minute: Number(m[2]) }));
+}
+
+// 「「ＲＥＳＥＴ」公演 初日」→「「RESET」公演」のように、照合用の公演名にそろえる
+export function normalizeTitle(s) {
+  const m = s.match(/「[^」]+」公演/);
+  return (m ? m[0] : s).replace(/\s+/g, ' ').trim();
+}
+
+const SCHEDULE_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S* (\d{1,2}):(\d{2}) ?[~～]$/;
+const MONTHLY_RE = /^(\d{1,2})\/(\d{1,2}) ?\(.\) ?(.+?) ((?:\d{1,2}:\d{2}開演 ?\/? ?)+)$/;
+const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\(.\)$/;
+const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
+
+/** トップページの劇場スケジュール一覧: 日付・時刻・公演名 */
+export function extractSchedule(lines) {
+  const out = [];
+  lines.forEach((line, i) => {
+    const m = line.match(SCHEDULE_RE);
+    if (!m || !lines[i + 1]) return;
+    out.push({
+      year: Number(m[1]), month: Number(m[2]), day: Number(m[3]),
+      hour: Number(m[4]), minute: Number(m[5]),
+      title: normalizeTitle(lines[i + 1]),
+    });
+  });
+  return out;
+}
+
+// 【出演メンバー】の次の行から、メンバーの並び（「・」区切り）を読む
+function readMembers(lines, start) {
+  const names = [];
+  for (let i = start; i < lines.length; i++) {
+    const l = lines[i];
+    if (/^[【※]/.test(l) || MONTHLY_RE.test(l) || SINGLE_DATE_RE.test(l) || !l.includes('・') && names.length) break;
+    names.push(...l.split('・').map((n) => n.trim()).filter(Boolean));
+    if (!l.includes('・')) break;
   }
-  return null;
+  return names;
 }
-
-export function findTime(text) {
-  const open = text.match(/開演\s*[:]?\s*(\d{1,2}):(\d{2})/) || text.match(/(\d{1,2}):(\d{2})\s*開演/);
-  const any = open || text.match(/(?<![\d:])(\d{1,2}):(\d{2})(?![\d:])/);
-  if (!any) return null;
-  const h = Number(any[1]);
-  const min = Number(any[2]);
-  if (h > 23 || min > 59) return null;
-  return { hour: h, minute: min };
-}
-
-const TITLE_RE = /[「『]([^」』]{1,40})[」』]\s*公演/;
 
 /**
- * テキスト行から公演の候補を取り出す。
- * 日付が現れたらそこから次の日付までを「その日のブロック」とし、
- * ブロック内は公演タイトル(「…」公演)ごとにさらに分ける（昼夜2公演など）。
+ * お知らせ記事から出演メンバーを読む。
+ * 返り値は1公演（1開演時刻）ごと。開演時刻が分からないものは hour: null。
  */
-export function extractShows(lines, { today = new Date(), sourceUrl = '' } = {}) {
-  const blocks = [];
-  let cur = null;
-  for (const line of lines) {
-    const date = findDate(line, today);
-    if (date) {
-      cur = { date, lines: [] };
-      blocks.push(cur);
+export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {}) {
+  const out = [];
+  let cur = null; // { year, month, day, title, times, kind }
+  const push = (times, names) => {
+    for (const t of times.length ? times : [{ hour: null, minute: null }]) {
+      out.push({ year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, kind: cur.kind, sourceUrl });
     }
-    if (cur) cur.lines.push(line);
-  }
-
-  const shows = [];
-  for (const block of blocks) {
-    const segments = [];
-    let seg = { lines: [], carriedTime: null };
-    let lastTime = null;
-    for (const line of block.lines) {
-      if (TITLE_RE.test(line) && seg.lines.some((l) => TITLE_RE.test(l))) {
-        segments.push(seg);
-        // タイトルより前の行に書かれた時刻を次の公演に引き継げるよう覚えておく
-        seg = { lines: [], carriedTime: lastTime };
+  };
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let m;
+    if ((m = line.match(MONTHLY_RE))) {
+      const month = Number(m[1]);
+      const day = Number(m[2]);
+      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly' };
+    } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
+      const next = lines[i + 1];
+      cur = {
+        year: Number(m[1]), month: Number(m[2]), day: Number(m[3]),
+        title: normalizeTitle(next.replace(/\d{1,2}:\d{2}.*$/, '')),
+        times: parseTimes(next), kind: 'single',
+      };
+      i++;
+    } else if (cur && (m = line.match(CAST_HEAD_RE))) {
+      const names = readMembers(lines, i + 1);
+      if (!names.length) continue;
+      if (m[1]) {
+        // 【14:00公演 出演メンバー】のように、時刻ごとにメンバーが違う場合
+        push(parseTimes(m[1]), names);
+      } else {
+        push(cur.times, names);
       }
-      seg.lines.push(line);
-      const t = findTime(line);
-      if (t) lastTime = t;
-    }
-    segments.push(seg);
-
-    for (const s of segments) {
-      const text = s.lines.join('\n');
-      const titleMatch = text.match(TITLE_RE);
-      if (!titleMatch && !/公演/.test(text)) continue;
-      const time = findTime(text) || s.carriedTime;
-      shows.push({
-        year: block.date.year,
-        month: block.date.month,
-        day: block.date.day,
-        hour: time?.hour ?? null,
-        minute: time?.minute ?? null,
-        title: titleMatch ? `「${titleMatch[1]}」公演` : '劇場公演',
-        text,
-        sourceUrl,
-      });
+    } else if (/^\d{1,2}\/\d{1,2} ?\(.\)/.test(line)) {
+      cur = null; // 休館日など
     }
   }
-  return shows;
+  return out;
 }
 
-const compact = (s) => s.replace(/[\s\u3000・･]/g, '');
+const dateKey = (s) => `${s.year}-${s.month}-${s.day}`;
+export const performanceKey = (s) => `${dateKey(s)}|${s.title}`;
+const compact = (s) => s.replace(/[\s　]/g, '');
 
-// ブロック内に名前が出てくる推しメンを返す（「伊藤 百花」のような空白入りも拾う）
-export function matchMembers(text, members) {
-  const hay = compact(text);
-  return members
-    .filter((m) => [m.name, ...(m.aliases ?? [])].some((n) => hay.includes(compact(n))))
-    .map((m) => m.name);
+/**
+ * 出演情報と一覧を突き合わせて公演の一覧を作る。
+ * 同じ日・同じ公演の情報が複数あれば「ご案内」(single) を「スケジュール更新」(monthly) より優先する。
+ * 返り値: { shows: 推しメンが出る公演, covered: 出演情報が見つかった「日付|公演名」 }
+ */
+export function buildShows(casts, schedule, members) {
+  const groups = new Map();
+  for (const c of casts) {
+    const key = performanceKey(c);
+    const g = groups.get(key) ?? { single: [], monthly: [] };
+    g[c.kind].push(c);
+    groups.set(key, g);
+  }
+  const shows = [];
+  for (const g of groups.values()) {
+    for (const c of g.single.length ? g.single : g.monthly) {
+      const hits = members
+        .filter((m) => [m.name, ...(m.aliases ?? [])].some((n) => c.names.some((x) => compact(x) === compact(n))))
+        .map((m) => m.name);
+      if (!hits.length) continue;
+      const times = c.hour != null
+        ? [{ hour: c.hour, minute: c.minute }]
+        : schedule.filter((s) => performanceKey(s) === performanceKey(c)).map(({ hour, minute }) => ({ hour, minute }));
+      for (const t of times.length ? times : [{ hour: null, minute: null }]) {
+        shows.push({ year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, sourceUrl: c.sourceUrl });
+      }
+    }
+  }
+  return { shows: mergeShows(shows), covered: new Set(groups.keys()) };
 }
 
 export function showKey(s) {
@@ -151,17 +173,14 @@ export function showKey(s) {
   return `${s.year}${pad(s.month)}${pad(s.day)}-${time}-${s.title}`;
 }
 
-/** 同じ公演が複数ページに載っていたら1つにまとめ、出演した推しメンは合わせる */
+/** 同じ公演（同じ開演時刻）が重なったら1つにまとめる */
 export function mergeShows(list) {
   const map = new Map();
   for (const s of list) {
     const key = showKey(s);
     const prev = map.get(key);
-    if (!prev) {
-      map.set(key, { ...s, members: [...new Set(s.members)] });
-    } else {
-      prev.members = [...new Set([...prev.members, ...s.members])];
-    }
+    if (!prev) map.set(key, { ...s, members: [...new Set(s.members)] });
+    else prev.members = [...new Set([...prev.members, ...s.members])];
   }
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
 }
