@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { buildIcs, buildShows, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -93,16 +93,6 @@ test('ICSは日本時間をUTCに直し、色とカレンダー名を入れる',
   assert.ok(ics.split('\r\n').every((l) => Buffer.byteLength(l) <= 75));
 });
 
-test('申込ページのURLを日付・開演時刻・公演名から作る', () => {
-  const show = { year: 2026, month: 10, day: 23, hour: 18, minute: 30, title: '「RESET」公演' };
-  const u = config.zaikoUrls;
-  assert.equal(applyUrl(show, u), 'https://akb48.zaiko.io/ja/e/2026-reset-1023-1830');
-  assert.equal(applyUrl({ ...show, day: 25, hour: 13, minute: 0, title: '「手をつなぎながら」公演' }, u), 'https://akb48.zaiko.io/ja/e/te2026-1025-1300');
-  assert.equal(applyUrl({ ...show, day: 27, title: '「ここからだ」公演' }, u), 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830');
-  assert.equal(applyUrl({ ...show, day: 31, hour: 17, title: '「夢のポップスター」公演' }, u), 'https://akb48.zaiko.io/ja/e/p2026-1031');
-  assert.equal(applyUrl({ ...show, title: '「M.T.に捧ぐ」公演' }, u), null);
-});
-
 test('トップページ: 一覧と同じ順番に並ぶ詳細から、日付ごとの出演メンバーを読む', () => {
   const lines = fixture('top-page.txt');
   const casts = extractTopCasts(lines);
@@ -117,6 +107,37 @@ test('トップページ: 一覧と同じ順番に並ぶ詳細から、日付ご
     '10/29 18:30 「ここからだ」公演 奥本カイリ',
     '10/31 17:30 「夢のポップスター」公演 伊藤百花',
   ]);
+  // 申込ページのリンクは公式に書かれたものだけ。URLの形は公演ごとにばらばら
+  assert.deepEqual(
+    shows.filter((s) => s.month === 10 && s.day >= 18).map((s) => s.applyUrl),
+    [
+      'https://akb48.zaiko.io/ja/e/s2026-1019-1830',
+      'https://akb48.zaiko.io/ja/e/2026w-1021-1830',
+      'https://akb48.zaiko.io/ja/e/te2026-1025-1300',
+      'https://akb48.zaiko.io/ja/e/te2026-1025-1730',
+      'https://akb48.zaiko.io/ja/e/ko2026-1027-1830',
+      'https://akb48.zaiko.io/ja/e/k2026-1029-1830',
+      'https://akb48.zaiko.io/ja/e/p2026-1031',
+    ],
+  );
+  // まだ申込が始まっていない公演（「お申し込み等は改めてお知らせ致します」）にはリンクがない
+  assert.ok(casts.filter((c) => c.month === 11).every((c) => c.applyUrl === null));
+});
+
+test('お知らせ記事: 公演ごとの申込リンクを拾い、チケットセンターのトップへのリンクは無視する', () => {
+  const casts = extractCasts(
+    [
+      '2026年11月2日(月)',
+      '「ここからだ」公演 18:30開演',
+      '【出演メンバー】',
+      '奥本カイリ・小栗有以',
+      '【お申し込みについて】',
+      'AKB48チケットセンター ⟨https://akb48.zaiko.io/⟩にて現在受け付け中です。',
+      '★お申し込みはコチラ ⟨https://akb48.zaiko.io/ja/e/x2026-1102-1830⟩',
+    ],
+    { today },
+  );
+  assert.equal(casts[0].applyUrl, 'https://akb48.zaiko.io/ja/e/x2026-1102-1830');
 });
 
 test('トップページ: 一覧と詳細の対応がずれていたら使わない', () => {
