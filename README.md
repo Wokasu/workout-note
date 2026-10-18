@@ -92,6 +92,15 @@ node akb48-calendar/update.mjs --out feed --dump dump    # 手元で .ics を作
 2. 推しが出る公演の一覧が出るので、開く公演の番号を入れる（例: `1-5`、`1,3,4`）
 3. `AKB 01` のウィンドウに選んだ公演が開く → 申し込む → Enter で `AKB 02` へ … をくり返す（`q` で終了）
 
-申込ページのURLは `https://akb48.zaiko.io/ja/e/2026-reset-1023-1830`（年-公演名-月日-開演時刻）の形で、
-公演名の部分は `akb48-calendar/config.json` の `zaikoSlugs` に公演ごとに書きます。未設定の公演は一覧に「申込URL未設定」と出て開きません。
+申込ページのURL（`https://akb48.zaiko.io/ja/e/` の後ろ）は公演ごとに形が違うので、`akb48-calendar/config.json` の `zaikoUrls` に
+`{yyyy}`（年）・`{MMDD}`（月日）・`{HHMM}`（開演時刻）を使って書きます。
+
+| 公演 | URLの形 | 例 |
+| --- | --- | --- |
+| 「RESET」公演 | `{yyyy}-reset-{MMDD}-{HHMM}` | `2026-reset-1023-1830` |
+| 「手をつなぎながら」公演 | `te{yyyy}-{MMDD}-{HHMM}` | `te2026-1025-1300` |
+| 「ここからだ」公演 | `ko{yyyy}-{MMDD}-{HHMM}` | `ko2026-1027-1830` |
+| 「夢のポップスター」公演 | `p{yyyy}-{MMDD}` | `p2026-1031` |
+
+未設定の公演（「M.T.に捧ぐ」公演など）は一覧に「申込URL未設定」と出て開きません。`launcherExclude` の公演（柱の会限定イベント）は一覧に出しません。
 自分で決めたURLを開きたいときは、`launcher.bat` と同じフォルダに `urls.txt`（1行に1つURL）を置くとそちらを使います。

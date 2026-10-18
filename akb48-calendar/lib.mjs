@@ -187,14 +187,19 @@ export function mergeShows(list) {
 
 /**
  * AKB48チケットセンター（ZAIKO）の申込ページURLを作る。
- * 例) 2026年10月23日 18:30 「RESET」公演 → https://akb48.zaiko.io/ja/e/2026-reset-1023-1830
- * URL内の公演名（slugs）が設定にない公演は null
+ * 公演ごとのURLの形（テンプレート）の {yyyy} {MMDD} {HHMM} を日付・開演時刻で置き換える。
+ * 例) "{yyyy}-reset-{MMDD}-{HHMM}" → https://akb48.zaiko.io/ja/e/2026-reset-1023-1830
+ * テンプレートが設定にない公演は null
  */
-export function applyUrl(s, slugs) {
-  const slug = slugs[s.title];
-  if (!slug || s.hour == null) return null;
+export function applyUrl(s, templates) {
+  const template = templates[s.title];
+  if (!template || (s.hour == null && template.includes('{HHMM}'))) return null;
   const pad = (n) => String(n).padStart(2, '0');
-  return `https://akb48.zaiko.io/ja/e/${s.year}-${slug}-${pad(s.month)}${pad(s.day)}-${pad(s.hour)}${pad(s.minute)}`;
+  const path = template
+    .replace('{yyyy}', s.year)
+    .replace('{MMDD}', `${pad(s.month)}${pad(s.day)}`)
+    .replace('{HHMM}', `${pad(s.hour)}${pad(s.minute)}`);
+  return `https://akb48.zaiko.io/ja/e/${path}`;
 }
 
 // ---- iCalendar ----
