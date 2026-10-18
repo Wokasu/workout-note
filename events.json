@@ -3,6 +3,100 @@
   "events": [
     {
       "year": 2026,
+      "month": 10,
+      "day": 19,
+      "hour": 18,
+      "minute": 30,
+      "title": "「ここからだ」公演",
+      "members": [
+        "奥本カイリ"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/ko2026-1019-1830"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 21,
+      "hour": 18,
+      "minute": 30,
+      "title": "「手をつなぎながら」公演",
+      "members": [
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1021-1830"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 25,
+      "hour": 13,
+      "minute": 0,
+      "title": "「手をつなぎながら」公演",
+      "members": [
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1025-1300"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 25,
+      "hour": 17,
+      "minute": 30,
+      "title": "「手をつなぎながら」公演",
+      "members": [
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1025-1730"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 27,
+      "hour": 18,
+      "minute": 30,
+      "title": "「ここからだ」公演",
+      "members": [
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/ko2026-1027-1830"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 29,
+      "hour": 18,
+      "minute": 30,
+      "title": "「ここからだ」公演",
+      "members": [
+        "奥本カイリ"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/ko2026-1029-1830"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 31,
+      "hour": 17,
+      "minute": 30,
+      "title": "「夢のポップスター」公演",
+      "members": [
+        "伊藤百花"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
+      "applyUrl": "https://akb48.zaiko.io/ja/e/p2026-1031"
+    },
+    {
+      "year": 2026,
       "month": 11,
       "day": 2,
       "hour": 18,
