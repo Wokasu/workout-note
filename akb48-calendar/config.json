@@ -4,6 +4,7 @@
     "https://www.akb48.co.jp/theater",
     "https://www.akb48.co.jp/news"
   ],
+  "startDate": "2026-11-01",
   "followLinkPattern": "/news/detailpage/",
   "followLinkTextPattern": "公演|出演メンバー",
   "followLinkExcludePattern": "配信",
@@ -24,7 +25,7 @@
     },
     {
       "id": "kairi-kiko",
-      "name": "AKB48 奥本カイリ・渡邊きこ",
+      "name": "AKB48 奥本カイリ・渡邉葵心",
       "color": "#5AC8FA",
       "members": [
         {
@@ -32,12 +33,12 @@
           "aliases": []
         },
         {
-          "name": "渡邊きこ",
+          "name": "渡邉葵心",
           "aliases": [
-            "渡邉葵心",
-            "渡辺きこ",
             "渡邊葵心",
-            "渡辺葵心"
+            "渡辺葵心",
+            "渡邊きこ",
+            "渡辺きこ"
           ]
         }
       ]

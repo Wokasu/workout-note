@@ -87,13 +87,16 @@ const { shows: found, covered } = buildShows(casts, schedule, allMembers);
 // 前回の記録: 今回の記事に出演情報がなかった公演（過去の公演や、一覧から消えたお知らせの分）は前回のまま残す。
 // 出演情報がある公演は今回の内容で置き換える（メンバー変更で推しが外れたら消える）
 // 読み取り方を変えたら STATE_VERSION を上げて、古い読み取り結果を捨てる
-const STATE_VERSION = 2;
+const STATE_VERSION = 3;
 let previous = [];
 try {
   const state = JSON.parse(await readFile(join(outDir, 'events.json'), 'utf8'));
   if (state.version === STATE_VERSION) previous = state.events;
 } catch {}
-const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found]);
+// startDate より前の公演は入れない（それまでの分は手動で登録済みのため）
+const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
+const afterStart = (s) => s.year * 10000 + s.month * 100 + s.day >= sy * 10000 + sm * 100 + sd;
+const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found]).filter(afterStart);
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
