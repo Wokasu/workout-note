@@ -2,15 +2,20 @@
 # 推しが出る公演の申込ページを、Chromeのプロファイル（申込アカウント）ごとに順番に開く。
 # ページを開くだけで、ログイン・入力・申込ボタンは自分で操作する。
 #
-# 使い方: launcher.bat をダブルクリック
+# 使い方: launcher.bat をダブルクリックして、モードを選ぶ
+#   1. 申込ページを開く … 選んだ公演の申込ページを、アカウントごとに順番に開く
+#   2. ログイン確認    … チケットセンターを、アカウントごとに順番に開く（申込前にログインを確かめる）
 # 準備: Chromeのプロファイル名を「AKB 01」「AKB 02」…のように「AKB」で始め、番号は2桁にしておく
 param(
+  [ValidateSet('', 'apply', 'login')]
+  [string]$Mode,            # apply=申込ページを開く / login=ログイン確認。指定すると質問しない
   [string]$Select,          # 開く公演の番号（例 "1-5"）。指定すると質問しない
   [switch]$DryRun,          # Chromeを起動せず、開く内容を表示するだけ
   [switch]$NoWait,          # Enterを待たずに次のアカウントへ進む（テスト用）
   [string]$LocalState = "$env:LOCALAPPDATA\Google\Chrome\User Data\Local State",
   [string]$Links = 'https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/links.json',
   [string]$ProfilePrefix = 'AKB',
+  [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
   [string]$ChromePath
 )
 
@@ -98,6 +103,42 @@ if ($profiles.Count -eq 0) {
 }
 Write-Host "申込アカウント（Chromeのプロファイル）: $($profiles.Count) 個"
 
+# アカウント（プロファイル）ごとに、Enterを押すたびに次のウィンドウでURLを開く
+function Open-PerProfile([string[]]$urls, [string]$waitMessage) {
+  for ($p = 0; $p -lt $profiles.Count; $p++) {
+    $prof = $profiles[$p]
+    Write-Host ''
+    Write-Host ("[{0}/{1}] {2} で開きます" -f ($p + 1), $profiles.Count, $prof.Name) -ForegroundColor Yellow
+    $arguments = @("--profile-directory=`"$($prof.Dir)`"", '--new-window') + $urls
+    if ($DryRun) {
+      Write-Host "  chrome $($arguments -join ' ')"
+    } else {
+      Start-Process -FilePath $chrome -ArgumentList $arguments
+    }
+    if ($NoWait -or $p -eq $profiles.Count - 1) { continue }
+    $answer = Read-Host "  $waitMessage（q で終了）"
+    if ($answer -eq 'q') { break }
+  }
+}
+
+if (-not $Mode) {
+  Write-Host ''
+  Write-Host '  1. 申込ページを開く'
+  Write-Host '  2. 全アカウントのログイン確認'
+  $Mode = switch (Read-Host '番号を選んでください') { '1' { 'apply' } '2' { 'login' } default { Stop-WithMessage '1 か 2 を入力してください。' } }
+}
+
+if ($Mode -eq 'login') {
+  Write-Host ''
+  Write-Host "チケットセンターを $($profiles.Count) 個のアカウントで1つずつ開きます。" -ForegroundColor Cyan
+  Write-Host '右上にログインボタンが出ていたら、ログインし直してください（パスワードは保存しておくと自動で入ります）。'
+  Open-PerProfile @($LoginUrl) 'ログインできていたら Enter で次のアカウントへ'
+  Write-Host ''
+  Write-Host 'ログイン確認が終わりました！' -ForegroundColor Magenta
+  if (-not $NoWait) { [void](Read-Host 'Enterで閉じます') }
+  exit 0
+}
+
 try { $shows = Get-Shows } catch { Stop-WithMessage "公演の一覧を読み込めませんでした: $($_.Exception.Message)" }
 if ($shows.Count -eq 0) { Stop-WithMessage '申込できる公演がありません。' }
 
@@ -119,20 +160,7 @@ Write-Host ''
 Write-Host "次の $($targets.Count) 公演を、$($profiles.Count) 個のアカウントで1つずつ開きます:" -ForegroundColor Cyan
 $targets | ForEach-Object { Write-Host "  - $(Format-Show $_)" }
 
-for ($p = 0; $p -lt $profiles.Count; $p++) {
-  $prof = $profiles[$p]
-  Write-Host ''
-  Write-Host ("[{0}/{1}] {2} で開きます" -f ($p + 1), $profiles.Count, $prof.Name) -ForegroundColor Yellow
-  $arguments = @("--profile-directory=`"$($prof.Dir)`"", '--new-window') + @($targets | ForEach-Object { $_.url })
-  if ($DryRun) {
-    Write-Host "  chrome $($arguments -join ' ')"
-  } else {
-    Start-Process -FilePath $chrome -ArgumentList $arguments
-  }
-  if ($NoWait -or $p -eq $profiles.Count - 1) { continue }
-  $answer = Read-Host '  申し込みが終わったら Enter で次のアカウントへ（q で終了）'
-  if ($answer -eq 'q') { break }
-}
+Open-PerProfile @($targets | ForEach-Object { $_.url }) '申し込みが終わったら Enter で次のアカウントへ'
 
 Write-Host ''
 Write-Host 'おつかれさまでした！' -ForegroundColor Magenta

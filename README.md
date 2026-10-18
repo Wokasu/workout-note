@@ -88,8 +88,9 @@ node akb48-calendar/update.mjs --out feed --dump dump    # 手元で .ics を作
 3. `akb48-calendar/launcher/` の `launcher.bat` と `launcher.ps1` を同じフォルダに保存する
 
 ### 使い方
-1. `launcher.bat` をダブルクリック
-2. 推しが出る公演の一覧が出るので、開く公演の番号を入れる（例: `1-5`、`1,3,4`）
+1. `launcher.bat` をダブルクリックして、`1`（申込ページを開く）か `2`（全アカウントのログイン確認）を選ぶ
+   - `2` はチケットセンターを `AKB 01` から順に開くので、ログインが切れていたらその場でログインし直す。申込開始の前にやっておく
+2. `1` を選ぶと推しが出る公演の一覧が出るので、開く公演の番号を入れる（例: `1-5`、`1,3,4`）
 3. `AKB 01` のウィンドウに選んだ公演が開く → 申し込む → Enter で `AKB 02` へ … をくり返す（`q` で終了）
 
 申込ページのURL（`https://akb48.zaiko.io/ja/e/` の後ろ）は公演ごとに形が違うので、`akb48-calendar/config.json` の `zaikoUrls` に

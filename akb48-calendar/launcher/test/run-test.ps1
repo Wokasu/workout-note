@@ -1,7 +1,7 @@
 ﻿# 申込ランチャーを Chrome を起動しないモードで動かし、出力を確かめる（Windows PowerShell 5.1 用）
 $ErrorActionPreference = 'Stop'
 $dir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$out = & "$dir\launcher.ps1" -DryRun -NoWait -Select '1-3' -LocalState "$dir\test\Local State" -Links "$dir\test\links.json" *>&1 | Out-String -Width 1000
+$out = & "$dir\launcher.ps1" -Mode apply -DryRun -NoWait -Select '1-3' -LocalState "$dir\test\Local State" -Links "$dir\test\links.json" *>&1 | Out-String -Width 1000
 Write-Host $out
 $expected = @(
   '申込アカウント（Chromeのプロファイル）: 2 個',
@@ -15,4 +15,16 @@ foreach ($e in $expected) {
   if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
 }
 if ($out.Contains('個人用')) { throw 'AKB以外のプロファイルが含まれています' }
+
+# ログイン確認モード
+$out = & "$dir\launcher.ps1" -Mode login -DryRun -NoWait -LocalState "$dir\test\Local State" *>&1 | Out-String -Width 1000
+Write-Host $out
+foreach ($e in @(
+  'チケットセンターを 2 個のアカウントで1つずつ開きます。',
+  'chrome --profile-directory="Profile 1" --new-window https://akb48.zaiko.io/ja',
+  'chrome --profile-directory="Profile 2" --new-window https://akb48.zaiko.io/ja',
+  'ログイン確認が終わりました！'
+)) {
+  if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
+}
 Write-Host 'OK'
