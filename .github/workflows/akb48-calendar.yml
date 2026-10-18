@@ -1,0 +1,73 @@
+name: AKB48 劇場公演カレンダー更新
+
+on:
+  schedule:
+    - cron: '17 */3 * * *' # 3時間ごと
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: akb48-calendar
+  cancel-in-progress: false
+
+env:
+  FEED_BRANCH: akb48-calendar-feed
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 公開用ブランチ（.ics と前回までの記録）を feed/ に取り出す。初回は空のブランチを作る
+      - name: Checkout feed branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin "$FEED_BRANCH" >/dev/null; then
+            git clone --depth 1 --branch "$FEED_BRANCH" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" feed
+          else
+            mkdir feed && cd feed && git init -b "$FEED_BRANCH"
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Test parser
+        run: node --test akb48-calendar/test.mjs
+
+      - name: Build calendars
+        id: build
+        continue-on-error: true
+        run: node akb48-calendar/update.mjs --out feed --dump dump
+
+      - name: Upload fetched text (for debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fetched-text
+          path: dump/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      # 予定が変わったときだけコミットする（DTSTAMP だけの変化では push しない）
+      - name: Publish
+        working-directory: feed
+        run: |
+          git add -A
+          if git rev-parse --verify HEAD >/dev/null 2>&1 && git diff --cached --quiet -- events.json; then
+            echo '予定に変化なし'
+            exit 0
+          fi
+          git commit -m "カレンダー更新 $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')"
+          git push origin "HEAD:$FEED_BRANCH"
+
+      - name: Report fetch failure
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo '::error::公式サイトから公演情報を取得できませんでした。前回の予定を残しています。'
+          exit 1
