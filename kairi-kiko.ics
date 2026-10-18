@@ -10,104 +10,106 @@ REFRESH-INTERVAL;VALUE=DURATION:PT6H
 X-PUBLISHED-TTL:PT6H
 BEGIN:VEVENT
 UID:20261102-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261102T093000Z
 DTEND:20261102T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
- etailpage/489596266\n※出演メンバーは変更になる場合があ
- ります
+DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/ko
+ 2026-1102-1830\n出典: https://www.akb48.co.jp/news/detailpage/489596266\
+ n※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/ko2026-1102-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261103T040000Z
 DTEND:20261103T060000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
-DESCRIPTION:出演: 渡邉葵心\n出典: https://www.akb48.co.jp/news/deta
- ilpage/489596266\n※出演メンバーは変更になる場合があり
- ます
+DESCRIPTION:出演: 渡邉葵心\n申込: https://akb48.zaiko.io/ja/e/ko202
+ 6-1103-1300\n出典: https://www.akb48.co.jp/news/detailpage/489596266\n
+ ※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/ko2026-1103-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261103T083000Z
 DTEND:20261103T103000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
-DESCRIPTION:出演: 渡邉葵心\n出典: https://www.akb48.co.jp/news/deta
- ilpage/489596266\n※出演メンバーは変更になる場合があり
- ます
+DESCRIPTION:出演: 渡邉葵心\n申込: https://akb48.zaiko.io/ja/e/ko202
+ 6-1103-1730\n出典: https://www.akb48.co.jp/news/detailpage/489596266\n
+ ※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/ko2026-1103-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261105-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261105T093000Z
 DTEND:20261105T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ・渡邉葵心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
- る場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
+ aiko.io/ja/e/ko2026-1105-1830\n出典: https://www.akb48.co.jp/news/detail
+ page/489596266\n※出演メンバーは変更になる場合がありま
+ す
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/ko2026-1105-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261106-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261106T093000Z
 DTEND:20261106T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
- る場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
+ aiko.io/ja/e/te2026-1106-1830\n出典: https://www.akb48.co.jp/news/detail
+ page/489596266\n※出演メンバーは変更になる場合がありま
+ す
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/te2026-1106-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261108T040000Z
 DTEND:20261108T060000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
- etailpage/489596266\n※出演メンバーは変更になる場合があ
- ります
+DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/ko
+ 2026-1108-1300\n出典: https://www.akb48.co.jp/news/detailpage/489596266\
+ n※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/ko2026-1108-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261108T083000Z
 DTEND:20261108T103000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
- etailpage/489596266\n※出演メンバーは変更になる場合があ
- ります
+DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/ko
+ 2026-1108-1730\n出典: https://www.akb48.co.jp/news/detailpage/489596266\
+ n※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/ko2026-1108-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261113-1830--e3808ce5a4a2e381aee3839d@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261113T093000Z
 DTEND:20261113T113000Z
 SUMMARY:「夢のポップスター」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
- etailpage/489596266\n※出演メンバーは変更になる場合があ
- ります
+DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/p2
+ 026-1113\n出典: https://www.akb48.co.jp/news/detailpage/489596266\n※
+ 出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/p2026-1113
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1400--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261115T050000Z
 DTEND:20261115T070000Z
 SUMMARY:柱の会限定イベント（渡邉葵心）
@@ -119,7 +121,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1900--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261115T100000Z
 DTEND:20261115T120000Z
 SUMMARY:柱の会限定イベント（奥本カイリ）
@@ -131,53 +133,56 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261123T040000Z
 DTEND:20261123T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
- る場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
+ aiko.io/ja/e/te2026-1123-1300\n出典: https://www.akb48.co.jp/news/detail
+ page/489596266\n※出演メンバーは変更になる場合がありま
+ す
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/te2026-1123-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261123T083000Z
 DTEND:20261123T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
- る場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
+ aiko.io/ja/e/te2026-1123-1730\n出典: https://www.akb48.co.jp/news/detail
+ page/489596266\n※出演メンバーは変更になる場合がありま
+ す
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/te2026-1123-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261126-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261126T093000Z
 DTEND:20261126T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
- る場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
+ aiko.io/ja/e/te2026-1126-1830\n出典: https://www.akb48.co.jp/news/detail
+ page/489596266\n※出演メンバーは変更になる場合がありま
+ す
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/te2026-1126-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261130-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T113005Z
+DTSTAMP:20261018T113135Z
 DTSTART:20261130T093000Z
 DTEND:20261130T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
- etailpage/489596266\n※出演メンバーは変更になる場合があ
- ります
+DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/te
+ 2026-1130-1830\n出典: https://www.akb48.co.jp/news/detailpage/489596266\
+ n※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://akb48.zaiko.io/ja/e/te2026-1130-1830
 END:VEVENT
 END:VCALENDAR
