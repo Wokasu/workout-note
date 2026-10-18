@@ -185,6 +185,18 @@ export function mergeShows(list) {
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
 }
 
+/**
+ * AKB48チケットセンター（ZAIKO）の申込ページURLを作る。
+ * 例) 2026年10月23日 18:30 「RESET」公演 → https://akb48.zaiko.io/ja/e/2026-reset-1023-1830
+ * URL内の公演名（slugs）が設定にない公演は null
+ */
+export function applyUrl(s, slugs) {
+  const slug = slugs[s.title];
+  if (!slug || s.hour == null) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  return `https://akb48.zaiko.io/ja/e/${s.year}-${slug}-${pad(s.month)}${pad(s.day)}-${pad(s.hour)}${pad(s.minute)}`;
+}
+
 // ---- iCalendar ----
 
 function escapeText(s) {
@@ -235,7 +247,12 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
   ];
   for (const s of shows) {
     const uid = `${showKey(s).replace(/[^\w-]/g, '')}-${Buffer.from(s.title).toString('hex').slice(0, 24)}@akb48-calendar`;
-    const desc = [`出演: ${s.members.join('、')}`, s.sourceUrl ? `出典: ${s.sourceUrl}` : '', '※出演メンバーは変更になる場合があります']
+    const desc = [
+      `出演: ${s.members.join('、')}`,
+      s.applyUrl ? `申込: ${s.applyUrl}` : '',
+      s.sourceUrl ? `出典: ${s.sourceUrl}` : '',
+      '※出演メンバーは変更になる場合があります',
+    ]
       .filter(Boolean)
       .join('\n');
     lines.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${utcStamp(now)}`);
@@ -255,7 +272,7 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
       `DESCRIPTION:${escapeText(desc)}`,
     );
     if (location) lines.push(`LOCATION:${escapeText(location)}`);
-    if (s.sourceUrl) lines.push(`URL:${s.sourceUrl}`);
+    if (s.applyUrl || s.sourceUrl) lines.push(`URL:${s.applyUrl || s.sourceUrl}`);
     lines.push('END:VEVENT');
   }
   lines.push('END:VCALENDAR');

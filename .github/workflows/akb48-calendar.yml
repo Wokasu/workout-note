@@ -63,7 +63,7 @@ jobs:
         working-directory: feed
         run: |
           git add -A
-          if git rev-parse --verify HEAD >/dev/null 2>&1 && git diff --cached --quiet -- events.json; then
+          if git rev-parse --verify HEAD >/dev/null 2>&1 && git diff --cached --quiet -- events.json links.json; then
             echo '予定に変化なし'
             exit 0
           fi

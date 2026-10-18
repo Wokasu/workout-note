@@ -1,0 +1,18 @@
+name: AKB48 申込ランチャーのテスト
+
+on:
+  push:
+    paths: ['akb48-calendar/launcher/**', '.github/workflows/akb48-launcher-test.yml']
+  pull_request:
+    paths: ['akb48-calendar/launcher/**', '.github/workflows/akb48-launcher-test.yml']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Windows標準の PowerShell 5.1 で、Chromeを起動しないモードで動かして出力を確かめる
+      - name: Dry run
+        shell: powershell
+        run: '& akb48-calendar\launcher\test\run-test.ps1'
