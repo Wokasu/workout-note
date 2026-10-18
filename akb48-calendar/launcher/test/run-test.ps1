@@ -1,7 +1,7 @@
 ﻿# 申込ランチャーを Chrome を起動しないモードで動かし、出力を確かめる（Windows PowerShell 5.1 用）
 $ErrorActionPreference = 'Stop'
 $dir = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
-$out = & "$dir\launcher.ps1" -DryRun -NoWait -Select '1-3' -LocalState "$dir\test\Local State" -Links "$dir\test\links.json" *>&1 | Out-String
+$out = & "$dir\launcher.ps1" -DryRun -NoWait -Select '1-3' -LocalState "$dir\test\Local State" -Links "$dir\test\links.json" *>&1 | Out-String -Width 1000
 Write-Host $out
 $expected = @(
   '申込アカウント（Chromeのプロファイル）: 2 個',
