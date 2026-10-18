@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -96,7 +96,9 @@ try {
 // startDate より前の公演は入れない（それまでの分は手動で登録済みのため）
 const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
 const afterStart = (s) => s.year * 10000 + s.month * 100 + s.day >= sy * 10000 + sm * 100 + sd;
-const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found]).filter(afterStart);
+const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found])
+  .filter(afterStart)
+  .map((s) => ({ ...s, applyUrl: applyUrl(s, config.zaikoSlugs ?? {}) }));
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
@@ -109,6 +111,21 @@ for (const cal of config.calendars) {
   await writeFile(join(outDir, `${cal.id}.ics`), ics);
   console.log(`${cal.id}.ics: ${shows.length} 件`);
 }
+
+// 申込ランチャー（Windows）が読む一覧: 今日以降の公演
+const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).replace(/-/g, ''));
+const pad = (n) => String(n).padStart(2, '0');
+const links = events
+  .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
+  .map((s) => ({
+    date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
+    time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,
+    title: s.title,
+    members: s.members,
+    url: s.applyUrl,
+  }));
+await writeFile(join(outDir, 'links.json'), JSON.stringify(links, null, 2) + '\n');
+console.log(`links.json: ${links.length} 件（URLあり ${links.filter((l) => l.url).length} 件）`);
 if (fetchedPages === 0) {
   console.error('公式サイトから1ページも取得できませんでした（前回の予定をそのまま残しています）');
   process.exitCode = 1;

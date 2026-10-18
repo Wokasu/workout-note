@@ -11,6 +11,9 @@
   "maxFollowLinks": 40,
   "durationMinutes": 120,
   "location": "AKB48劇場（ドン・キホーテ秋葉原店8F）",
+  "zaikoSlugs": {
+    "「RESET」公演": "reset"
+  },
   "calendars": [
     {
       "id": "momoka",

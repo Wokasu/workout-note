@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applyUrl, buildIcs, buildShows, extractCasts, extractSchedule, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -91,4 +91,10 @@ test('ICSは日本時間をUTCに直し、色とカレンダー名を入れる',
   assert.match(ics, /DTSTART:20261109T093000Z/);
   assert.match(ics, /DTEND:20261109T113000Z/);
   assert.ok(ics.split('\r\n').every((l) => Buffer.byteLength(l) <= 75));
+});
+
+test('申込ページのURLを日付・開演時刻・公演名から作る', () => {
+  const show = { year: 2026, month: 10, day: 23, hour: 18, minute: 30, title: '「RESET」公演' };
+  assert.equal(applyUrl(show, config.zaikoSlugs), 'https://akb48.zaiko.io/ja/e/2026-reset-1023-1830');
+  assert.equal(applyUrl({ ...show, title: '「ここからだ」公演' }, {}), null);
 });
