@@ -1,45 +1,6 @@
 {
-  "version": 2,
+  "version": 3,
   "events": [
-    {
-      "year": 2026,
-      "month": 10,
-      "day": 21,
-      "hour": 18,
-      "minute": 30,
-      "title": "「手をつなぎながら」公演",
-      "members": [
-        "奥本カイリ",
-        "渡邊きこ"
-      ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/488448121"
-    },
-    {
-      "year": 2026,
-      "month": 10,
-      "day": 25,
-      "hour": 13,
-      "minute": 0,
-      "title": "「手をつなぎながら」公演",
-      "members": [
-        "奥本カイリ",
-        "渡邊きこ"
-      ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489357510"
-    },
-    {
-      "year": 2026,
-      "month": 10,
-      "day": 25,
-      "hour": 17,
-      "minute": 30,
-      "title": "「手をつなぎながら」公演",
-      "members": [
-        "奥本カイリ",
-        "渡邊きこ"
-      ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489357510"
-    },
     {
       "year": 2026,
       "month": 11,
@@ -60,7 +21,7 @@
       "minute": 0,
       "title": "「ここからだ」公演",
       "members": [
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -72,7 +33,7 @@
       "minute": 30,
       "title": "「ここからだ」公演",
       "members": [
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -85,7 +46,7 @@
       "title": "「ここからだ」公演",
       "members": [
         "奥本カイリ",
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -98,7 +59,7 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -159,7 +120,7 @@
       "minute": 0,
       "title": "柱の会限定イベント",
       "members": [
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -185,7 +146,7 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -198,7 +159,7 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
@@ -211,7 +172,7 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
-        "渡邊きこ"
+        "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266"
     },
