@@ -17,6 +17,8 @@ export function htmlToLines(html) {
   const text = html
     .replace(/<(script|style|noscript)[\s\S]*?<\/\1>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
+    // チケットセンター（ZAIKO）へのリンクは、リンク先を「⟨URL⟩」として本文に残す
+    .replace(/<a\b[^>]*href=["']([^"']*zaiko\.io[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, '$2 ⟨$1⟩')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?(p|div|li|ul|ol|tr|td|th|dt|dd|dl|h[1-6]|section|article|table|time)\b[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, ' ')
