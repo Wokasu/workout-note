@@ -11,12 +11,6 @@
   "maxFollowLinks": 40,
   "durationMinutes": 120,
   "location": "AKB48劇場（ドン・キホーテ秋葉原店8F）",
-  "zaikoUrls": {
-    "「RESET」公演": "{yyyy}-reset-{MMDD}-{HHMM}",
-    "「手をつなぎながら」公演": "te{yyyy}-{MMDD}-{HHMM}",
-    "「ここからだ」公演": "ko{yyyy}-{MMDD}-{HHMM}",
-    "「夢のポップスター」公演": "p{yyyy}-{MMDD}"
-  },
   "launcherExclude": [
     "柱の会限定イベント"
   ],

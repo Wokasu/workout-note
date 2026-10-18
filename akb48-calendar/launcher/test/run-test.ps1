@@ -5,7 +5,7 @@ $out = & "$dir\launcher.ps1" -Mode apply -DryRun -NoWait -Select '1-3' -LocalSta
 Write-Host $out
 $expected = @(
   '申込アカウント（Chromeのプロファイル）: 2 個',
-  '[ 2] 11/09(月) 18:30 「ここからだ」公演  伊藤百花  ← 申込URL未設定',
+  '[ 2] 11/09(月) 18:30 「ここからだ」公演  伊藤百花  ← まだ申込が始まっていません',
   '次の 2 公演を、2 個のアカウントで1つずつ開きます',
   '[1/2] AKB 01 柱の会 で開きます',
   'chrome --profile-directory="Profile 1" --new-window https://akb48.zaiko.io/ja/e/2026-reset-1107-1230 https://akb48.zaiko.io/ja/e/2026-reset-1111-1900',

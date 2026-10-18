@@ -66,11 +66,15 @@ const MONTHLY_RE = /^(\d{1,2})\/(\d{1,2}) ?\(.\) ?(.+?) ((?:\d{1,2}:\d{2}開演 
 const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\(.\)$/;
 const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
 
+// 公演ごとの申込ページへのリンク（htmlToLines が残した ⟨URL⟩）。チケットセンターのトップへのリンクは除く
+const APPLY_LINK_RE = /⟨(https:\/\/akb48\.zaiko\.io\/(?:[a-z]{2}\/)?e\/[^⟩\s]+)⟩/;
+
 const SCHEDULE_DAY_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S*(?: (\d{1,2}):(\d{2}) ?[~～])?$/;
 
 /**
  * トップページの出演メンバー。
  * 劇場スケジュール一覧（休館日も含む）と、その後ろに日付なしで並ぶ詳細を順番に対応させる。
+ * 申込が始まっている公演は、詳細に書かれた申込ページのリンク（applyUrl）も返す。
  * 公演名・開演時刻・休館日が1つでも食い違ったら、対応がずれているので何も返さない。
  */
 export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
@@ -91,11 +95,14 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
     const l = lines[i];
     const t = l.match(/^(\d{1,2}):(\d{2})開演$/);
     if (t && /公演|イベント/.test(lines[i - 1])) {
-      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [] });
+      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null });
     } else if (l === '休館日') {
-      details.push({ title: null, names: [] });
+      details.push({ title: null, names: [], applyUrl: null });
     } else if (l === '【出演メンバー】' && details.length && !details.at(-1).names.length) {
       details.at(-1).names = readMembers(lines, i + 1);
+    } else if (APPLY_LINK_RE.test(l) && details.length && !details.at(-1).applyUrl) {
+      // 申込が始まった公演には「★お申し込みはコチラ」などのリンクが付く
+      details.at(-1).applyUrl = l.match(APPLY_LINK_RE)[1];
     }
   }
   if (!entries.length || entries.length !== details.length) return [];
@@ -105,7 +112,7 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
   });
   if (!same) return [];
   return entries
-    .map((e, i) => ({ ...e, names: details[i].names, kind: 'top', sourceUrl }))
+    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, kind: 'top', sourceUrl }))
     .filter((c) => c.title !== null && c.names.length);
 }
 
@@ -145,7 +152,9 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
   let cur = null; // { year, month, day, title, times, kind }
   const push = (times, names) => {
     for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-      out.push({ year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, kind: cur.kind, sourceUrl });
+      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, kind: cur.kind, sourceUrl };
+      out.push(cast);
+      cur.casts.push(cast);
     }
   };
   for (let i = 0; i < lines.length; i++) {
@@ -154,13 +163,13 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
     if ((m = line.match(MONTHLY_RE))) {
       const month = Number(m[1]);
       const day = Number(m[2]);
-      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly' };
+      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [] };
     } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
       const next = lines[i + 1];
       cur = {
         year: Number(m[1]), month: Number(m[2]), day: Number(m[3]),
         title: normalizeTitle(next.replace(/\d{1,2}:\d{2}.*$/, '')),
-        times: parseTimes(next), kind: 'single',
+        times: parseTimes(next), kind: 'single', casts: [],
       };
       i++;
     } else if (cur && (m = line.match(CAST_HEAD_RE))) {
@@ -172,6 +181,10 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
       } else {
         push(cur.times, names);
       }
+    } else if (cur && APPLY_LINK_RE.test(line)) {
+      // 申込ページへのリンクは、まだリンクのない公演に書かれた順に付ける
+      const cast = cur.casts.find((c) => !c.applyUrl);
+      if (cast) cast.applyUrl = line.match(APPLY_LINK_RE)[1];
     } else if (/^\d{1,2}\/\d{1,2} ?\(.\)/.test(line)) {
       cur = null; // 休館日など
     }
@@ -189,6 +202,9 @@ const compact = (s) => s.replace(/[\s　]/g, '');
  * 返り値: { shows: 推しメンが出る公演, covered: 出演情報が見つかった「日付|公演名」 }
  */
 export function buildShows(casts, schedule, members) {
+  // 申込ページのリンクは、どの記事に書かれていたものでも使う（日付・公演名・開演時刻で対応させる）
+  const timeKey = (s) => `${performanceKey(s)}|${s.hour}:${s.minute}`;
+  const urls = new Map(casts.filter((c) => c.applyUrl && c.hour != null).map((c) => [timeKey(c), c.applyUrl]));
   const groups = new Map();
   for (const c of casts) {
     const key = performanceKey(c);
@@ -207,7 +223,8 @@ export function buildShows(casts, schedule, members) {
         ? [{ hour: c.hour, minute: c.minute }]
         : schedule.filter((s) => performanceKey(s) === performanceKey(c)).map(({ hour, minute }) => ({ hour, minute }));
       for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-        shows.push({ year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, sourceUrl: c.sourceUrl });
+        const show = { year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, sourceUrl: c.sourceUrl };
+        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null });
       }
     }
   }
@@ -227,26 +244,12 @@ export function mergeShows(list) {
     const key = showKey(s);
     const prev = map.get(key);
     if (!prev) map.set(key, { ...s, members: [...new Set(s.members)] });
-    else prev.members = [...new Set([...prev.members, ...s.members])];
+    else {
+      prev.members = [...new Set([...prev.members, ...s.members])];
+      prev.applyUrl ??= s.applyUrl;
+    }
   }
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
-}
-
-/**
- * AKB48チケットセンター（ZAIKO）の申込ページURLを作る。
- * 公演ごとのURLの形（テンプレート）の {yyyy} {MMDD} {HHMM} を日付・開演時刻で置き換える。
- * 例) "{yyyy}-reset-{MMDD}-{HHMM}" → https://akb48.zaiko.io/ja/e/2026-reset-1023-1830
- * テンプレートが設定にない公演は null
- */
-export function applyUrl(s, templates) {
-  const template = templates[s.title];
-  if (!template || (s.hour == null && template.includes('{HHMM}'))) return null;
-  const pad = (n) => String(n).padStart(2, '0');
-  const path = template
-    .replace('{yyyy}', s.year)
-    .replace('{MMDD}', `${pad(s.month)}${pad(s.day)}`)
-    .replace('{HHMM}', `${pad(s.hour)}${pad(s.minute)}`);
-  return `https://akb48.zaiko.io/ja/e/${path}`;
 }
 
 // ---- iCalendar ----

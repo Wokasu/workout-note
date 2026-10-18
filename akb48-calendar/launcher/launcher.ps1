@@ -145,7 +145,7 @@ if ($shows.Count -eq 0) { Stop-WithMessage '申込できる公演がありませ
 Write-Host ''
 for ($i = 0; $i -lt $shows.Count; $i++) {
   $line = "[{0,2}] {1}" -f ($i + 1), (Format-Show $shows[$i])
-  if ($shows[$i].url) { Write-Host $line } else { Write-Host "$line  ← 申込URL未設定" -ForegroundColor DarkGray }
+  if ($shows[$i].url) { Write-Host $line } else { Write-Host "$line  ← まだ申込が始まっていません" -ForegroundColor DarkGray }
 }
 Write-Host ''
 
@@ -154,7 +154,7 @@ if (-not $Select) {
 }
 try { $picked = Expand-Selection $Select $shows.Count } catch { Stop-WithMessage $_.Exception.Message }
 $targets = @($picked | ForEach-Object { $shows[$_ - 1] } | Where-Object { $_.url })
-if ($targets.Count -eq 0) { Stop-WithMessage '申込URLのある公演が選ばれていません。' }
+if ($targets.Count -eq 0) { Stop-WithMessage '申込が始まっている公演が選ばれていません。' }
 
 Write-Host ''
 Write-Host "次の $($targets.Count) 公演を、$($profiles.Count) 個のアカウントで1つずつ開きます:" -ForegroundColor Cyan
