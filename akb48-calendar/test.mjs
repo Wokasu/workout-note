@@ -146,7 +146,7 @@ test('トップページ: 一覧と詳細の対応がずれていたら使わな
   assert.deepEqual(extractTopCasts([...lines.slice(0, i), ...lines.slice(i + 1)]), []);
 });
 
-test('公式スケジュール: 推しが出る握手会・イベントを拾い、テレビ・ラジオ・オンラインは入れない', () => {
+test('公式スケジュール: 推しが出る握手会・お話し会（オンラインも）・イベントを拾い、テレビ・ラジオは入れない', () => {
   const api = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
   const events = [...eventsFromApi(api('api-2026-10.json'), members), ...eventsFromApi(api('api-2026-12.json'), members)];
   assert.deepEqual(
@@ -158,6 +158,8 @@ test('公式スケジュール: 推しが出る握手会・イベントを拾い
       '10/17 14 ロナルド・マクドナルド・ハウス 支援募金活動 渡邉葵心',
       '10/18 11 ロナルド・マクドナルド・ハウス 支援募金活動(青いマックの日・名古屋まつり) 渡邉葵心',
       '12/19 終日 【2ショット写真会】AKB48~studio recordings コレクション~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition) 伊藤百花,奥本カイリ,渡邉葵心',
+      '12/26 終日 AKB48 69thシングル OS盤 【オンラインお話し会】 伊藤百花,奥本カイリ,渡邉葵心',
+      '12/27 終日 AKB48 69thシングル OS盤 【オンラインお話し会】 伊藤百花,奥本カイリ,渡邉葵心',
     ],
   );
   // 詳細ページのURLと会場
@@ -177,4 +179,13 @@ test('ICS: 現場の予定は会場と詳細ページのURLを入れる（劇場
   assert.match(ics, /LOCATION:セブンパーク天美/);
   assert.match(ics, /URL:https:\/\/example.com\/a/);
   assert.doesNotMatch(ics, /AKB48劇場/);
+});
+
+test('公式スケジュール: 握手会以外のオンライン・配信の予定は入れない', () => {
+  const json = { data: { thismonth: { '2026_11_1': [
+    { parent_category: '3', title: '配信イベント', body: '', member: '1093', date: '2026-11-01 20:00:00', end_date: '2026-11-01 21:00:00' },
+    { parent_category: '2', title: 'ラジオ', body: '', member: '1093', date: '2026-11-01 25:00:00', end_date: '2026-11-01 25:30:00' },
+    { parent_category: '2', title: 'ラジオ公開収録', body: '【会場】渋谷', member: '1093', date: '2026-11-01 13:00:00', end_date: '2026-11-01 14:00:00' },
+  ] } } };
+  assert.deepEqual(eventsFromApi(json, members).map((e) => e.title), ['ラジオ公開収録']);
 });

@@ -273,15 +273,17 @@ function pickDetailUrl(text) {
 }
 
 /**
- * 直接会いに行ける現場かどうか。
- * イベント・ライブ・握手会（オンラインを除く）と、会場が書かれた予定、テレビ・ラジオの公開収録を入れる。
+ * カレンダーに入れる現場かどうか。
+ * 握手会・写真会・お話し会（オンラインも含む）、イベント・ライブ（オンライン・配信を除く）、
+ * 会場が書かれた予定、テレビ・ラジオの公開収録を入れる。
  */
 export function isInPerson(item, text) {
   const pc = String(item.parent_category);
   if (pc === '1' || pc === '999') return false;
+  if (pc === '7') return true;
   const title = bodyText(item.title);
   if (ONLINE_RE.test(title)) return false;
-  if (pc === '3' || pc === '7') return true;
+  if (pc === '3') return true;
   return PUBLIC_RECORDING_RE.test(`${title}\n${text}`) || (pc !== '2' && VENUE_RE.test(text));
 }
 
