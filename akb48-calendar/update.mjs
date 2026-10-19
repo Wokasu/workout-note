@@ -40,6 +40,26 @@ function collectLinks(html, baseUrl) {
   return links;
 }
 
+// 調査用: --probe で、指定したページの本文とリンク一覧を dump に書き出すだけ
+if (dumpDir && args.probe) {
+  await mkdir(dumpDir, { recursive: true });
+  let n = 0;
+  for (const url of args.probe.split(',')) {
+    n++;
+    try {
+      const html = await fetchHtml(url);
+      const anchors = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+        .map((m) => `${new URL(m[1], url).href}\t${m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}`);
+      const scripts = [...html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|json)[^"']*)["']|["'](\/[\w\/.-]*api[\w\/.?=&-]*)["']/gi)].map((m) => m[1] || m[2]);
+      await writeFile(join(dumpDir, `probe-${n}.txt`), `${url}\n\n=== links ===\n${anchors.join('\n')}\n\n=== scripts/api ===\n${scripts.join('\n')}\n\n=== text ===\n${htmlToLines(html).join('\n')}\n`);
+      console.log(`probe ${url}: ${html.length} bytes`);
+    } catch (e) {
+      console.warn(`probe 失敗 ${url}: ${e.message}`);
+    }
+  }
+  process.exit(0);
+}
+
 const schedule = [];
 const casts = [];
 let fetchedPages = 0;

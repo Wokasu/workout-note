@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '17 */3 * * *' # 3時間ごと
   workflow_dispatch:
+    inputs:
+      probe:
+        description: '調査用: 本文とリンク一覧を出すだけのページ（カンマ区切り）。空なら通常の更新'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -43,7 +48,7 @@ jobs:
       - name: Build calendars
         id: build
         continue-on-error: true
-        run: node akb48-calendar/update.mjs --out feed --dump dump
+        run: node akb48-calendar/update.mjs --out feed --dump dump ${{ inputs.probe && format('--probe {0}', inputs.probe) || '' }}
 
       - name: Show fetched text (for debugging)
         if: always()
@@ -60,6 +65,7 @@ jobs:
 
       # 予定が変わったときだけコミットする（DTSTAMP だけの変化では push しない）
       - name: Publish
+        if: ${{ !inputs.probe }}
         working-directory: feed
         run: |
           git add -A
