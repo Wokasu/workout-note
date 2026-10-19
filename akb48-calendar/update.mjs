@@ -168,11 +168,11 @@ const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
+// 複数の推しが出る予定は、config.json で先に書かれたカレンダー（伊藤百花）にだけ入れ、
+// 予定のタイトルには出演する推しを全員書く
+const ownerOf = (s) => config.calendars.find((c) => c.members.some((m) => s.members.includes(m.name)))?.id;
 for (const cal of config.calendars) {
-  const names = cal.members.map((m) => m.name);
-  const shows = events
-    .filter((s) => s.memberUnknown || s.members.some((m) => names.includes(m)))
-    .map((s) => ({ ...s, members: s.members.filter((m) => names.includes(m)) }));
+  const shows = events.filter((s) => s.memberUnknown || ownerOf(s) === cal.id);
   const ics = buildIcs(cal, shows, { durationMinutes: config.durationMinutes, location: config.location, now: today });
   await writeFile(join(outDir, `${cal.id}.ics`), ics);
   console.log(`${cal.id}.ics: ${shows.length} 件`);
