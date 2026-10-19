@@ -70,13 +70,13 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # 予定が変わったときだけコミットする（DTSTAMP だけの変化では push しない）
+      # 中身が変わったときだけコミットする（.ics の DTSTAMP は毎回変わるので比べない）
       - name: Publish
         if: ${{ !inputs.probe }}
         working-directory: feed
         run: |
           git add -A
-          if git rev-parse --verify HEAD >/dev/null 2>&1 && git diff --cached --quiet -- events.json links.json; then
+          if git rev-parse --verify HEAD >/dev/null 2>&1 && git diff --cached --quiet -I '^DTSTAMP:'; then
             echo '予定に変化なし'
             exit 0
           fi
