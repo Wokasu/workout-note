@@ -60,7 +60,7 @@ if (dumpDir && args.probe) {
         }
         const res = await fetch(url, init);
         const text = await res.text();
-        await writeFile(join(dumpDir, `probe-${n}.txt`), `${spec}\nHTTP ${res.status}\n\n${text.slice(0, 30000)}\n`);
+        await writeFile(join(dumpDir, `probe-${n}.txt`), `${spec}\nHTTP ${res.status}\n\n${text.slice(0, 600000)}\n`);
         console.log(`probe ${spec}: HTTP ${res.status} ${text.length} bytes`);
         continue;
       }
