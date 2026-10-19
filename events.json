@@ -367,8 +367,10 @@
       "endHour": null,
       "endMinute": null,
       "title": "【AKB48】「GIFT〜Girls Idol Festival Tokyo〜」",
-      "members": [],
-      "memberUnknown": true,
+      "members": [
+        "伊藤百花"
+      ],
+      "memberUnknown": false,
       "detailUrl": "https://gift-idol.jp",
       "location": "SGC ホール有明 TOYOTA ARENA TOKYO",
       "note": "【開催日時】11/28(土)開催\n【イベント名】「GIFT〜Girls Idol Festival Tokyo〜」\n【会場】SGC ホール有明 TOYOTA ARENA TOKYO\n【出演者】AKB48\n【公式サイト】 https://gift-idol.jp",
