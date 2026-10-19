@@ -48,11 +48,17 @@ if (dumpDir && args.probe) {
     n++;
     try {
       // raw:URL → 加工せずに出す / post:URL|本文 → POSTして結果をそのまま出す
-      if (spec.startsWith('raw:') || spec.startsWith('post:')) {
-        const [url, body] = spec.replace(/^(raw|post):/, '').split('|');
-        const res = await fetch(url, spec.startsWith('post:')
-          ? { method: 'POST', body, headers: { 'Content-Type': body?.startsWith('{') ? 'application/json' : 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' } }
-          : {});
+      if (/^(raw|post|form):/.test(spec)) {
+        const [url, body] = spec.replace(/^(raw|post|form):/, '').split('|');
+        let init = {};
+        if (spec.startsWith('post:')) {
+          init = { method: 'POST', body, headers: { 'Content-Type': 'application/x-www-form-urlencoded' } };
+        } else if (spec.startsWith('form:')) {
+          const form = new FormData();
+          for (const [k, v] of new URLSearchParams(body ?? '')) form.append(k, v);
+          init = { method: 'POST', body: form };
+        }
+        const res = await fetch(url, init);
         const text = await res.text();
         await writeFile(join(dumpDir, `probe-${n}.txt`), `${spec}\nHTTP ${res.status}\n\n${text.slice(0, 30000)}\n`);
         console.log(`probe ${spec}: HTTP ${res.status} ${text.length} bytes`);
