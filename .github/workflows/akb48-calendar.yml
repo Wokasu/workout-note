@@ -48,7 +48,14 @@ jobs:
       - name: Build calendars
         id: build
         continue-on-error: true
-        run: node akb48-calendar/update.mjs --out feed --dump dump ${{ inputs.probe && format('--probe {0}', inputs.probe) || '' }}
+        env:
+          PROBE: ${{ inputs.probe }}
+        run: |
+          if [ -n "$PROBE" ]; then
+            node akb48-calendar/update.mjs --out feed --dump dump --probe "$PROBE"
+          else
+            node akb48-calendar/update.mjs --out feed --dump dump
+          fi
 
       - name: Show fetched text (for debugging)
         if: always()
