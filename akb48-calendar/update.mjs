@@ -44,9 +44,21 @@ function collectLinks(html, baseUrl) {
 if (dumpDir && args.probe) {
   await mkdir(dumpDir, { recursive: true });
   let n = 0;
-  for (const url of args.probe.split(',')) {
+  for (const spec of args.probe.split(',')) {
     n++;
     try {
+      // raw:URL → 加工せずに出す / post:URL|本文 → POSTして結果をそのまま出す
+      if (spec.startsWith('raw:') || spec.startsWith('post:')) {
+        const [url, body] = spec.replace(/^(raw|post):/, '').split('|');
+        const res = await fetch(url, spec.startsWith('post:')
+          ? { method: 'POST', body, headers: { 'Content-Type': body?.startsWith('{') ? 'application/json' : 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' } }
+          : {});
+        const text = await res.text();
+        await writeFile(join(dumpDir, `probe-${n}.txt`), `${spec}\nHTTP ${res.status}\n\n${text.slice(0, 30000)}\n`);
+        console.log(`probe ${spec}: HTTP ${res.status} ${text.length} bytes`);
+        continue;
+      }
+      const url = spec;
       const html = await fetchHtml(url);
       const anchors = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
         .map((m) => `${new URL(m[1], url).href}\t${m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()}`);
@@ -54,7 +66,7 @@ if (dumpDir && args.probe) {
       await writeFile(join(dumpDir, `probe-${n}.txt`), `${url}\n\n=== links ===\n${anchors.join('\n')}\n\n=== scripts/api ===\n${scripts.join('\n')}\n\n=== text ===\n${htmlToLines(html).join('\n')}\n`);
       console.log(`probe ${url}: ${html.length} bytes`);
     } catch (e) {
-      console.warn(`probe 失敗 ${url}: ${e.message}`);
+      console.warn(`probe 失敗 ${spec}: ${e.message}`);
     }
   }
   process.exit(0);
