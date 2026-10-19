@@ -252,6 +252,79 @@ export function mergeShows(list) {
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
 }
 
+// ---- 公式スケジュール（握手会・ライブ・イベントなど）----
+// 公式サイトの「スケジュール」ページが読んでいるデータ（/public/api/schedule/calendar/）。
+// 1件ごとに日時・カテゴリ・出演メンバーID・本文がある。parent_category は
+// 1=劇場公演（別に読む） 2=メディア（テレビ・ラジオ・雑誌など） 3=イベント・ライブ 7=握手会・写真会。
+
+const ONLINE_RE = /オンライン|配信|リモート/;
+const PUBLIC_RECORDING_RE = /公開(?:収録|録音|生放送|放送)|観覧/;
+const VENUE_RE = /【会場】|会場[＞>:：]/;
+
+function bodyText(body) {
+  return htmlToLines(body.replace(/\\\//g, '/')).join('\n');
+}
+
+// 本文から詳細ページのURLを選ぶ（＜詳細＞ ＞ 【公式サイト】 ＞ 最初のURL）
+function pickDetailUrl(text) {
+  const urls = (label) => text.match(new RegExp(`${label}[^\\n]*\\n?\\s*(https?:\\/\\/[^\\s⟨⟩]+)`));
+  const any = text.match(/https?:\/\/[^\s⟨⟩]+/);
+  return (urls('＜詳細＞') || urls('【公式サイト】') || urls('＜申込ページはこちら＞'))?.[1] ?? any?.[0] ?? null;
+}
+
+/**
+ * 直接会いに行ける現場かどうか。
+ * イベント・ライブ・握手会（オンラインを除く）と、会場が書かれた予定、テレビ・ラジオの公開収録を入れる。
+ */
+export function isInPerson(item, text) {
+  const pc = String(item.parent_category);
+  if (pc === '1' || pc === '999') return false;
+  const title = bodyText(item.title);
+  if (ONLINE_RE.test(title)) return false;
+  if (pc === '3' || pc === '7') return true;
+  return PUBLIC_RECORDING_RE.test(`${title}\n${text}`) || (pc !== '2' && VENUE_RE.test(text));
+}
+
+/**
+ * スケジュールのデータから、推しメンが出る現場を取り出す。
+ * members: [{ name, mid }]。出演メンバーが空の予定（グループ全体の出演など）は memberUnknown: true で返す
+ */
+export function eventsFromApi(json, members) {
+  const out = [];
+  const days = json?.data?.thismonth;
+  if (!days || Array.isArray(days)) return out;
+  for (const item of Object.values(days).flat()) {
+    const text = bodyText(item.body ?? '');
+    if (!isInPerson(item, text)) continue;
+    const ids = String(item.member ?? '').split(',').filter(Boolean);
+    const hits = members.filter((m) => ids.includes(String(m.mid))).map((m) => m.name);
+    if (ids.length && !hits.length) continue;
+    const [d, t] = item.date.split(' ');
+    const [year, month, day] = d.split('-').map(Number);
+    const [hour, minute] = t.split(':').map(Number);
+    const [, et] = (item.end_date ?? '').split(' ');
+    const [endHour, endMinute] = (et ?? '00:00').split(':').map(Number);
+    const allDay = hour === 0 && minute === 0;
+    const hasEnd = !allDay && endHour * 60 + endMinute > hour * 60 + minute;
+    out.push({
+      year, month, day,
+      hour: allDay ? null : hour,
+      minute: allDay ? null : minute,
+      endHour: hasEnd ? endHour : null,
+      endMinute: hasEnd ? endMinute : null,
+      title: bodyText(item.title).replace(/\s+/g, ' ').trim(),
+      members: hits,
+      memberUnknown: !ids.length,
+      detailUrl: pickDetailUrl(text),
+      location: text.match(/(?:【会場】|会場[：:])\s*\n?\s*([^\n]+)/)?.[1]?.trim() ?? null,
+      note: text.slice(0, 600),
+      kind: 'event',
+      sourceUrl: 'https://www.akb48.co.jp/about/schedule',
+    });
+  }
+  return out;
+}
+
 // ---- iCalendar ----
 
 function escapeText(s) {
@@ -303,9 +376,11 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
   for (const s of shows) {
     const uid = `${showKey(s).replace(/[^\w-]/g, '')}-${Buffer.from(s.title).toString('hex').slice(0, 24)}@akb48-calendar`;
     const desc = [
-      `出演: ${s.members.join('、')}`,
+      s.memberUnknown ? '出演: 出演メンバー未発表' : `出演: ${s.members.join('、')}`,
       s.applyUrl ? `申込: ${s.applyUrl}` : '',
+      s.detailUrl ? `詳細: ${s.detailUrl}` : '',
       s.sourceUrl ? `出典: ${s.sourceUrl}` : '',
+      s.note ? `\n${s.note}` : '',
       '※出演メンバーは変更になる場合があります',
     ]
       .filter(Boolean)
@@ -319,15 +394,19 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
       );
     } else {
       const start = jstToUtc(s.year, s.month, s.day, s.hour, s.minute);
-      const end = new Date(start.getTime() + durationMinutes * 60_000);
+      const end = s.endHour != null
+        ? jstToUtc(s.year, s.month, s.day, s.endHour, s.endMinute)
+        : new Date(start.getTime() + durationMinutes * 60_000);
       lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`);
     }
     lines.push(
-      `SUMMARY:${escapeText(`${s.title}（${s.members.join('・')}）`)}`,
+      `SUMMARY:${escapeText(`${s.title}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
       `DESCRIPTION:${escapeText(desc)}`,
     );
-    if (location) lines.push(`LOCATION:${escapeText(location)}`);
-    if (s.applyUrl || s.sourceUrl) lines.push(`URL:${s.applyUrl || s.sourceUrl}`);
+    const place = s.kind === 'event' ? s.location : location;
+    if (place) lines.push(`LOCATION:${escapeText(place)}`);
+    const url = s.applyUrl || s.detailUrl || s.sourceUrl;
+    if (url) lines.push(`URL:${url}`);
     lines.push('END:VEVENT');
   }
   lines.push('END:VCALENDAR');
