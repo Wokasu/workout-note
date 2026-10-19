@@ -4,6 +4,25 @@
     {
       "year": 2026,
       "month": 10,
+      "day": 18,
+      "hour": 11,
+      "minute": 0,
+      "endHour": null,
+      "endMinute": null,
+      "title": "ロナルド・マクドナルド・ハウス 支援募金活動(青いマックの日・名古屋まつり)",
+      "members": [
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://www.mcdonalds.co.jp/sustainability/local/aoimc/",
+      "location": "名古屋まつり 久屋大通公演 会場",
+      "note": "【開催日時】10月18日(日) 11:00-11:30(募金活動)/ 14:10-14:30(トークイベント)/ 14:40-15:10(募金活動) 予定\n【イベント名】ロナルド・マクドナルド・ハウス 支援募金活動\n【会場】名古屋まつり 久屋大通公演 会場\n【出演者】近藤沙樹、髙橋舞桜、田中沙友利、牧戸愛茉、森川 優、渡邉葵心 ※時間によって参加メンバーが異なります。\n【公式サイト】 https://www.mcdonalds.co.jp/sustainability/local/aoimc/",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2026,
+      "month": 10,
       "day": 19,
       "hour": 18,
       "minute": 30,
@@ -68,6 +87,19 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/ja/e/ko2026-1027-1830"
+    },
+    {
+      "year": 2026,
+      "month": 10,
+      "day": 28,
+      "hour": 18,
+      "minute": 30,
+      "title": "「ここからだ」公演",
+      "members": [
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489819658",
+      "applyUrl": null
     },
     {
       "year": 2026,
@@ -245,6 +277,48 @@
     {
       "year": 2026,
       "month": 11,
+      "day": 21,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "【2ショット写真会】AKB48~studio recordings コレクション~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://ameblo.jp/akihabara48/entry-12978495505.html",
+      "location": null,
+      "note": "<詳細> https://ameblo.jp/akihabara48/entry-12978495505.html\n▼「2ショット写真会」会場・開催日時\n全3日程にて開催\n2026年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月22日(日)10:00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:00(インテックス大阪)\n▼Standard Edition:「2ショット写真会」参加権利付き お申し込みページ(AKB48 Official Shop)\nhttps://official-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Edition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/detail/102627\n▼Limited Edition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/detail/102613",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2026,
+      "month": 11,
+      "day": 22,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "【2ショット写真会】AKB48~studio recordings コレクション~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://ameblo.jp/akihabara48/entry-12978495505.html",
+      "location": null,
+      "note": "<詳細> https://ameblo.jp/akihabara48/entry-12978495505.html\n▼「2ショット写真会」会場・開催日時\n全3日程にて開催\n2026年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月22日(日)10:00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:00(インテックス大阪)\n▼Standard Edition:「2ショット写真会」参加権利付き お申し込みページ(AKB48 Official Shop)\nhttps://official-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Edition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/detail/102627\n▼Limited Edition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/detail/102613",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2026,
+      "month": 11,
       "day": 23,
       "hour": 13,
       "minute": 0,
@@ -287,6 +361,23 @@
     {
       "year": 2026,
       "month": 11,
+      "day": 28,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "【AKB48】「GIFT〜Girls Idol Festival Tokyo〜」",
+      "members": [],
+      "memberUnknown": true,
+      "detailUrl": "https://gift-idol.jp",
+      "location": "SGC ホール有明 TOYOTA ARENA TOKYO",
+      "note": "【開催日時】11/28(土)開催\n【イベント名】「GIFT〜Girls Idol Festival Tokyo〜」\n【会場】SGC ホール有明 TOYOTA ARENA TOKYO\n【出演者】AKB48\n【公式サイト】 https://gift-idol.jp",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2026,
+      "month": 11,
       "day": 29,
       "hour": 18,
       "minute": 30,
@@ -309,6 +400,111 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
       "applyUrl": null
+    },
+    {
+      "year": 2026,
+      "month": 12,
+      "day": 19,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "【2ショット写真会】AKB48~studio recordings コレクション~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://ameblo.jp/akihabara48/entry-12978495505.html",
+      "location": null,
+      "note": "<詳細> https://ameblo.jp/akihabara48/entry-12978495505.html\n▼「2ショット写真会」会場・開催日時\n全3日程にて開催\n2026年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月22日(日)10:00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:00(インテックス大阪)\n▼Standard Edition:「2ショット写真会」参加権利付き お申し込みページ(AKB48 Official Shop)\nhttps://official-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Edition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/detail/102627\n▼Limited Edition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/detail/102613",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2027,
+      "month": 1,
+      "day": 9,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "AKB48 69thシングル OS盤 【個別握手会】 @幕張メッセ",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://official-cd.akb48.co.jp/akb48-69th/",
+      "location": null,
+      "note": "<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会場・開催日時>\n関東会場8日間、東海会場2日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メッセ: https://www.m-messe.co.jp/access/\n有明GYM-EX: https://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト: https://www.bigsight.jp/visitor/access/\nAichi Sky Expo: https://www.aichiskyexpo.com/access/\n",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2027,
+      "month": 1,
+      "day": 10,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "AKB48 69thシングル OS盤 【個別握手会】 @幕張メッセ",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://official-cd.akb48.co.jp/akb48-69th/",
+      "location": null,
+      "note": "<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会場・開催日時>\n関東会場8日間、東海会場2日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メッセ: https://www.m-messe.co.jp/access/\n有明GYM-EX: https://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト: https://www.bigsight.jp/visitor/access/\nAichi Sky Expo: https://www.aichiskyexpo.com/access/\n",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2027,
+      "month": 1,
+      "day": 23,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "AKB48 69thシングル OS盤 【個別握手会】 @有明GYM-EX",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://official-cd.akb48.co.jp/akb48-69th/",
+      "location": null,
+      "note": "<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会場・開催日時>\n関東会場8日間、東海会場2日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メッセ:https://www.m-messe.co.jp/access/\n有明GYM-EX:https://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト:https://www.bigsight.jp/visitor/access/\nAichi Sky Expo:https://www.aichiskyexpo.com/access/\n※会場へ",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
+    },
+    {
+      "year": 2027,
+      "month": 1,
+      "day": 24,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "AKB48 69thシングル OS盤 【個別握手会】 @有明GYM-EX",
+      "members": [
+        "伊藤百花",
+        "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://official-cd.akb48.co.jp/akb48-69th/",
+      "location": null,
+      "note": "<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会場・開催日時>\n関東会場8日間、東海会場2日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メッセ:https://www.m-messe.co.jp/access/\n有明GYM-EX:https://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト:https://www.bigsight.jp/visitor/access/\nAichi Sky Expo:https://www.aichiskyexpo.com/access/\n※会場へ",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/about/schedule"
     }
   ]
 }

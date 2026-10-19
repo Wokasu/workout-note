@@ -10,7 +10,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT6H
 X-PUBLISHED-TTL:PT6H
 BEGIN:VEVENT
 UID:20261031-1730--e3808ce5a4a2e381aee3839d@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261031T083000Z
 DTEND:20261031T103000Z
 SUMMARY:「夢のポップスター」公演（伊藤百花）
@@ -22,7 +22,7 @@ URL:https://akb48.zaiko.io/ja/e/p2026-1031
 END:VEVENT
 BEGIN:VEVENT
 UID:20261109-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261109T093000Z
 DTEND:20261109T113000Z
 SUMMARY:「ここからだ」公演（伊藤百花）
@@ -34,7 +34,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261113-1830--e3808ce5a4a2e381aee3839d@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261113T093000Z
 DTEND:20261113T113000Z
 SUMMARY:「夢のポップスター」公演（伊藤百花）
@@ -46,7 +46,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1900--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261115T100000Z
 DTEND:20261115T120000Z
 SUMMARY:柱の会限定イベント（伊藤百花）
@@ -57,8 +57,73 @@ LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
+UID:20261121-xxxx-2AKB48studiorecordingsTeamA7thStageMTStandardEdition-e380
+ 9032e382b7e383a7e383@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261121
+DTEND;VALUE=DATE:20261122
+SUMMARY:【2ショット写真会】AKB48~studio recordings コレクショ
+ ン~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)（伊藤百花
+ ）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://ameblo.jp/akihabara48/ent
+ ry-12978495505.html\n出典: https://www.akb48.co.jp/about/schedule\n\n<
+ 詳細> https://ameblo.jp/akihabara48/entry-12978495505.html\n▼「2シ
+ ョット写真会」会場・開催日時\n全3日程にて開催\n2026
+ 年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月22日(日)10
+ :00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:00(インテ
+ ックス大阪)\n▼Standard Edition:「2ショット写真会」参加
+ 権利付き お申し込みページ(AKB48 Official Shop)\nhttps://offici
+ al-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Edition:通常
+ 販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/d
+ etail/102627\n▼Limited Edition:通常販売ページ(AKB48 Official Shop
+ )\nhttps://shop.akb48.co.jp/selection/detail/102613\n※出演メンバー
+ は変更になる場合があります
+URL:https://ameblo.jp/akihabara48/entry-12978495505.html
+END:VEVENT
+BEGIN:VEVENT
+UID:20261122-xxxx-2AKB48studiorecordingsTeamA7thStageMTStandardEdition-e380
+ 9032e382b7e383a7e383@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261122
+DTEND;VALUE=DATE:20261123
+SUMMARY:【2ショット写真会】AKB48~studio recordings コレクショ
+ ン~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)（伊藤百花
+ ）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://ameblo.jp/akihabara48/ent
+ ry-12978495505.html\n出典: https://www.akb48.co.jp/about/schedule\n\n<
+ 詳細> https://ameblo.jp/akihabara48/entry-12978495505.html\n▼「2シ
+ ョット写真会」会場・開催日時\n全3日程にて開催\n2026
+ 年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月22日(日)10
+ :00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:00(インテ
+ ックス大阪)\n▼Standard Edition:「2ショット写真会」参加
+ 権利付き お申し込みページ(AKB48 Official Shop)\nhttps://offici
+ al-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Edition:通常
+ 販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/d
+ etail/102627\n▼Limited Edition:通常販売ページ(AKB48 Official Shop
+ )\nhttps://shop.akb48.co.jp/selection/detail/102613\n※出演メンバー
+ は変更になる場合があります
+URL:https://ameblo.jp/akihabara48/entry-12978495505.html
+END:VEVENT
+BEGIN:VEVENT
+UID:20261128-xxxx-AKB48GIFTGirlsIdolFestivalTokyo-e38090414b423438e38091e3@
+ akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261128
+DTEND;VALUE=DATE:20261129
+SUMMARY:【AKB48】「GIFT〜Girls Idol Festival Tokyo〜」（出演メン
+ バー未発表）
+DESCRIPTION:出演: 出演メンバー未発表\n詳細: https://gift-idol.
+ jp\n出典: https://www.akb48.co.jp/about/schedule\n\n【開催日時】11
+ /28(土)開催\n【イベント名】「GIFT〜Girls Idol Festival Tokyo
+ 〜」\n【会場】SGC ホール有明 TOYOTA ARENA TOKYO\n【出演者
+ 】AKB48\n【公式サイト】 https://gift-idol.jp\n※出演メンバ
+ ーは変更になる場合があります
+LOCATION:SGC ホール有明 TOYOTA ARENA TOKYO
+URL:https://gift-idol.jp
+END:VEVENT
+BEGIN:VEVENT
 UID:20261129-1830-MT-e3808c4d2e542ee381abe68d@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261129T093000Z
 DTEND:20261129T113000Z
 SUMMARY:「M.T.に捧ぐ」公演（伊藤百花）
@@ -67,5 +132,129 @@ DESCRIPTION:出演: 伊藤百花\n出典: https://www.akb48.co.jp/news/deta
  ます
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261219-xxxx-2AKB48studiorecordingsTeamA7thStageMTStandardEdition-e380
+ 9032e382b7e383a7e383@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261219
+DTEND;VALUE=DATE:20261220
+SUMMARY:【2ショット写真会】AKB48~studio recordings コレクショ
+ ン~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)（伊藤百花
+ ）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://ameblo.jp/akihabara48/ent
+ ry-12978495505.html\n出典: https://www.akb48.co.jp/about/schedule\n\n<
+ 詳細> https://ameblo.jp/akihabara48/entry-12978495505.html\n▼「2シ
+ ョット写真会」会場・開催日時\n全3日程にて開催\n2026
+ 年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月22日(日)10
+ :00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:00(インテ
+ ックス大阪)\n▼Standard Edition:「2ショット写真会」参加
+ 権利付き お申し込みページ(AKB48 Official Shop)\nhttps://offici
+ al-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Edition:通常
+ 販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp/selection/d
+ etail/102627\n▼Limited Edition:通常販売ページ(AKB48 Official Shop
+ )\nhttps://shop.akb48.co.jp/selection/detail/102613\n※出演メンバー
+ は変更になる場合があります
+URL:https://ameblo.jp/akihabara48/entry-12978495505.html
+END:VEVENT
+BEGIN:VEVENT
+UID:20270109-xxxx-AKB4869thOS-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270109
+DTEND;VALUE=DATE:20270110
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @幕張メッセ
+ （伊藤百花）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://official-cd.akb48.co.jp/a
+ kb48-69th/\n出典: https://www.akb48.co.jp/about/schedule\n\n<申込ペ
+ ージはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>
+ \nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会
+ 場・開催日時>\n関東会場8日間、東海会場2日間 全10日程
+ にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メ
+ ッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明G
+ YM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッ
+ セ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Ex
+ po\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)
+ 東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メ
+ ッセ: https://www.m-messe.co.jp/access/\n有明GYM-EX: https://www.bigsi
+ ght.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト: h
+ ttps://www.bigsight.jp/visitor/access/\nAichi Sky Expo: https://www.aichis
+ kyexpo.com/access/\n\n※出演メンバーは変更になる場合があ
+ ります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
+END:VEVENT
+BEGIN:VEVENT
+UID:20270110-xxxx-AKB4869thOS-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270110
+DTEND;VALUE=DATE:20270111
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @幕張メッセ
+ （伊藤百花）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://official-cd.akb48.co.jp/a
+ kb48-69th/\n出典: https://www.akb48.co.jp/about/schedule\n\n<申込ペ
+ ージはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>
+ \nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会
+ 場・開催日時>\n関東会場8日間、東海会場2日間 全10日程
+ にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メ
+ ッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明G
+ YM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッ
+ セ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Ex
+ po\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)
+ 東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メ
+ ッセ: https://www.m-messe.co.jp/access/\n有明GYM-EX: https://www.bigsi
+ ght.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト: h
+ ttps://www.bigsight.jp/visitor/access/\nAichi Sky Expo: https://www.aichis
+ kyexpo.com/access/\n\n※出演メンバーは変更になる場合があ
+ ります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
+END:VEVENT
+BEGIN:VEVENT
+UID:20270123-xxxx-AKB4869thOSGYM-EX-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270123
+DTEND;VALUE=DATE:20270124
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @有明GYM-EX（
+ 伊藤百花）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://official-cd.akb48.co.jp/a
+ kb48-69th/\n出典: https://www.akb48.co.jp/about/schedule\n\n<申込ペ
+ ージはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>
+ \nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会
+ 場・開催日時>\n関東会場8日間、東海会場2日間 全10日程
+ にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メ
+ ッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明G
+ YM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッ
+ セ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Ex
+ po\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)
+ 東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メ
+ ッセ:https://www.m-messe.co.jp/access/\n有明GYM-EX:https://www.bigsigh
+ t.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト:http
+ s://www.bigsight.jp/visitor/access/\nAichi Sky Expo:https://www.aichiskyex
+ po.com/access/\n※会場へ\n※出演メンバーは変更になる場
+ 合があります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
+END:VEVENT
+BEGIN:VEVENT
+UID:20270124-xxxx-AKB4869thOSGYM-EX-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270124
+DTEND;VALUE=DATE:20270125
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @有明GYM-EX（
+ 伊藤百花）
+DESCRIPTION:出演: 伊藤百花\n詳細: https://official-cd.akb48.co.jp/a
+ kb48-69th/\n出典: https://www.akb48.co.jp/about/schedule\n\n<申込ペ
+ ージはこちら>\nhttps://official-cd.akb48.co.jp/akb48-69th/\n<詳細>
+ \nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個別握手会 会
+ 場・開催日時>\n関東会場8日間、東海会場2日間 全10日程
+ にて開催\n・AKB48全メンバー参加\n2027年1月9日(土)幕張メ
+ ッセ\n2027年1月10日(日)幕張メッセ\n2027年1月23日(土)有明G
+ YM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6日(土)幕張メッ
+ セ\n2027年2月7日(日)幕張メッセ\n2027年3月7日(日)Aichi Sky Ex
+ po\n2027年4月10日(土)東京ビッグサイト\n2027年4月11日(日)
+ 東京ビッグサイト\n2027年4月25日(日)Aichi Sky Expo\n幕張メ
+ ッセ:https://www.m-messe.co.jp/access/\n有明GYM-EX:https://www.bigsigh
+ t.jp/organizer/buildings/gym-ex/access.html\n東京ビッグサイト:http
+ s://www.bigsight.jp/visitor/access/\nAichi Sky Expo:https://www.aichiskyex
+ po.com/access/\n※会場へ\n※出演メンバーは変更になる場
+ 合があります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
 END:VEVENT
 END:VCALENDAR

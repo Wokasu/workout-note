@@ -9,8 +9,28 @@ X-APPLE-CALENDAR-COLOR:#5AC8FA
 REFRESH-INTERVAL;VALUE=DURATION:PT6H
 X-PUBLISHED-TTL:PT6H
 BEGIN:VEVENT
+UID:20261018-1100--e383ade3838ae383abe38389@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART:20261018T020000Z
+DTEND:20261018T040000Z
+SUMMARY:ロナルド・マクドナルド・ハウス 支援募金活動(
+ 青いマックの日・名古屋まつり)（渡邉葵心）
+DESCRIPTION:出演: 渡邉葵心\n詳細: https://www.mcdonalds.co.jp/susta
+ inability/local/aoimc/\n出典: https://www.akb48.co.jp/about/schedule\n\n
+ 【開催日時】10月18日(日) 11:00-11:30(募金活動)/ 14:10-14:30(
+ トークイベント)/ 14:40-15:10(募金活動) 予定\n【イベント
+ 名】ロナルド・マクドナルド・ハウス 支援募金活動\n
+ 【会場】名古屋まつり 久屋大通公演 会場\n【出演者】
+ 近藤沙樹、髙橋舞桜、田中沙友利、牧戸愛茉、森川 優
+ 、渡邉葵心 ※時間によって参加メンバーが異なります
+ 。\n【公式サイト】 https://www.mcdonalds.co.jp/sustainability/loca
+ l/aoimc/\n※出演メンバーは変更になる場合があります
+LOCATION:名古屋まつり 久屋大通公演 会場
+URL:https://www.mcdonalds.co.jp/sustainability/local/aoimc/
+END:VEVENT
+BEGIN:VEVENT
 UID:20261019-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261019T093000Z
 DTEND:20261019T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
@@ -22,7 +42,7 @@ URL:https://akb48.zaiko.io/ja/e/s2026-1019-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261021-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261021T093000Z
 DTEND:20261021T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -35,7 +55,7 @@ URL:https://akb48.zaiko.io/ja/e/2026w-1021-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261025-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261025T040000Z
 DTEND:20261025T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -48,7 +68,7 @@ URL:https://akb48.zaiko.io/ja/e/te2026-1025-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261025-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261025T083000Z
 DTEND:20261025T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -61,7 +81,7 @@ URL:https://akb48.zaiko.io/ja/e/te2026-1025-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261027-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261027T093000Z
 DTEND:20261027T113000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
@@ -72,8 +92,20 @@ LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/ko2026-1027-1830
 END:VEVENT
 BEGIN:VEVENT
+UID:20261028-1830--e3808ce38193e38193e3818b@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART:20261028T093000Z
+DTEND:20261028T113000Z
+SUMMARY:「ここからだ」公演（渡邉葵心）
+DESCRIPTION:出演: 渡邉葵心\n出典: https://www.akb48.co.jp/news/deta
+ ilpage/489819658\n※出演メンバーは変更になる場合があり
+ ます
+LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
+URL:https://www.akb48.co.jp/news/detailpage/489819658
+END:VEVENT
+BEGIN:VEVENT
 UID:20261029-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261029T093000Z
 DTEND:20261029T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
@@ -85,7 +117,7 @@ URL:https://akb48.zaiko.io/ja/e/k2026-1029-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261102-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261102T093000Z
 DTEND:20261102T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
@@ -96,7 +128,7 @@ URL:https://www.akb48.co.jp/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261103T040000Z
 DTEND:20261103T060000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
@@ -108,7 +140,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261103T083000Z
 DTEND:20261103T103000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
@@ -120,7 +152,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261105-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261105T093000Z
 DTEND:20261105T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ・渡邉葵心）
@@ -132,7 +164,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261106-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261106T093000Z
 DTEND:20261106T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -145,7 +177,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261108T040000Z
 DTEND:20261108T060000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
@@ -157,7 +189,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261108T083000Z
 DTEND:20261108T103000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
@@ -169,7 +201,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261113-1830--e3808ce5a4a2e381aee3839d@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261113T093000Z
 DTEND:20261113T113000Z
 SUMMARY:「夢のポップスター」公演（奥本カイリ）
@@ -181,7 +213,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1400--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261115T050000Z
 DTEND:20261115T070000Z
 SUMMARY:柱の会限定イベント（渡邉葵心）
@@ -193,7 +225,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1900--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261115T100000Z
 DTEND:20261115T120000Z
 SUMMARY:柱の会限定イベント（奥本カイリ）
@@ -204,8 +236,56 @@ LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
+UID:20261121-xxxx-2AKB48studiorecordingsTeamA7thStageMTStandardEdition-e380
+ 9032e382b7e383a7e383@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261121
+DTEND;VALUE=DATE:20261122
+SUMMARY:【2ショット写真会】AKB48~studio recordings コレクショ
+ ン~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)（奥本カイ
+ リ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://ameblo.
+ jp/akihabara48/entry-12978495505.html\n出典: https://www.akb48.co.jp/abo
+ ut/schedule\n\n<詳細> https://ameblo.jp/akihabara48/entry-12978495505.ht
+ ml\n▼「2ショット写真会」会場・開催日時\n全3日程にて
+ 開催\n2026年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月
+ 22日(日)10:00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:
+ 00(インテックス大阪)\n▼Standard Edition:「2ショット写真
+ 会」参加権利付き お申し込みページ(AKB48 Official Shop)\nht
+ tps://official-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Ed
+ ition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp
+ /selection/detail/102627\n▼Limited Edition:通常販売ページ(AKB48 O
+ fficial Shop)\nhttps://shop.akb48.co.jp/selection/detail/102613\n※出演
+ メンバーは変更になる場合があります
+URL:https://ameblo.jp/akihabara48/entry-12978495505.html
+END:VEVENT
+BEGIN:VEVENT
+UID:20261122-xxxx-2AKB48studiorecordingsTeamA7thStageMTStandardEdition-e380
+ 9032e382b7e383a7e383@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261122
+DTEND;VALUE=DATE:20261123
+SUMMARY:【2ショット写真会】AKB48~studio recordings コレクショ
+ ン~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)（奥本カイ
+ リ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://ameblo.
+ jp/akihabara48/entry-12978495505.html\n出典: https://www.akb48.co.jp/abo
+ ut/schedule\n\n<詳細> https://ameblo.jp/akihabara48/entry-12978495505.ht
+ ml\n▼「2ショット写真会」会場・開催日時\n全3日程にて
+ 開催\n2026年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月
+ 22日(日)10:00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:
+ 00(インテックス大阪)\n▼Standard Edition:「2ショット写真
+ 会」参加権利付き お申し込みページ(AKB48 Official Shop)\nht
+ tps://official-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Ed
+ ition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp
+ /selection/detail/102627\n▼Limited Edition:通常販売ページ(AKB48 O
+ fficial Shop)\nhttps://shop.akb48.co.jp/selection/detail/102613\n※出演
+ メンバーは変更になる場合があります
+URL:https://ameblo.jp/akihabara48/entry-12978495505.html
+END:VEVENT
+BEGIN:VEVENT
 UID:20261123-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261123T040000Z
 DTEND:20261123T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -218,7 +298,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261123T083000Z
 DTEND:20261123T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -231,7 +311,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
 UID:20261126-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261126T093000Z
 DTEND:20261126T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -243,8 +323,25 @@ LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://www.akb48.co.jp/news/detailpage/489596266
 END:VEVENT
 BEGIN:VEVENT
+UID:20261128-xxxx-AKB48GIFTGirlsIdolFestivalTokyo-e38090414b423438e38091e3@
+ akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261128
+DTEND;VALUE=DATE:20261129
+SUMMARY:【AKB48】「GIFT〜Girls Idol Festival Tokyo〜」（出演メン
+ バー未発表）
+DESCRIPTION:出演: 出演メンバー未発表\n詳細: https://gift-idol.
+ jp\n出典: https://www.akb48.co.jp/about/schedule\n\n【開催日時】11
+ /28(土)開催\n【イベント名】「GIFT〜Girls Idol Festival Tokyo
+ 〜」\n【会場】SGC ホール有明 TOYOTA ARENA TOKYO\n【出演者
+ 】AKB48\n【公式サイト】 https://gift-idol.jp\n※出演メンバ
+ ーは変更になる場合があります
+LOCATION:SGC ホール有明 TOYOTA ARENA TOKYO
+URL:https://gift-idol.jp
+END:VEVENT
+BEGIN:VEVENT
 UID:20261130-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261018T153926Z
+DTSTAMP:20261019T084532Z
 DTSTART:20261130T093000Z
 DTEND:20261130T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ）
@@ -253,5 +350,129 @@ DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
  ります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://www.akb48.co.jp/news/detailpage/489596266
+END:VEVENT
+BEGIN:VEVENT
+UID:20261219-xxxx-2AKB48studiorecordingsTeamA7thStageMTStandardEdition-e380
+ 9032e382b7e383a7e383@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20261219
+DTEND;VALUE=DATE:20261220
+SUMMARY:【2ショット写真会】AKB48~studio recordings コレクショ
+ ン~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition)（奥本カイ
+ リ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://ameblo.
+ jp/akihabara48/entry-12978495505.html\n出典: https://www.akb48.co.jp/abo
+ ut/schedule\n\n<詳細> https://ameblo.jp/akihabara48/entry-12978495505.ht
+ ml\n▼「2ショット写真会」会場・開催日時\n全3日程にて
+ 開催\n2026年11月21日(土)10:00〜20:15(幕張メッセ)\n2026年11月
+ 22日(日)10:00〜20:15(幕張メッセ)\n2026年12月19日(土)9:45〜20:
+ 00(インテックス大阪)\n▼Standard Edition:「2ショット写真
+ 会」参加権利付き お申し込みページ(AKB48 Official Shop)\nht
+ tps://official-cd.akb48.co.jp/akb48-team-a-7thstage-album/\n▼Standard Ed
+ ition:通常販売ページ(AKB48 Official Shop)\nhttps://shop.akb48.co.jp
+ /selection/detail/102627\n▼Limited Edition:通常販売ページ(AKB48 O
+ fficial Shop)\nhttps://shop.akb48.co.jp/selection/detail/102613\n※出演
+ メンバーは変更になる場合があります
+URL:https://ameblo.jp/akihabara48/entry-12978495505.html
+END:VEVENT
+BEGIN:VEVENT
+UID:20270109-xxxx-AKB4869thOS-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270109
+DTEND;VALUE=DATE:20270110
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @幕張メッセ
+ （奥本カイリ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://officia
+ l-cd.akb48.co.jp/akb48-69th/\n出典: https://www.akb48.co.jp/about/schedu
+ le\n\n<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48
+ -69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個
+ 別握手会 会場・開催日時>\n関東会場8日間、東海会場2
+ 日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月
+ 9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1
+ 月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6
+ 日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7
+ 日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n202
+ 7年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky
+  Expo\n幕張メッセ: https://www.m-messe.co.jp/access/\n有明GYM-EX: h
+ ttps://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビ
+ ッグサイト: https://www.bigsight.jp/visitor/access/\nAichi Sky Expo: 
+ https://www.aichiskyexpo.com/access/\n\n※出演メンバーは変更に
+ なる場合があります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
+END:VEVENT
+BEGIN:VEVENT
+UID:20270110-xxxx-AKB4869thOS-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270110
+DTEND;VALUE=DATE:20270111
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @幕張メッセ
+ （奥本カイリ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://officia
+ l-cd.akb48.co.jp/akb48-69th/\n出典: https://www.akb48.co.jp/about/schedu
+ le\n\n<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48
+ -69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個
+ 別握手会 会場・開催日時>\n関東会場8日間、東海会場2
+ 日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月
+ 9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1
+ 月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6
+ 日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7
+ 日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n202
+ 7年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky
+  Expo\n幕張メッセ: https://www.m-messe.co.jp/access/\n有明GYM-EX: h
+ ttps://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビ
+ ッグサイト: https://www.bigsight.jp/visitor/access/\nAichi Sky Expo: 
+ https://www.aichiskyexpo.com/access/\n\n※出演メンバーは変更に
+ なる場合があります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
+END:VEVENT
+BEGIN:VEVENT
+UID:20270123-xxxx-AKB4869thOSGYM-EX-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270123
+DTEND;VALUE=DATE:20270124
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @有明GYM-EX（
+ 奥本カイリ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://officia
+ l-cd.akb48.co.jp/akb48-69th/\n出典: https://www.akb48.co.jp/about/schedu
+ le\n\n<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48
+ -69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個
+ 別握手会 会場・開催日時>\n関東会場8日間、東海会場2
+ 日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月
+ 9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1
+ 月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6
+ 日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7
+ 日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n202
+ 7年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky
+  Expo\n幕張メッセ:https://www.m-messe.co.jp/access/\n有明GYM-EX:htt
+ ps://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビッ
+ グサイト:https://www.bigsight.jp/visitor/access/\nAichi Sky Expo:https
+ ://www.aichiskyexpo.com/access/\n※会場へ\n※出演メンバーは変
+ 更になる場合があります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
+END:VEVENT
+BEGIN:VEVENT
+UID:20270124-xxxx-AKB4869thOSGYM-EX-414b4234382036397468e382@akb48-calendar
+DTSTAMP:20261019T084532Z
+DTSTART;VALUE=DATE:20270124
+DTEND;VALUE=DATE:20270125
+SUMMARY:AKB48 69thシングル OS盤 【個別握手会】 @有明GYM-EX（
+ 奥本カイリ・渡邉葵心）
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n詳細: https://officia
+ l-cd.akb48.co.jp/akb48-69th/\n出典: https://www.akb48.co.jp/about/schedu
+ le\n\n<申込ページはこちら>\nhttps://official-cd.akb48.co.jp/akb48
+ -69th/\n<詳細>\nhttps://www.akb48.co.jp/news/detailpage/486379500\n<個
+ 別握手会 会場・開催日時>\n関東会場8日間、東海会場2
+ 日間 全10日程にて開催\n・AKB48全メンバー参加\n2027年1月
+ 9日(土)幕張メッセ\n2027年1月10日(日)幕張メッセ\n2027年1
+ 月23日(土)有明GYM-EX\n2027年1月24日(日)有明GYM-EX\n2027年2月6
+ 日(土)幕張メッセ\n2027年2月7日(日)幕張メッセ\n2027年3月7
+ 日(日)Aichi Sky Expo\n2027年4月10日(土)東京ビッグサイト\n202
+ 7年4月11日(日)東京ビッグサイト\n2027年4月25日(日)Aichi Sky
+  Expo\n幕張メッセ:https://www.m-messe.co.jp/access/\n有明GYM-EX:htt
+ ps://www.bigsight.jp/organizer/buildings/gym-ex/access.html\n東京ビッ
+ グサイト:https://www.bigsight.jp/visitor/access/\nAichi Sky Expo:https
+ ://www.aichiskyexpo.com/access/\n※会場へ\n※出演メンバーは変
+ 更になる場合があります
+URL:https://official-cd.akb48.co.jp/akb48-69th/
 END:VEVENT
 END:VCALENDAR
