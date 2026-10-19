@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildIcs, buildShows, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -124,8 +124,34 @@ while (queue.length) {
 
 const { shows: found, covered } = buildShows(casts, schedule, allMembers);
 
+// 公式スケジュールから、推しメンが出る握手会・ライブ・イベントなどを読む（今月から scheduleMonthsAhead か月先まで）
+const apiEvents = [];
+const fetchedMonths = new Set();
+for (let i = 0; i <= (config.scheduleMonthsAhead ?? 3); i++) {
+  const jst = new Date(today.getTime() + 9 * 3600_000);
+  const d = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth() + i, 1));
+  const [year, month] = [d.getUTCFullYear(), d.getUTCMonth() + 1];
+  try {
+    const form = new FormData();
+    form.append('month', String(month));
+    form.append('year', String(year));
+    form.append('category', '0');
+    const res = await fetch(config.scheduleApi, { method: 'POST', body: form });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.result !== 'ok') throw new Error(`result=${json.result}`);
+    const got = eventsFromApi(json, allMembers);
+    apiEvents.push(...got);
+    fetchedMonths.add(`${year}-${month}`);
+    console.log(`スケジュール ${year}/${month}: 現場 ${got.length} 件`);
+  } catch (e) {
+    console.warn(`スケジュール ${year}/${month} 取得失敗: ${e.message}`);
+  }
+}
+
 // 前回の記録: 今回の記事に出演情報がなかった公演（過去の公演や、一覧から消えたお知らせの分）は前回のまま残す。
 // 出演情報がある公演は今回の内容で置き換える（メンバー変更で推しが外れたら消える）
+// 現場（kind: 'event'）は、今回読めた月の分を置き換え、読めなかった月の分は前回のまま残す
 // 読み取り方を変えたら STATE_VERSION を上げて、古い読み取り結果を捨てる
 const STATE_VERSION = 4;
 let previous = [];
@@ -136,14 +162,16 @@ try {
 // startDate より前の公演は入れない（それまでの分は手動で登録済みのため）
 const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
 const afterStart = (s) => s.year * 10000 + s.month * 100 + s.day >= sy * 10000 + sm * 100 + sd;
-const events = mergeShows([...previous.filter((s) => !covered.has(performanceKey(s))), ...found]).filter(afterStart);
+const keptTheater = previous.filter((s) => s.kind !== 'event' && !covered.has(performanceKey(s)));
+const keptEvents = previous.filter((s) => s.kind === 'event' && !fetchedMonths.has(`${s.year}-${s.month}`));
+const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents]).filter(afterStart);
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
 for (const cal of config.calendars) {
   const names = cal.members.map((m) => m.name);
   const shows = events
-    .filter((s) => s.members.some((m) => names.includes(m)))
+    .filter((s) => s.memberUnknown || s.members.some((m) => names.includes(m)))
     .map((s) => ({ ...s, members: s.members.filter((m) => names.includes(m)) }));
   const ics = buildIcs(cal, shows, { durationMinutes: config.durationMinutes, location: config.location, now: today });
   await writeFile(join(outDir, `${cal.id}.ics`), ics);
@@ -155,7 +183,7 @@ const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Toky
 const pad = (n) => String(n).padStart(2, '0');
 const links = events
   .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
-  .filter((s) => !(config.launcherExclude ?? []).includes(s.title))
+  .filter((s) => s.kind !== 'event' && !(config.launcherExclude ?? []).includes(s.title))
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,

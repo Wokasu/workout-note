@@ -11,6 +11,8 @@
   "maxFollowLinks": 40,
   "durationMinutes": 120,
   "location": "AKB48劇場（ドン・キホーテ秋葉原店8F）",
+  "scheduleApi": "https://www.akb48.co.jp/public/api/schedule/calendar/",
+  "scheduleMonthsAhead": 3,
   "launcherExclude": [
     "柱の会限定イベント"
   ],
@@ -22,6 +24,7 @@
       "members": [
         {
           "name": "伊藤百花",
+          "mid": 1093,
           "aliases": []
         }
       ]
@@ -33,10 +36,12 @@
       "members": [
         {
           "name": "奥本カイリ",
+          "mid": 1094,
           "aliases": []
         },
         {
           "name": "渡邉葵心",
+          "mid": 1105,
           "aliases": [
             "渡邊葵心",
             "渡辺葵心",

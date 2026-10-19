@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildIcs, buildShows, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -144,4 +144,37 @@ test('トップページ: 一覧と詳細の対応がずれていたら使わな
   const lines = fixture('top-page.txt');
   const i = lines.indexOf('休館日', lines.indexOf('一覧を見る'));
   assert.deepEqual(extractTopCasts([...lines.slice(0, i), ...lines.slice(i + 1)]), []);
+});
+
+test('公式スケジュール: 推しが出る握手会・イベントを拾い、テレビ・ラジオ・オンラインは入れない', () => {
+  const api = (name) => JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
+  const events = [...eventsFromApi(api('api-2026-10.json'), members), ...eventsFromApi(api('api-2026-12.json'), members)];
+  assert.deepEqual(
+    events.map((e) => `${e.month}/${e.day} ${e.hour ?? '終日'} ${e.title} ${e.members.join(',')}`),
+    [
+      '10/4 終日 68thSG『好きish』初回限定盤 発売記念「東京握手会」 伊藤百花,奥本カイリ,渡邉葵心',
+      '10/11 終日 【AKB48】福島応援イベント「どうしても福島が好きだ」 渡邉葵心',
+      '10/17 11 ロナルド・マクドナルド・ハウス 支援募金活動 渡邉葵心',
+      '10/17 14 ロナルド・マクドナルド・ハウス 支援募金活動 渡邉葵心',
+      '10/18 11 ロナルド・マクドナルド・ハウス 支援募金活動(青いマックの日・名古屋まつり) 渡邉葵心',
+      '12/19 終日 【2ショット写真会】AKB48~studio recordings コレクション~Team A 7th Stage 「M.T.に捧ぐ」(Standard Edition) 伊藤百花,奥本カイリ,渡邉葵心',
+    ],
+  );
+  // 詳細ページのURLと会場
+  assert.equal(events[0].detailUrl, 'https://ameblo.jp/akihabara48/entry-12969991436.html');
+  assert.equal(events[0].location, '幕張メッセ');
+  assert.equal(events[1].detailUrl, 'https://dousitemosukida.com');
+});
+
+test('ICS: 現場の予定は会場と詳細ページのURLを入れる（劇場の住所は入れない）', () => {
+  const ics = buildIcs(
+    { name: 'AKB48 奥本カイリ・渡邉葵心', color: '#5AC8FA' },
+    [{ year: 2026, month: 10, day: 17, hour: 11, minute: 10, endHour: 11, endMinute: 40, title: '支援募金活動', members: ['渡邉葵心'], kind: 'event', location: 'セブンパーク天美', detailUrl: 'https://example.com/a' }],
+    { now: today, location: 'AKB48劇場' },
+  );
+  assert.match(ics, /DTSTART:20261017T021000Z/);
+  assert.match(ics, /DTEND:20261017T024000Z/);
+  assert.match(ics, /LOCATION:セブンパーク天美/);
+  assert.match(ics, /URL:https:\/\/example.com\/a/);
+  assert.doesNotMatch(ics, /AKB48劇場/);
 });
