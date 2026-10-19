@@ -16,6 +16,15 @@
   "launcherExclude": [
     "柱の会限定イベント"
   ],
+  "knownMembers": [
+    {
+      "titleIncludes": "GIFT〜Girls Idol Festival Tokyo〜",
+      "date": "2026-11-28",
+      "members": [
+        "伊藤百花"
+      ]
+    }
+  ],
   "calendars": [
     {
       "id": "momoka",

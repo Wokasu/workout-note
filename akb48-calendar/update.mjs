@@ -164,7 +164,14 @@ const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
 const afterStart = (s) => s.year * 10000 + s.month * 100 + s.day >= sy * 10000 + sm * 100 + sd;
 const keptTheater = previous.filter((s) => s.kind !== 'event' && !covered.has(performanceKey(s)));
 const keptEvents = previous.filter((s) => s.kind === 'event' && !fetchedMonths.has(`${s.year}-${s.month}`));
-const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents]).filter(afterStart);
+// 公式に出演メンバーが載っていない予定に、自分で分かっている出演者を補う（config.json の knownMembers）。
+// 公式にメンバーが載ったら、そちらを使う
+const withKnownMembers = (s) => {
+  if (!s.memberUnknown) return s;
+  const known = (config.knownMembers ?? []).find((k) => s.title.includes(k.titleIncludes) && (!k.date || k.date === `${s.year}-${String(s.month).padStart(2, '0')}-${String(s.day).padStart(2, '0')}`));
+  return known ? { ...s, members: known.members, memberUnknown: false } : s;
+};
+const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents].map(withKnownMembers)).filter(afterStart);
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
