@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { buildAnnouncement, buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -183,6 +183,29 @@ for (const cal of config.calendars) {
   const ics = buildIcs(cal, shows, { durationMinutes: config.durationMinutes, location: config.location, now: today });
   await writeFile(join(outDir, `${cal.id}.ics`), ics);
   console.log(`${cal.id}.ics: ${shows.length} 件`);
+}
+
+// SNS告知文: 来月以降の月ごと・推しメンごとに sns/YYYY-MM/<名前>.txt と、3人ぶんをまとめた sns/YYYY-MM.txt を作る
+{
+  const jst = new Date(today.getTime() + 9 * 3600_000);
+  const thisMonth = jst.getUTCFullYear() * 12 + jst.getUTCMonth();
+  const months = [...new Set(events.filter((s) => s.kind !== 'event' && s.year * 12 + s.month - 1 > thisMonth).map((s) => `${s.year}-${s.month}`))];
+  for (const ym of months) {
+    const [year, month] = ym.split('-').map(Number);
+    const dir = join(outDir, 'sns', `${year}-${String(month).padStart(2, '0')}`);
+    const parts = [];
+    for (const m of config.calendars.flatMap((c) => c.members)) {
+      const text = buildAnnouncement(m.name, events, year, month, m.snsEmoji ?? '');
+      if (!text) continue;
+      await mkdir(dir, { recursive: true });
+      await writeFile(join(dir, `${m.name}.txt`), text);
+      parts.push(`■${m.name}\n\n${text}`);
+    }
+    if (parts.length) {
+      await writeFile(`${dir}.txt`, parts.join('\n'));
+      console.log(`SNS告知文 ${year}/${month}: ${parts.length} 人`);
+    }
+  }
 }
 
 // 申込ランチャー（Windows）が読む一覧: 今日以降の公演（launcherExclude の公演は除く）

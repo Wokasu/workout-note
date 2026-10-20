@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { buildAnnouncement, buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -188,4 +188,29 @@ test('公式スケジュール: 握手会以外のオンライン・配信の予
     { parent_category: '2', title: 'ラジオ公開収録', body: '【会場】渋谷', member: '1093', date: '2026-11-01 13:00:00', end_date: '2026-11-01 14:00:00' },
   ] } } };
   assert.deepEqual(eventsFromApi(json, members).map((e) => e.title), ['ラジオ公開収録']);
+});
+
+test('SNS告知文: 演目ごとに出演日と開演時刻を並べ、柱の会限定イベントは後ろに○付きで', () => {
+  const casts = extractCasts(fixture('schedule-notice.txt'), { today });
+  const { shows } = buildShows(casts, [], members);
+  assert.equal(
+    buildAnnouncement('渡邉葵心', shows, 2026, 11, '🧤🤍'),
+    [
+      '11月出演公演🧤🤍',
+      '',
+      '「ここからだ」',
+      '3日㈫ 13:00／17:30',
+      '5日㈭ 18:30',
+      '',
+      '「手をつなぎながら」',
+      '6日㈮ 18:30',
+      '23日㈪ 13:00／17:30',
+      '26日㈭ 18:30',
+      '',
+      '○柱の会限定イベント',
+      '15日㈰ 14:00',
+      '',
+    ].join('\n'),
+  );
+  assert.equal(buildAnnouncement('渡邉葵心', shows, 2026, 12), null);
 });
