@@ -18,7 +18,7 @@ export interface ParsedItem extends Macros {
 }
 
 /** 登録済みの食品の別名と、「1枚」などを重さに直す表 */
-const ALIASES: Record<string, { aliases: string[]; pieces?: Record<string, number> }> = {
+const ALIASES: Record<string, { aliases: string[]; pieces?: Record<string, number>; not?: string[] }> = {
   'p-chicken-breast': { aliases: ['鶏むね肉', '鶏胸肉', '鶏ムネ肉', 'とりむね肉', '鶏むね', '鶏胸', 'むね肉', '胸肉', 'ムネ肉', 'とりむね'], pieces: { 枚: 300 } },
   'p-sasami': { aliases: ['ささみ', 'ササミ', '笹身'], pieces: { 本: 50 } },
   'p-chicken-thigh': { aliases: ['鶏もも肉', '鶏モモ肉', '鶏もも', '鶏モモ', 'もも肉', 'モモ肉'], pieces: { 枚: 250 } },
@@ -47,6 +47,13 @@ const ALIASES: Record<string, { aliases: string[]; pieces?: Record<string, numbe
   'p-almond': { aliases: ['アーモンド'] },
   'p-olive-oil': { aliases: ['オリーブオイル', 'オリーブ油'], pieces: { 小さじ: 1 / 3 } },
   'p-mct': { aliases: ['MCTオイル', 'MCT'], pieces: { 小さじ: 1 / 3 } },
+  'p-bread': { aliases: ['食パン', 'トースト', 'パン'], not: ['パン粉', 'パンケーキ'] },
+  'p-pasta': { aliases: ['パスタ', 'スパゲッティ', 'スパゲティ'], pieces: { 人前: 250 } },
+  'p-pasta-dry': { aliases: ['パスタ乾麺', 'パスタ乾', '乾燥パスタ', '乾麺パスタ'] },
+  'p-udon': { aliases: ['うどん'], pieces: { 玉: 230 } },
+  'p-soba': { aliases: ['そば', '蕎麦'], pieces: { 玉: 170 }, not: ['焼きそば', '焼そば'] },
+  'p-walnut': { aliases: ['くるみ', 'クルミ', '胡桃'] },
+  'p-peanut-butter': { aliases: ['ピーナッツバター', 'ピーナツバター'], pieces: { 小さじ: 1 / 3 } },
 };
 
 /** 単位の言い方をそろえる */
@@ -55,9 +62,9 @@ const UNIT_WORDS: [RegExp, string][] = [
   [/^(kg|キロ)$/, 'kg'],
   [/^(個|つ|コ)$/, '個'],
   [/^(杯|膳|はい)$/, '杯'],
-  [/^(枚|本|パック|缶|切れ|切|丁|粒|大さじ|小さじ|房|株)$/, ''],
+  [/^(枚|本|パック|缶|切れ|切|丁|粒|大さじ|小さじ|房|株|玉|人前)$/, ''],
 ];
-const UNIT_PATTERN = 'g|ｇ|グラム|kg|キロ|個|つ|コ|杯|膳|枚|本|パック|缶|切れ|切|丁|粒|大さじ|小さじ|房|株';
+const UNIT_PATTERN = 'g|ｇ|グラム|kg|キロ|個|つ|コ|杯|膳|枚|本|パック|缶|切れ|切|丁|粒|大さじ|小さじ|房|株|玉|人前';
 
 function canonUnit(u: string): string {
   for (const [re, to] of UNIT_WORDS) if (re.test(u)) return to || (u === '切' ? '切れ' : u);
@@ -113,6 +120,7 @@ function findFood(text: string, myFoods: Food[]): Candidate | null {
   if (best) return best;
   for (const food of PRESET_FOODS) {
     const entry = ALIASES[food.id];
+    if (entry?.not?.some((n) => c.includes(compact(n)))) continue;
     for (const alias of entry?.aliases ?? []) {
       const a = compact(alias);
       if (c.includes(a) && (!best || a.length > best.matched.length)) best = { food, matched: a, pieces: entry.pieces };

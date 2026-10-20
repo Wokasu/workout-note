@@ -36,7 +36,7 @@ function upsertBody(body: BodyRecord[], rec: BodyRecord): BodyRecord[] {
 
 export function App() {
   const [data, setData, sync] = useAppData();
-  const [tab, setTab] = useState<Tab>('today');
+  const [tab, setTab] = useState<Tab>('meals');
   const today = todayKey();
   const { profile, logs, body, myFoods } = data;
 

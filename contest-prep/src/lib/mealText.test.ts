@@ -78,3 +78,16 @@ describe('claude reply', () => {
     expect(prompt).toContain('鶏むね肉（皮なし・生）: 100gあたり P23.3 F1.9 C0.1');
   });
 });
+
+describe('new staples', () => {
+  it('reads bread, pasta, noodles and nuts', () => {
+    expect(one('食パン2枚')).toMatchObject({ name: '食パン（6枚切り1枚）', amount: '2枚' });
+    expect(one('パスタ 250g')).toMatchObject({ name: 'パスタ（ゆで）', amount: '250g' });
+    expect(one('パスタ（乾）100g')).toMatchObject({ name: 'パスタ（乾麺）', amount: '100g' });
+    expect(one('うどん1玉')).toMatchObject({ name: 'うどん（ゆで）', amount: '230g' });
+    expect(one('くるみ20g')).toMatchObject({ name: 'くるみ', amount: '20g' });
+    expect(one('ピーナッツバター大さじ1')).toMatchObject({ amount: '1大さじ', f: 8.6 });
+    expect(parseLocally('焼きそば', [])).toBeNull();
+    expect(parseLocally('パン粉 10g', [])).toBeNull();
+  });
+});

@@ -424,3 +424,18 @@ describe('maintenanceEstimate', () => {
     expect(Math.abs(cal.tdee - 2760)).toBeLessThan(15);
   });
 });
+
+describe('food groups', () => {
+  it('sorts my foods by where most of the calories come from', async () => {
+    const { groupOf, PRESET_FOODS } = await import('./foods');
+    expect(groupOf({ p: 30, f: 2, c: 0 })).toBe('protein');
+    expect(groupOf({ p: 5, f: 1, c: 75 })).toBe('carb');
+    expect(groupOf({ p: 0, f: 14, c: 0 })).toBe('fat');
+    // なか卯の親子丼大盛りくらいの配分（どれも半分未満）
+    expect(groupOf({ p: 33, f: 21, c: 132 })).toBe('carb');
+    expect(groupOf({ p: 30, f: 25, c: 40 })).toBe('other');
+    expect(groupOf({ p: 0, f: 0, c: 0 })).toBe('other');
+    // 登録済みの食品は一般的な分類（卵・サバ缶・納豆などはタンパク質）で、すべてどれかのタブに入る
+    expect(PRESET_FOODS.every((f) => ['carb', 'protein', 'fat', 'other'].includes(f.group))).toBe(true);
+  });
+});

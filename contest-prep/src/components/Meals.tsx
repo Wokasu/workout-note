@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Food, FoodLog, Macros } from '../types';
-import { PRESET_FOODS } from '../lib/foods';
+import { FOOD_GROUPS, PRESET_FOODS, groupOf, type FoodGroup } from '../lib/foods';
 import { kcalOf, scaleMacros, sumMacros } from '../lib/macros';
 import { addDays, formatJa } from '../lib/date';
 import { MacroBars } from './MacroBars';
@@ -28,7 +28,7 @@ function pfc(m: Macros): string {
 export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood, onRemoveFood }: Props) {
   const [date, setDate] = useState(today);
   const [slot, setSlot] = useState(1);
-  const [mode, setMode] = useState<'text' | 'pick' | 'manual'>('text');
+  const [mode, setMode] = useState<'text' | 'pick' | 'manual'>('pick');
 
   const dayLogs = useMemo(() => logs.filter((l) => l.date === date), [logs, date]);
   const eaten = sumMacros(dayLogs);
@@ -93,11 +93,11 @@ export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood
         )}
 
         <div className="seg">
-          <button type="button" className={mode === 'text' ? 'on' : ''} onClick={() => setMode('text')}>
-            文章で入力
-          </button>
           <button type="button" className={mode === 'pick' ? 'on' : ''} onClick={() => setMode('pick')}>
             食品から選ぶ
+          </button>
+          <button type="button" className={mode === 'text' ? 'on' : ''} onClick={() => setMode('text')}>
+            文章で入力
           </button>
           <button type="button" className={mode === 'manual' ? 'on' : ''} onClick={() => setMode('manual')}>
             PFC を直接入力
@@ -156,15 +156,17 @@ function FoodPicker({
   onRemoveFood: (id: string) => void;
 }) {
   const [query, setQuery] = useState('');
+  const [group, setGroup] = useState<FoodGroup>('protein');
   const [selected, setSelected] = useState<Food | null>(null);
   const [amount, setAmount] = useState('');
 
-  const all: (Food & { category: string; mine?: boolean })[] = [
-    ...myFoods.map((f) => ({ ...f, category: 'マイ食品', mine: true })),
+  // マイ食品は PFC から分類して、各タブの先頭に出す
+  const all: (Food & { group: FoodGroup; category: string; mine?: boolean })[] = [
+    ...myFoods.map((f) => ({ ...f, group: groupOf(f), category: 'マイ食品', mine: true })),
     ...PRESET_FOODS,
   ];
   const q = query.trim();
-  const shown = q ? all.filter((f) => f.name.includes(q)) : all;
+  const shown = q ? all.filter((f) => f.name.includes(q)) : all.filter((f) => f.group === group);
   const categories = [...new Set(shown.map((f) => f.category))];
 
   const select = (f: Food) => {
@@ -207,7 +209,22 @@ function FoodPicker({
 
   return (
     <div>
-      <input className="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="食品を検索（例：鶏むね）" />
+      <div className="seg group-tabs">
+        {FOOD_GROUPS.map((g) => (
+          <button
+            type="button"
+            key={g.id}
+            className={`${g.id} ${group === g.id && !q ? 'on' : ''}`}
+            onClick={() => {
+              setGroup(g.id);
+              setQuery('');
+            }}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
+      <input className="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="すべての食品から検索（例：鶏むね）" />
       <div className="food-list">
         {categories.map((c) => (
           <div key={c}>
