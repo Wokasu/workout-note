@@ -252,6 +252,47 @@ export function mergeShows(list) {
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
 }
 
+// ---- SNS告知文 ----
+// 例)
+//   11月出演公演🧤🤍
+//
+//   「ここからだ」
+//   3日㈫ 13:00／17:30
+//
+//   ○柱の会限定イベント
+//   15日㈰ 14:00
+const ENCLOSED_WEEKDAYS = ['㈰', '㈪', '㈫', '㈬', '㈭', '㈮', '㈯'];
+
+/**
+ * 1人ぶん・1か月ぶんの出演告知文を作る。shows は劇場の公演（kind が 'event' でないもの）。
+ * 「」の付く公演は初めて出る日の順に、それ以外（柱の会限定イベントなど）は「○」を付けて後ろに並べる。
+ */
+export function buildAnnouncement(name, shows, year, month, emoji = '') {
+  const pad = (n) => String(n).padStart(2, '0');
+  const mine = shows
+    .filter((s) => s.kind !== 'event' && s.year === year && s.month === month && s.members.includes(name))
+    .sort((a, b) => a.day - b.day || (a.hour ?? 0) - (b.hour ?? 0) || (a.minute ?? 0) - (b.minute ?? 0));
+  if (!mine.length) return null;
+  const groups = new Map();
+  for (const s of mine) {
+    const m = s.title.match(/^「(.+)」公演$/);
+    const key = m ? `「${m[1]}」` : `○${s.title}`;
+    if (!groups.has(key)) groups.set(key, new Map());
+    const days = groups.get(key);
+    if (!days.has(s.day)) days.set(s.day, []);
+    if (s.hour != null) days.get(s.day).push(`${s.hour}:${pad(s.minute)}`);
+  }
+  const keys = [...groups.keys()].sort((a, b) => (a[0] === '○') - (b[0] === '○'));
+  const blocks = keys.map((key) => {
+    const lines = [...groups.get(key)].map(([day, times]) => {
+      const wd = ENCLOSED_WEEKDAYS[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+      return `${day}日${wd}${times.length ? ` ${times.join('／')}` : ''}`;
+    });
+    return [key, ...lines].join('\n');
+  });
+  return [`${month}月出演公演${emoji}`, ...blocks].join('\n\n') + '\n';
+}
+
 // ---- 公式スケジュール（握手会・ライブ・イベントなど）----
 // 公式サイトの「スケジュール」ページが読んでいるデータ（/public/api/schedule/calendar/）。
 // 1件ごとに日時・カテゴリ・出演メンバーID・本文がある。parent_category は
