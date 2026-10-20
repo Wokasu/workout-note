@@ -3649,7 +3649,11 @@ function renderEdit(view) {
 
   const bind = (el, obj, key) => { el.value = obj[key]; el.addEventListener("input", () => (obj[key] = el.value)); return el; };
   view.append(h("div", { class: "card" },
-    h("label", { class: "f" }, "実施日", bind(h("input", { class: "in", type: "date", id: "f-date", max: today() }), f, "date")),
+    h("label", { class: "f" }, "実施日", (() => { const d = bind(h("input", { class: "in", type: "date", id: "f-date", max: today() }), f, "date"); d.addEventListener("change", render); return d; })()),
+    (() => {
+      const others = E.importKey ? [] : S.workouts.filter((x) => x.date === f.date && x.id !== E.existing?.id);
+      return others.length ? h("div", { class: "notice", style: "font-size:12px" }, `この日にはすでに記録があります（${others.map(exerciseSummary).join("・")}）。上書きはせず、別の記録として追加します。記録の画面で切り替えて見られます。`) : null;
+    })(),
     h("label", { class: "f" }, "タイトル", bind(h("input", { class: "in", id: "f-title", placeholder: "胸の日 など" }), f, "title"))));
   if (f.cond) view.append(condCard(f.cond, bind));
 
@@ -3802,7 +3806,8 @@ async function saveEdit() {
   try {
     await putWorkout(w);
     if (E.photoUrl && E.photoUrl !== S.add.photoUrl) URL.revokeObjectURL(E.photoUrl);
-    toast("保存しました");
+    const n = S.workouts.filter((x) => x.date === w.date && x.id !== w.id).length + 1;
+    toast(n > 1 && !E.existing ? `保存しました（この日の記録は${n}件）` : "保存しました");
     S.detailId = w.id; S.selDate = w.date; S.month = w.date.slice(0, 7);
     if (E.existing) back(); else go("detail", { replace: true });
   } catch (e) { btn.disabled = false; btn.textContent = "保存する"; toast(storeErrorText(e)); }
@@ -4013,6 +4018,10 @@ function compareWithPrev(ex, vol, prev) {
       h("div", { class: "cmp " + sign(ds) }, h("span", { class: "k" }, "セット数"), h("b", {}, `${ex.sets.length}`, h("small", {}, `（前回 ${prev.exercise.sets.length}）`)), h("span", { class: "d" }, `${arrow(ds)} ${Math.abs(ds)}セット`)),
       h("div", { class: "cmp " + sign(Math.round(dv)) }, h("span", { class: "k" }, "ボリューム"), h("b", {}, WN.formatKg(vol), h("small", {}, "kg")), h("span", { class: "d" }, `${arrow(Math.round(dv))} ${WN.formatKg(Math.abs(dv))}kg`))));
 }
+// 同じ日の記録（保存した順）
+const sameDayWorkouts = (date) => S.workouts.filter((x) => x.date === date).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+const savedTime = (w) => { if (String(w.createdAt).length <= 10) return ""; const d = new Date(w.createdAt); return isNaN(d) ? "" : `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}に保存`; };
+const exerciseSummary = (w) => (w.exercises.length ? `${w.exercises[0].name}${w.exercises.length > 1 ? ` ほか${w.exercises.length - 1}種目` : ""}` : "種目なし");
 function openDetail(id) { S.detailId = id; go("detail"); }
 function detailTitle() { const w = S.workouts.find((x) => x.id === S.detailId); return w ? WN.formatDateJa(w.date) : "記録"; }
 function renderDetail(view) {
@@ -4020,9 +4029,17 @@ function renderDetail(view) {
   if (!w) { view.append(h("div", { class: "card empty" }, h("p", { class: "sub" }, "この記録は見つかりません。"))); return; }
   const sets = w.exercises.reduce((n, e) => n + e.sets.length, 0), reps = w.exercises.reduce((n, e) => n + e.sets.reduce((a, x) => a + (x.reps || 0), 0), 0);
   view.append(h("div", { class: "row", style: "flex-wrap:wrap;gap:6px" }, WN.workoutParts(w).map(tag), w.title ? h("b", { style: "color:var(--accent)" }, w.title) : null, w.sample ? h("span", { class: "muted" }, "サンプル") : null));
+  // 同じ日に記録が複数あるとき（家で手入力＋ジムで写真、など）は切り替えて見られるようにする
+  const sameDay = sameDayWorkouts(w.date);
+  if (sameDay.length > 1) {
+    view.append(h("div", { class: "card", style: "gap:6px" },
+      h("div", { class: "card-head" }, h("h2", { class: "card-title" }, `この日は記録が${sameDay.length}件あります`), h("span", { class: "muted" }, `合計 ${WN.formatKg(sameDay.reduce((a, x) => a + WN.totalVolume(x), 0))}kg`)),
+      h("div", { class: "from" }, sameDay.map((x, i) => h("button", { type: "button", "aria-pressed": String(x.id === w.id), onclick: () => { S.detailId = x.id; render(); document.getElementById("main").scrollTop = 0; } },
+        h("b", {}, `${i + 1}件目${savedTime(x) ? `（${savedTime(x)}）` : ""}`), h("span", { style: "font-family:var(--font-body);font-size:12px" }, exerciseSummary(x)))))));
+  }
   const cs = condSummaryCard(w.cond);
   if (cs) view.append(cs);
-  view.append(h("div", { class: "card" }, h("div", { class: "hero-label" }, "この日の総ボリューム"), h("div", { class: "hero" }, WN.formatKg(WN.totalVolume(w)), h("small", {}, "kg")),
+  view.append(h("div", { class: "card" }, h("div", { class: "hero-label" }, sameDay.length > 1 ? "この記録の総ボリューム" : "この日の総ボリューム"), h("div", { class: "hero" }, WN.formatKg(WN.totalVolume(w)), h("small", {}, "kg")),
     h("div", { class: "muted", style: "font-size:12px" }, `${w.exercises.length}種目　${sets}セット　${reps}回`)));
   for (const ex of w.exercises) {
     const vol = WN.exerciseVolume(ex), prev = WN.previousSession(S.workouts, ex.name, w.date);
