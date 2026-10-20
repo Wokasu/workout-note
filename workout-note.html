@@ -1551,7 +1551,7 @@ const S = {
   add: { date: null, mode: "choose", file: null, photoUrl: null, ctl: null, error: null, text: "" },
   confirmDelete: false,
   exm: null, // 種目の管理画面の状態
-  exRules: { parts: {}, aliases: {} }, // 種目ごとの部位と、まとめた名前（これからの読み取りにも使う）
+  exRules: { parts: {}, aliases: {}, custom: [] }, // 種目ごとの部位と、まとめた名前（これからの読み取りにも使う）。custom は記録より先に登録した種目
 };
 const TITLES = { home: "ダッシュボード", calendar: "カレンダー", graph: "グラフ", add: "記録を追加", edit: "読み取り結果の確認", detail: "記録", settings: "設定・バックアップ", calc: "重量計算", share: "シェア画像", ai: "AI 分析", import: "まとめて取り込む", exercises: "種目の管理", form: "調子の分析", review: "振り返り" };
 const TABS = ["home", "calendar", "graph", "calc"];
@@ -3483,6 +3483,7 @@ function readingHints() {
     const last = WN.exerciseSessions(S.workouts, n).at(-1), b = last && WN.bestSet(last.exercise), part = last?.exercise.part;
     lines.push(`- ${n}${part ? `（${partLabel(part)}）` : ""}${b ? `：前回 ${last.date} ${fmtW(b.weight)}kg×${b.reps}` : ""}`);
   }
+  for (const n of S.exRules.custom || []) if (!names.includes(n)) lines.push(`- ${n}${S.exRules.parts[n] ? `（${partLabel(S.exRules.parts[n])}）` : ""}：登録済み・記録なし`);
   const aliases = Object.entries(S.exRules.aliases || {}).slice(0, 40).map(([k, v]) => `${k} → ${v}`);
   if (!lines.length && !aliases.length) return "";
   return `\n\nこの人の最近の記録（種目名はできるだけこの一覧の名前に合わせる。重量の読み間違いの確認にも使う）:\n${lines.join("\n")}${aliases.length ? `\n略記の対応: ${aliases.join("、")}` : ""}`;
@@ -3652,9 +3653,9 @@ function renderEdit(view) {
     h("label", { class: "f" }, "タイトル", bind(h("input", { class: "in", id: "f-title", placeholder: "胸の日 など" }), f, "title"))));
   if (f.cond) view.append(condCard(f.cond, bind));
 
+  const cat = exerciseCatalog();
   f.exercises.forEach((ex, i) => {
-    const nameIn = bind(h("input", { class: "in name grow", id: `f-ex-${ex.key}`, placeholder: "種目名", "aria-label": "種目名" }), ex, "name");
-    nameIn.addEventListener("change", () => { if (!ex.part) { ex.part = partFor(ex.name); render(); } });
+    const nameIn = exercisePicker(ex, cat);
     const move = (d) => { const j = i + d; if (j < 0 || j >= f.exercises.length) return; [f.exercises[i], f.exercises[j]] = [f.exercises[j], f.exercises[i]]; render(); };
     // まだ確認していない項目で名前が出てくる種目は、枠で目立たせる
     const card = h("div", { class: "card" },
@@ -3664,6 +3665,8 @@ function renderEdit(view) {
         h("button", { class: "x del", type: "button", "aria-label": "種目を削除", onclick: () => { f.exercises.splice(i, 1); render(); } }, "✕")),
       h("div", { class: "parts" }, WN.BODY_PARTS.map((p) => h("button", { class: "part-pick", type: "button", "aria-pressed": String(ex.part === p), onclick: () => { ex.part = ex.part === p ? null : p; render(); } }, h("i", { class: "dot", c: partColor(p) }), partLabel(p))),
         ex.part ? null : h("span", { class: "muted", style: "color:var(--warn-ink);align-self:center" }, "部位を選択")),
+      newExerciseRow(ex),
+      unregisteredHint(ex, cat),
       ex.raw ? h("div", { class: "raw-line" }, "ノートの表記：", h("span", {}, ex.raw)) : null,
       h("div", { class: "set-row muted" }, h("span", {}, "#"), h("span", {}, "重量"), h("span", {}), h("span", {}, "回数"), h("span", {})));
     ex.sets.forEach((st, si) => {
@@ -3681,6 +3684,73 @@ function renderEdit(view) {
   view.append(h("div", { class: "card" }, h("label", { class: "f" }, "全体メモ", bind(h("textarea", { class: "in", id: "f-notes", rows: "3", placeholder: "体重・体調など" }), f, "notes"))));
   view.append(h("button", { class: "btn primary", type: "button", id: "save-btn", onclick: saveEdit, disabled: !S.db }, E.importKey ? "この内容にする" : "保存する"));
 }
+// 種目はプルダウンで選ぶ。リストにない種目は、その場で登録して使う
+const NEW_EX = "\u0000new";
+const findExercise = (cat, n) => cat.find((c) => nameKey(c.name) === nameKey(n));
+function exercisePicker(ex, cat) {
+  if (ex.adding != null) return h("b", { class: "grow", style: "font-size:14px" }, "新しい種目を登録");
+  const known = ex.name.trim() ? findExercise(cat, ex.name) : null;
+  if (known && known.name !== ex.name) ex.name = known.name; // 空白や全角半角の違いだけなら登録済みの名前にそろえる
+  const sel = h("select", { class: "in name grow", id: `f-ex-${ex.key}`, "aria-label": "種目" },
+    h("option", { value: "" }, "種目を選ぶ"),
+    ex.name.trim() && !known ? h("option", { value: ex.name }, `${ex.name}（未登録）`) : null,
+    [...WN.BODY_PARTS, null].map((p) => {
+      const items = cat.filter((c) => c.part === p);
+      return items.length ? h("optgroup", { label: partLabel(p) }, items.map((c) => h("option", { value: c.name }, c.name))) : null;
+    }),
+    h("option", { value: NEW_EX }, "＋ 新しい種目を登録…"));
+  sel.value = ex.name.trim() ? ex.name : "";
+  sel.addEventListener("change", () => {
+    if (sel.value === NEW_EX) { ex.adding = ex.name.trim() && !known ? ex.name : ""; ex.focusNew = true; render(); return; }
+    pickExercise(ex, sel.value, cat);
+  });
+  return sel;
+}
+function newExerciseRow(ex) {
+  if (ex.adding == null) return null;
+  const t = h("input", { class: "in name grow", id: `f-new-${ex.key}`, placeholder: "新しい種目名", "aria-label": "新しい種目名", autocomplete: "off" });
+  t.value = ex.adding;
+  t.addEventListener("input", () => (ex.adding = t.value));
+  t.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); registerExercise(ex, t.value); } });
+  if (ex.focusNew) { ex.focusNew = false; queueMicrotask(() => t.focus()); }
+  return h("div", { class: "row", style: "gap:4px" }, t,
+    h("button", { class: "btn primary small", type: "button", onclick: () => registerExercise(ex, t.value) }, "登録"),
+    h("button", { class: "btn ghost small", type: "button", onclick: () => { ex.adding = null; render(); } }, "やめる"));
+}
+function pickExercise(ex, name, cat) {
+  const c = findExercise(cat, name);
+  ex.name = c ? c.name : name;
+  ex.part = (c && c.part) || partFor(ex.name) || (c ? null : ex.part);
+  render();
+}
+// 読み取った名前がリストにないとき：近い種目をすすめ、そのまま保存すれば新しい種目になることを伝える
+function unregisteredHint(ex, cat) {
+  const k = nameKey(ex.name);
+  if (!k || ex.adding != null || findExercise(cat, ex.name)) return null;
+  const near = cat.filter((c) => { const ck = nameKey(c.name); return ck.includes(k) || k.includes(ck); }).slice(0, 3);
+  return h("div", { class: "muted", style: "color:var(--warn-ink);line-height:1.6;display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center" },
+    h("span", {}, `「${ex.name}」はまだ登録されていない種目です。このまま保存すると新しい種目として登録されます。`),
+    near.map((c) => h("button", { class: "linkish", type: "button", onclick: () => pickExercise(ex, c.name, cat) }, `→「${c.name}」にする`)));
+}
+async function registerExercise(ex, raw) {
+  const t = raw.trim().replace(/\s+/g, " ");
+  if (!t) return toast("種目名を入れてください");
+  const name = canonName(t), hit = findExercise(exerciseCatalog(), name);
+  ex.adding = null;
+  if (hit) { pickExercise(ex, hit.name, [hit]); return toast(`「${hit.name}」はすでに登録されています`); }
+  ex.name = name; ex.part = partFor(name);
+  S.exRules = { ...S.exRules, custom: [...(S.exRules.custom || []), name] };
+  render();
+  try { await rulesDoc().set(S.exRules); toast(`「${name}」を登録しました`); }
+  catch { toast(`「${name}」はこの記録には使えますが、種目リストへの保存に失敗しました`); }
+}
+async function unregisterExercise(name) {
+  const parts = { ...S.exRules.parts }; delete parts[name];
+  S.exRules = { ...S.exRules, parts, custom: (S.exRules.custom || []).filter((n) => n !== name) };
+  render();
+  try { await rulesDoc().set(S.exRules); toast(`「${name}」を削除しました`); } catch { toast("削除を保存できませんでした。通信状態を確認してください"); }
+}
+
 function readSummary(E) {
   const f = E.form, exs = f.exercises.filter((x) => x.name.trim());
   const sets = exs.reduce((a, x) => a + x.sets.filter((st) => st.weight.trim() || st.reps.trim()).length, 0);
@@ -3745,7 +3815,7 @@ async function loadRules() {
   try {
     const snap = await rulesDoc().get();
     const d = snap.exists ? snap.data() : null;
-    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, ...(d.focus ? { focus: d.focus } : {}) };
+    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}) };
   } catch {}
 }
 const canonName = (n) => S.exRules.aliases[nameKey(n)] || n;
@@ -3755,7 +3825,7 @@ function applyRule(e) {
   const name = canonName(e.name);
   return { ...e, name, part: S.exRules.parts[name] ?? e.part ?? WN.guessPart(name) };
 }
-// 記録に出てくる種目の一覧（回数・いちばん多い部位・最後の日）
+// 記録に出てくる種目と登録した種目の一覧（回数・いちばん多い部位・最後の日）
 function exerciseCatalog() {
   const m = new Map();
   for (const w of S.workouts) for (const ex of w.exercises) {
@@ -3766,10 +3836,14 @@ function exerciseCatalog() {
     if (w.date > c.last) c.last = w.date;
     m.set(ex.name, c);
   }
-  return [...m.values()].map((c) => {
+  const list = [...m.values()].map((c) => {
     const ps = Object.entries(c.parts).sort((a, b) => b[1] - a[1]);
     return { ...c, part: ps[0][0] === "none" ? null : ps[0][0], mixed: ps.length > 1 };
-  }).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  });
+  // 登録だけして、まだ記録のない種目
+  const seen = new Set(list.map((c) => nameKey(c.name)));
+  for (const n of S.exRules.custom || []) if (!seen.has(nameKey(n))) { seen.add(nameKey(n)); list.push({ name: n, count: 0, parts: {}, last: "", part: S.exRules.parts[n] ?? WN.guessPart(n), mixed: false }); }
+  return list.sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 function openExercises() { S.exm = { sel: new Set(), mode: "list" }; go("exercises"); }
 
@@ -3794,7 +3868,7 @@ async function applyExerciseChange(fromNames, toName, part) {
       if (S.view === "exercises" && S.exm === E) render();
     }
     // これから読み取る記録にも使う決まり
-    const R = { parts: { ...S.exRules.parts }, aliases: { ...S.exRules.aliases }, focus: S.exRules.focus ? Object.fromEntries(Object.entries(S.exRules.focus).map(([p, l]) => [p, [...new Set(l.map((n) => (from.has(n) ? toName : n)))]])) : null };
+    const R = { parts: { ...S.exRules.parts }, aliases: { ...S.exRules.aliases }, custom: [...new Set((S.exRules.custom || []).map((n) => (from.has(n) ? toName : n)))], focus: S.exRules.focus ? Object.fromEntries(Object.entries(S.exRules.focus).map(([p, l]) => [p, [...new Set(l.map((n) => (from.has(n) ? toName : n)))]])) : null };
     if (!R.focus) delete R.focus;
     for (const n of from) if (n !== toName) { R.aliases[nameKey(n)] = toName; delete R.parts[n]; }
     for (const k in R.aliases) if (from.has(R.aliases[k])) R.aliases[k] = toName;
@@ -3850,8 +3924,9 @@ function renderExercises(view) {
       cb.addEventListener("change", () => { cb.checked ? E.sel.add(c.name) : E.sel.delete(c.name); render(); });
       card.append(h("div", { class: "ex-row" }, cb,
         h("div", { class: "grow" }, h("div", { style: "font-weight:700" }, c.name),
-          h("div", { class: "muted" }, `${c.count}回・最後 ${WN.shortDate(c.last)}`, c.mixed ? h("span", { style: "color:var(--warn-ink)" }, "・部位がばらばら") : null)),
-        c.part ? h("button", { class: "star" + (focusOf(c.part).includes(c.name) ? " on" : "") + (S.exRules.focus?.[c.part] ? "" : " auto"), type: "button", disabled: !S.db, "aria-pressed": String(focusOf(c.part).includes(c.name)), "aria-label": `${c.name}を伸ばしたい種目にする`, onclick: () => toggleFocus(c.part, c.name) }, focusOf(c.part).includes(c.name) ? "★" : "☆") : null,
+          h("div", { class: "muted" }, c.count ? `${c.count}回・最後 ${WN.shortDate(c.last)}` : "登録済み・まだ記録なし", c.mixed ? h("span", { style: "color:var(--warn-ink)" }, "・部位がばらばら") : null)),
+        c.count === 0 ? h("button", { class: "btn ghost small", type: "button", disabled: !S.db, onclick: () => unregisterExercise(c.name) }, "削除") : null,
+        c.part && c.count ? h("button", { class: "star" + (focusOf(c.part).includes(c.name) ? " on" : "") + (S.exRules.focus?.[c.part] ? "" : " auto"), type: "button", disabled: !S.db, "aria-pressed": String(focusOf(c.part).includes(c.name)), "aria-label": `${c.name}を伸ばしたい種目にする`, onclick: () => toggleFocus(c.part, c.name) }, focusOf(c.part).includes(c.name) ? "★" : "☆") : null,
         h("button", { class: "btn secondary small", type: "button", disabled: !S.db, onclick: () => {
           Object.assign(E, { mode: "edit", from: [c.name], name: c.name, part: c.part });
           render(); document.getElementById("main").scrollTop = 0;
@@ -3998,7 +4073,7 @@ function renderSettings(view) {
   });
   view.append(h("div", { class: "card" }, h("h2", { class: "card-title", style: "color:var(--ink);font-size:15px" }, "種目の管理"),
     h("div", { class: "sub" }, "部位の付け直しや、同じ種目なのに名前が違うものを1つにまとめられます（例：デッドリフトを脚にする、「デッド」と「デッドリフト」をまとめる）。"),
-    h("button", { class: "btn secondary", type: "button", disabled: !S.db || !S.workouts.length, onclick: openExercises }, "種目の一覧を開く")));
+    h("button", { class: "btn secondary", type: "button", disabled: !S.db || (!S.workouts.length && !(S.exRules.custom || []).length), onclick: openExercises }, "種目の一覧を開く")));
   view.append(h("div", { class: "card" }, h("h2", { class: "card-title", style: "color:var(--ink);font-size:15px" }, "バックアップ"),
     h("div", { class: "sub" }, "記録は claude.ai のこのページに、あなた専用で保存されています（ほかの人からは見えません）。ファイルに書き出しておくと、Web アプリ版（GitHub Pages 版）にも取り込めます。"),
     h("button", { class: "btn primary", type: "button", disabled: !S.downloads || !S.workouts.length, onclick: exportBackup }, "💾 バックアップを保存"),
