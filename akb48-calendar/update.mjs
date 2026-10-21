@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -201,6 +201,33 @@ if (config.deadlineCalendar) {
     await writeFile(args.notify.replace(/\.md$/, '') + '.txt', openedPlain(opened));
     console.log(`申込開始: ${opened.length} 公演`);
   }
+}
+
+// 申込締切の1日前のプッシュ通知: 締切の24時間前に届くよう ntfy に予約送信する（環境変数 NTFY_TOPIC があるときだけ）。
+// 送ったものは ntfy-sent.json に記録して二度は送らない
+if (process.env.NTFY_TOPIC) {
+  const sentPath = join(outDir, 'ntfy-sent.json');
+  let sent = {};
+  try {
+    sent = JSON.parse(await readFile(sentPath, 'utf8'));
+  } catch {}
+  for (const r of dueDeadlineReminders(events, sent, today)) {
+    // 日本語は HTTP ヘッダーに入れられないので、ntfy の URL パラメーターで渡す
+    const params = new URLSearchParams({ title: r.title, click: r.click });
+    const scheduled = r.at && r.at.getTime() - today.getTime() > 60_000;
+    if (scheduled) params.set('at', String(Math.floor(r.at.getTime() / 1000)));
+    try {
+      const res = await fetch(`https://ntfy.sh/${encodeURIComponent(process.env.NTFY_TOPIC)}?${params}`, { method: 'POST', body: r.body });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      sent[r.key] = (r.at ?? today).toISOString();
+      console.log(`締切通知を${scheduled ? `${r.at.toISOString()} に予約` : '送信'}: ${r.body.split('\n')[0]}`);
+    } catch (e) {
+      console.warn(`締切通知の送信に失敗: ${e.message}`);
+    }
+  }
+  // 締切を過ぎた記録は消す
+  for (const [k, v] of Object.entries(sent)) if (new Date(v).getTime() < today.getTime() - 7 * 86400_000) delete sent[k];
+  await writeFile(sentPath, JSON.stringify(sent, null, 2) + '\n');
 }
 
 // SNS告知文: 来月以降の月ごと・推しメンごとに sns/YYYY-MM/<名前>.txt と、3人ぶんをまとめた sns/YYYY-MM.txt を作る
