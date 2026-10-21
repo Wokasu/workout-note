@@ -575,6 +575,21 @@ export function newlyOpened(previous, current) {
   return current.filter((s) => s.kind !== 'event' && s.applyUrl && !before.get(showKey(s))?.applyUrl);
 }
 
+/** 申込開始のプッシュ通知（ntfy）用のプレーンテキスト */
+export function openedPlain(list) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return list
+    .map((s) => {
+      const dl = (s.deadlines ?? []).map((d) => `${d.label} ${md(d.year, d.month, d.day)} ${d.hour}:${pad(d.minute)}`).join(' / ');
+      return [
+        `${md(s.year, s.month, s.day)} ${s.hour == null ? '' : `${s.hour}:${pad(s.minute)} `}${s.title}（${s.members.join('・')}）`,
+        `申込: ${s.applyUrl}`,
+        ...(dl ? [`締切: ${dl}`] : []),
+      ].join('\n');
+    })
+    .join('\n\n');
+}
+
 /** 申込開始の通知文（GitHub Issue 用の Markdown） */
 export function openedMessage(list) {
   const pad = (n) => String(n).padStart(2, '0');
