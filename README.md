@@ -110,6 +110,19 @@ node akb48-calendar/update.mjs --out feed --dump dump    # 手元で .ics を作
 - 新しい月の告知文ができると「出演告知文 2026年11月」という Issue が立ち、GitHub の通知が届きます。出演メンバーが変わったときはその Issue にコメントで新しい告知文が届きます
 - 見出しの絵文字は `config.json` の各メンバーの `snsEmoji` で変えられます
 
+### X（旧Twitter）への自動投稿
+
+新しい月の告知文ができたら、自分の X アカウントに推しメンごとに投稿します（先頭に `【伊藤百花】` のような見出しが付きます。
+`config.json` の `xHeading` で変更可）。280文字（日本語は1文字を2と数える）を超えるときは演目ごとにスレッドに分けます。
+投稿は月ごと・メンバーごとに1回だけで、記録は `akb48-calendar-feed` の `sns/posted.json` に残ります。メンバー変更があっても投稿し直しはしません（Issue で知らせるだけ）。
+
+準備:
+1. [X Developer Console](https://console.x.com) でアプリを作り、権限を **Read and write** にする
+2. API Key / API Key Secret / Access Token / Access Token Secret を発行する（権限を変えた後に Access Token を作り直す）
+3. GitHub のリポジトリ → Settings → Secrets and variables → Actions に `X_API_KEY` `X_API_SECRET` `X_ACCESS_TOKEN` `X_ACCESS_TOKEN_SECRET` として登録する
+
+すでにできている月を投稿したいときは、Actions の「AKB48 劇場公演カレンダー更新」→ Run workflow で `x_post_month` に `2026-11` のように入れて実行します。
+
 ## 申込ランチャー（Windows）
 
 推しが出る公演の申込ページ（AKB48チケットセンター）を、Chromeのプロファイル＝申込アカウントごとに **1アカウントずつ** 開きます。

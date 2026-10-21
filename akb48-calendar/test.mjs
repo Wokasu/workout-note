@@ -214,3 +214,37 @@ test('SNS告知文: 演目ごとに出演日と開演時刻を並べ、柱の会
   );
   assert.equal(buildAnnouncement('渡邉葵心', shows, 2026, 12), null);
 });
+
+test('X: 日本語は2文字、半角は1文字として数え、280を超えたら演目ごとにスレッドへ分ける', async () => {
+  const { weightedLength, splitForX } = await import('./x.mjs');
+  assert.equal(weightedLength('ab12'), 4);
+  assert.equal(weightedLength('「ここからだ」'), 14);
+  assert.equal(weightedLength('🧤🤍'), 4);
+  const casts = extractCasts(fixture('schedule-notice.txt'), { today });
+  const { shows } = buildShows(casts, [], members);
+  for (const name of ['伊藤百花', '奥本カイリ', '渡邉葵心']) {
+    const posts = splitForX(buildAnnouncement(name, shows, 2026, 11), `【${name}】`);
+    assert.ok(posts[0].startsWith(`【${name}】\n11月出演公演`));
+    assert.ok(posts.every((p) => weightedLength(p) <= 280));
+    // 分けても内容は欠けない
+    assert.equal(posts.join('\n\n').replace(`【${name}】\n`, ''), buildAnnouncement(name, shows, 2026, 11).trim());
+  }
+});
+
+test('X: OAuth 1.0a の署名（X の公式ドキュメントの例と同じ値になる）', async () => {
+  const { oauthHeader } = await import('./x.mjs');
+  const header = oauthHeader(
+    'POST',
+    'https://api.twitter.com/1.1/statuses/update.json',
+    {
+      apiKey: 'xvz1evFS4wEEPTGEFPHBog',
+      apiSecret: 'kAcSOqF21Fu85e7zjz7ZN2U4ZRhfV3WpwPAoE3Z7kBw',
+      accessToken: '370773112-GmHxMAgYyLbNEtIKZeRNFsMKPR9EyMZeS9weJAEb',
+      accessTokenSecret: 'LswwdoUaIvS8ltyTt5jkRh4J50vUPVVHtR2YPi5kE',
+    },
+    { include_entities: 'true', status: 'Hello Ladies + Gentlemen, a signed OAuth request!' },
+    'kYjzVBB8Y0ZFabxSWbWovY3uYSQ2pTgmZeNu2VS4cg',
+    1318622958,
+  );
+  assert.match(header, /oauth_signature="hCtSmYh%2BiHYCEqBWrE7C7hYmtUk%3D"/);
+});
