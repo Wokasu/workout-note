@@ -51,6 +51,8 @@ export function resolveYear(month, day, today) {
   return best.y;
 }
 
+const weekdayOf = (y, m, d) => '日月火水木金土'[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+
 function parseTimes(s) {
   return [...s.matchAll(/(\d{1,2}):(\d{2})/g)].map((m) => ({ hour: Number(m[1]), minute: Number(m[2]) }));
 }
@@ -63,7 +65,7 @@ export function normalizeTitle(s) {
 
 const SCHEDULE_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S* (\d{1,2}):(\d{2}) ?[~～]$/;
 const MONTHLY_RE = /^(\d{1,2})\/(\d{1,2}) ?\(.\) ?(.+?) ((?:\d{1,2}:\d{2}開演 ?\/? ?)+)$/;
-const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\(.\)$/;
+const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\((.)\)$/;
 const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
 
 // 公演ごとの申込ページへのリンク（htmlToLines が残した ⟨URL⟩）。チケットセンターのトップへのリンクは除く
@@ -183,8 +185,24 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
       cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines: [], label: null };
     } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
       const next = lines[i + 1];
+      const year = Number(m[1]);
+      let [month, day] = [Number(m[2]), Number(m[3])];
+      // 公式の記事には日付の書き間違いがある（例: 10月27日の公演の記事に「2026年10月28日(火)」）。
+      // 曜日が日付と合わないときは、記事の見出しや本文にある「10月27日」のうち曜日が合う日付を使う
+      if (weekdayOf(year, month, day) !== m[4]) {
+        const fixed = lines
+          .slice(0, i)
+          .flatMap((l) => [...l.matchAll(/(\d{1,2})月(\d{1,2})日/g)])
+          .map((x) => [Number(x[1]), Number(x[2])])
+          .find(([mo, d]) => weekdayOf(year, mo, d) === m[4]);
+        if (!fixed) {
+          cur = null;
+          continue;
+        }
+        [month, day] = fixed;
+      }
       cur = {
-        year: Number(m[1]), month: Number(m[2]), day: Number(m[3]),
+        year, month, day,
         title: normalizeTitle(next.replace(/\d{1,2}:\d{2}.*$/, '')),
         times: parseTimes(next), kind: 'single', casts: [], deadlines: [], label: null,
       };

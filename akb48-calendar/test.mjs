@@ -287,3 +287,17 @@ test('申込開始: 前回リンクがなく今回ついた公演だけを知ら
   assert.deepEqual(opened.map((x) => x.day), [2]);
   assert.match(openedMessage(opened), /11\/2\(月\) 18:30 「ここからだ」公演\*\*（奥本カイリ）\n  - 申込: u2/);
 });
+
+test('公演のご案内: 日付の書き間違い（曜日が合わない）は、見出しの曜日が合う日付に直す', () => {
+  const lines = [
+    '10月27日 「ここからだ」公演のご案内',
+    '10月27日(火)にAKB48劇場にて実施いたします「ここからだ」公演についてご案内いたします。',
+    '2026年10月28日(火)',
+    '「ここからだ」公演 18:30開演',
+    '【出演メンバー】',
+    '秋山由奈・渡邉葵心',
+  ];
+  assert.deepEqual(extractCasts(lines, { today }).map((c) => `${c.month}/${c.day}`), ['10/27']);
+  // 直せないときは読まない
+  assert.deepEqual(extractCasts(lines.slice(2), { today }), []);
+});
