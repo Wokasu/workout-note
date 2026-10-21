@@ -138,8 +138,12 @@ jobs:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           [ -n "$NTFY_TOPIC" ] || { echo '::error::NTFY_TOPIC が設定されていません'; exit 1; }
-          curl -fsS -H "Title: テスト通知" -H "Tags: white_check_mark" \
-            -d "AKB48 申込開始のお知らせは、この形で届きます。" "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+          # 本番と同じ形で送る（本文の先頭に（テスト）を付ける）
+          curl -fsS \
+            -H "Title: 🎫 推しの公演の申込が始まりました" \
+            -H "Click: https://akb48.zaiko.io/" \
+            -d "（テスト）10/27(火)〜11/9(月) の推しの公演 5件" \
+            "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
 
       # ntfy でスマホにまとめて1つプッシュ通知する（Secrets の NTFY_TOPIC を購読している人全員に届く）。
       # タップすると AKB48チケットセンター（ZAIKO）が開く
