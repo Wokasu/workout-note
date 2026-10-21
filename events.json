@@ -31,7 +31,25 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/s2026-1019-1830"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/s2026-1019-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 12,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 14,
+          "hour": 16,
+          "minute": 0
+        }
+      ]
     },
     {
       "year": 2026,
@@ -45,7 +63,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/2026w-1021-1830"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/2026w-1021-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 14,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 16,
+          "hour": 16,
+          "minute": 0
+        }
+      ]
     },
     {
       "year": 2026,
@@ -59,7 +95,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1025-1300"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1025-1300",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 18,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 20,
+          "hour": 16,
+          "minute": 0
+        }
+      ]
     },
     {
       "year": 2026,
@@ -73,7 +127,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1025-1730"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/te2026-1025-1730",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 18,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 20,
+          "hour": 16,
+          "minute": 0
+        }
+      ]
     },
     {
       "year": 2026,
@@ -86,7 +158,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/ko2026-1027-1830"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/ko2026-1027-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 20,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 22,
+          "hour": 16,
+          "minute": 0
+        }
+      ]
     },
     {
       "year": 2026,
@@ -99,7 +189,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489819658",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 20,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 22,
+          "hour": 16,
+          "minute": 0
+        }
+      ]
     },
     {
       "year": 2026,
@@ -112,7 +220,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/k2026-1029-1830"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/k2026-1029-1830",
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -125,7 +234,8 @@
         "伊藤百花"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": "https://akb48.zaiko.io/ja/e/p2026-1031"
+      "applyUrl": "https://akb48.zaiko.io/ja/e/p2026-1031",
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -138,7 +248,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -151,7 +262,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -164,7 +276,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -178,7 +291,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -192,7 +306,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -205,7 +320,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -218,7 +334,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -231,7 +348,8 @@
         "伊藤百花"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -245,7 +363,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -258,7 +377,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -272,7 +392,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -328,7 +449,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -342,7 +464,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -356,7 +479,8 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -388,7 +512,8 @@
         "伊藤百花"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
@@ -401,7 +526,8 @@
         "奥本カイリ"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
-      "applyUrl": null
+      "applyUrl": null,
+      "deadlines": []
     },
     {
       "year": 2026,
