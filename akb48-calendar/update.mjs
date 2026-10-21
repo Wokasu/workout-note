@@ -153,11 +153,12 @@ for (let i = 0; i <= (config.scheduleMonthsAhead ?? 3); i++) {
 // 出演情報がある公演は今回の内容で置き換える（メンバー変更で推しが外れたら消える）
 // 現場（kind: 'event'）は、今回読めた月の分を置き換え、読めなかった月の分は前回のまま残す
 // 読み取り方を変えたら STATE_VERSION を上げて、古い読み取り結果を捨てる
-const STATE_VERSION = 4;
+const STATE_VERSION = 5;
 let previous = [];
+let stateReset = true; // 前回の記録が使えないとき（初回・読み取り方の変更）は、申込開始の通知を出さない
 try {
   const state = JSON.parse(await readFile(join(outDir, 'events.json'), 'utf8'));
-  if (state.version === STATE_VERSION) previous = state.events;
+  if (state.version === STATE_VERSION) [previous, stateReset] = [state.events, false];
 } catch {}
 // startDate より前の公演は入れない（それまでの分は手動で登録済みのため）
 const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
@@ -195,7 +196,7 @@ if (config.deadlineCalendar) {
 // 申込開始の通知: 前回は申込リンクがなく、今回ついた推しの公演があれば --notify のファイルに書く
 {
   const opened = newlyOpened(previous, events);
-  if (opened.length && args.notify) {
+  if (opened.length && args.notify && !stateReset) {
     await writeFile(args.notify, openedMessage(opened));
     console.log(`申込開始: ${opened.length} 公演`);
   }
