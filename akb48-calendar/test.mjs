@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -310,4 +310,28 @@ test('申込開始のプッシュ通知文（ntfy）', async () => {
   };
   assert.equal(openedPlain([{ ...s, month: 11, day: 9 }, s, { ...s, day: 29 }]), '10/27(火)〜11/9(月) の推しの公演 3件');
   assert.equal(openedPlain([s]), '10/27(火) の推しの公演 1件');
+});
+
+test('締切1日前のプッシュ通知: 4時間以内に24時間前を迎える分だけ、1公演・1応募枠ごとに', () => {
+  const s = {
+    year: 2026, month: 10, day: 27, hour: 18, minute: 30, title: '「ここからだ」公演', members: ['渡邉葵心'], applyUrl: 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830',
+    deadlines: [
+      { label: '(1)〜(3)枠', year: 2026, month: 10, day: 20, hour: 16, minute: 0 },
+      { label: '(4)〜(6)枠', year: 2026, month: 10, day: 22, hour: 16, minute: 0 },
+    ],
+  };
+  // 10/19 14:00 JST: (1)〜(3)枠の24時間前（10/19 16:00）が2時間後
+  const now = new Date('2026-10-19T05:00:00Z');
+  const due = dueDeadlineReminders([s], {}, now);
+  assert.equal(due.length, 1);
+  assert.equal(due[0].at.toISOString(), '2026-10-19T07:00:00.000Z');
+  assert.equal(due[0].body, '10/27(火) 18:30 「ここからだ」公演（渡邉葵心）\n(1)〜(3)枠 10/20(火) 16:00締切');
+  assert.equal(due[0].click, 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830');
+  // 送った記録があれば送らない
+  assert.equal(dueDeadlineReminders([s], { [due[0].key]: 'x' }, now).length, 0);
+  // チェックが遅れて24時間前を過ぎていても、締切前ならすぐ送る（at なし）
+  const late = dueDeadlineReminders([s], {}, new Date('2026-10-20T01:00:00Z'));
+  assert.deepEqual(late.map((r) => r.at), [null]);
+  // 締切を過ぎたら送らない
+  assert.equal(dueDeadlineReminders([s], {}, new Date('2026-10-23T00:00:00Z')).length, 0);
 });

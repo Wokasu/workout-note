@@ -603,3 +603,30 @@ export function openedMessage(list) {
     }),
   ].join('\n') + '\n';
 }
+
+// ---- 申込締切の1日前のプッシュ通知（ntfy）----
+/**
+ * これから horizonMs 以内に「締切の24時間前」を迎える、まだ送っていない通知（1公演・1応募枠につき1通）。
+ * 自動チェックが遅れて24時間前を過ぎていても、締切前ならすぐ送る。
+ */
+export function dueDeadlineReminders(shows, sent, now, horizonMs = 4 * 3600_000) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const out = [];
+  for (const s of shows) {
+    if (s.kind === 'event') continue;
+    for (const d of s.deadlines ?? []) {
+      const deadline = jstToUtc(d.year, d.month, d.day, d.hour, d.minute);
+      const at = new Date(deadline.getTime() - 24 * 3600_000);
+      const key = `${showKey(s)}|${d.label}|${deadline.toISOString()}`;
+      if (sent[key] || deadline <= now || at > new Date(now.getTime() + horizonMs)) continue;
+      out.push({
+        key,
+        at: at > now ? at : null,
+        click: s.applyUrl ?? 'https://akb48.zaiko.io/',
+        title: '⏰ 明日が申込締切です',
+        body: `${md(s.year, s.month, s.day)} ${s.hour == null ? '' : `${s.hour}:${pad(s.minute)} `}${s.title}（${s.members.join('・')}）\n${d.label} ${md(d.year, d.month, d.day)} ${d.hour}:${pad(d.minute)}締切`,
+      });
+    }
+  }
+  return out.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
+}
