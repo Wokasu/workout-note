@@ -604,6 +604,23 @@ export function openedMessage(list) {
   ].join('\n') + '\n';
 }
 
+/**
+ * 締切を、対象の応募枠（例: (2)柱の会会員枠）を含むものだけにし、表示名をその枠の名前にする。
+ * 締切の表記は「(1)〜(3)枠」のような範囲なので、枠の番号が範囲に入るものを残す
+ */
+export function onlyFrame(shows, frame) {
+  if (!frame) return shows;
+  return shows.map((s) => ({
+    ...s,
+    deadlines: (s.deadlines ?? [])
+      .filter((d) => {
+        const m = d.label.match(/\((\d+)\)\s*[〜~～-]\s*\((\d+)\)/);
+        return m ? Number(m[1]) <= frame.number && frame.number <= Number(m[2]) : d.label.includes(`(${frame.number})`);
+      })
+      .map((d) => ({ ...d, label: frame.name })),
+  }));
+}
+
 // ---- 申込締切の1日前のプッシュ通知（ntfy）----
 /**
  * これから horizonMs 以内に「締切の24時間前」を迎える、まだ送っていない通知（1公演・1応募枠につき1通）。

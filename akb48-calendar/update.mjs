@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -186,16 +186,19 @@ for (const cal of config.calendars) {
   console.log(`${cal.id}.ics: ${shows.length} 件`);
 }
 
+// 申込締切は対象の応募枠（config.json の targetFrame、例: 柱の会会員枠）だけを扱う
+const frameEvents = onlyFrame(events, config.targetFrame);
+
 // 申込締切カレンダー（締切の1日前に通知）
 if (config.deadlineCalendar) {
-  const ics = buildDeadlineIcs(config.deadlineCalendar, events, { now: today });
+  const ics = buildDeadlineIcs(config.deadlineCalendar, frameEvents, { now: today });
   await writeFile(join(outDir, `${config.deadlineCalendar.id}.ics`), ics);
   console.log(`${config.deadlineCalendar.id}.ics: ${(ics.match(/BEGIN:VEVENT/g) ?? []).length} 件`);
 }
 
 // 申込開始の通知: 前回は申込リンクがなく、今回ついた推しの公演があれば --notify のファイルに書く
 {
-  const opened = newlyOpened(previous, events);
+  const opened = newlyOpened(previous, frameEvents);
   if (opened.length && args.notify && !stateReset) {
     await writeFile(args.notify, openedMessage(opened));
     await writeFile(args.notify.replace(/\.md$/, '') + '.txt', openedPlain(opened));
@@ -211,7 +214,7 @@ if (process.env.NTFY_TOPIC) {
   try {
     sent = JSON.parse(await readFile(sentPath, 'utf8'));
   } catch {}
-  for (const r of dueDeadlineReminders(events, sent, today)) {
+  for (const r of dueDeadlineReminders(frameEvents, sent, today)) {
     // 日本語は HTTP ヘッダーに入れられないので、ntfy の URL パラメーターで渡す
     const params = new URLSearchParams({ title: r.title, click: r.click });
     const scheduled = r.at && r.at.getTime() - today.getTime() > 60_000;
