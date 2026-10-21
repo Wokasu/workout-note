@@ -135,6 +135,8 @@ jobs:
             node ../akb48-calendar/post-x.mjs --dir . --month "$m" || failed=1
           done
           # 途中で失敗しても、投稿できた分の記録は残す（二重投稿を防ぐため）
+          # 前の手順で DTSTAMP だけの変更がステージに残っていることがあるので、投稿記録だけをコミットする
+          git reset -q
           git add -A sns/posted.json 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "X に投稿した記録 $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')"
