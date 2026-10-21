@@ -199,7 +199,6 @@ if (config.deadlineCalendar) {
   if (opened.length && args.notify && !stateReset) {
     await writeFile(args.notify, openedMessage(opened));
     await writeFile(args.notify.replace(/\.md$/, '') + '.txt', openedPlain(opened));
-    await writeFile(args.notify.replace(/\.md$/, '') + '.url', opened[0].applyUrl);
     console.log(`申込開始: ${opened.length} 公演`);
   }
 }
