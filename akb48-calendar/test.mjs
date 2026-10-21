@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildAnnouncement, buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -247,4 +247,43 @@ test('X: OAuth 1.0a の署名（X の公式ドキュメントの例と同じ値�
     1318622958,
   );
   assert.match(header, /oauth_signature="hCtSmYh%2BiHYCEqBWrE7C7hYmtUk%3D"/);
+});
+
+test('申込締切: トップページと公演のご案内から応募枠ごとの締切を読む（ロビー観覧は除く）', () => {
+  const top = extractTopCasts(fixture('top-page.txt'));
+  const c1019 = top.find((c) => c.month === 10 && c.day === 19);
+  assert.deepEqual(c1019.deadlines.map((d) => `${d.label} ${d.month}/${d.day} ${d.hour}:${d.minute}`), [
+    '(1)〜(3)枠 10/12 16:0',
+    '(4)〜(6)枠 10/14 16:0',
+  ]);
+  const casts = extractCasts(fixture('single-notice-1025.txt'), { today });
+  const { shows } = buildShows(casts, extractSchedule(fixture('top-schedule.txt')), members);
+  // 昼夜2公演とも同じ締切
+  assert.equal(shows.length, 2);
+  for (const s of shows) assert.deepEqual(s.deadlines.map((d) => `${d.month}/${d.day}`), ['10/18', '10/20']);
+});
+
+test('申込締切カレンダー: 同じ締切の公演を1つにまとめ、1日前に通知する', () => {
+  const base = { year: 2026, month: 11, hour: 18, minute: 30, members: ['奥本カイリ'], applyUrl: 'https://akb48.zaiko.io/ja/e/x' };
+  const dl = (day) => [{ label: '(1)〜(3)枠', year: 2026, month: 10, day, hour: 16, minute: 0 }];
+  const ics = buildDeadlineIcs(
+    { name: 'AKB48 申込締切', color: '#FF9500' },
+    [
+      { ...base, day: 2, title: '「ここからだ」公演', deadlines: dl(25) },
+      { ...base, day: 3, title: '「ここからだ」公演', deadlines: dl(25) },
+      { ...base, day: 30, title: '「RESET」公演', deadlines: dl(10) }, // 締切が過ぎている
+    ],
+    { now: today },
+  );
+  assert.equal(ics.match(/BEGIN:VEVENT/g).length, 1);
+  assert.match(ics, /DTEND:20261025T070000Z/);
+  assert.match(ics, /TRIGGER:-PT23H30M/);
+  assert.match(ics.replace(/\r\n /g, ''), /SUMMARY:📝申込締切 \(1\)〜\(3\)枠 11\/2\(月\)「ここからだ」公演 ほか1公演/);
+});
+
+test('申込開始: 前回リンクがなく今回ついた公演だけを知らせる', () => {
+  const s = { year: 2026, month: 11, day: 2, hour: 18, minute: 30, title: '「ここからだ」公演', members: ['奥本カイリ'], deadlines: [] };
+  const opened = newlyOpened([{ ...s, applyUrl: null }, { ...s, day: 3, applyUrl: 'u3' }], [{ ...s, applyUrl: 'u2' }, { ...s, day: 3, applyUrl: 'u3' }]);
+  assert.deepEqual(opened.map((x) => x.day), [2]);
+  assert.match(openedMessage(opened), /11\/2\(月\) 18:30 「ここからだ」公演\*\*（奥本カイリ）\n  - 申込: u2/);
 });
