@@ -575,6 +575,18 @@ export function newlyOpened(previous, current) {
   return current.filter((s) => s.kind !== 'event' && s.applyUrl && !before.get(showKey(s))?.applyUrl);
 }
 
+/**
+ * 申込開始のプッシュ通知（ntfy）用の1行。まとめて始まった公演を1つの通知にする。
+ * 例) 10/27(火)〜11/9(月) の推しの公演 5件
+ */
+export function openedPlain(list) {
+  const sorted = [...list].sort((a, b) => showKey(a).localeCompare(showKey(b)));
+  const [first, last] = [sorted[0], sorted.at(-1)];
+  const from = md(first.year, first.month, first.day);
+  const to = md(last.year, last.month, last.day);
+  return `${from === to ? from : `${from}〜${to}`} の推しの公演 ${sorted.length}件`;
+}
+
 /** 申込開始の通知文（GitHub Issue 用の Markdown） */
 export function openedMessage(list) {
   const pad = (n) => String(n).padStart(2, '0');
