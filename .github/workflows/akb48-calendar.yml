@@ -141,17 +141,18 @@ jobs:
           curl -fsS -H "Title: テスト通知" -H "Tags: white_check_mark" \
             -d "AKB48 申込開始のお知らせは、この形で届きます。" "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
 
-      # ntfy でスマホに「🎫 推しの公演の申込が始まりました」と1つだけプッシュ通知する（Secrets の NTFY_TOPIC を購読している人全員に届く）。
+      # ntfy でスマホにまとめて1つプッシュ通知する（Secrets の NTFY_TOPIC を購読している人全員に届く）。
       # タップすると AKB48チケットセンター（ZAIKO）が開く
       - name: Push application open (ntfy)
-        if: ${{ !inputs.probe && hashFiles('notify-apply.md') != '' }}
+        if: ${{ !inputs.probe && hashFiles('notify-apply.txt') != '' }}
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
           [ -n "$NTFY_TOPIC" ] || { echo 'NTFY_TOPIC が設定されていないので送りません'; exit 0; }
           curl -fsS \
+            -H "Title: 🎫 推しの公演の申込が始まりました" \
             -H "Click: https://akb48.zaiko.io/" \
-            -d "🎫 推しの公演の申込が始まりました" \
+            --data-binary @notify-apply.txt \
             "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
 
       # 新しい月の出演告知文ができたら、自分の X アカウントに投稿する（Secrets に X の認証情報があるときだけ）
