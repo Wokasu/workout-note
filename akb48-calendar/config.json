@@ -25,6 +25,10 @@
       ]
     }
   ],
+  "targetFrame": {
+    "number": 2,
+    "name": "柱の会会員枠"
+  },
   "deadlineCalendar": {
     "id": "deadlines",
     "name": "AKB48 申込締切",

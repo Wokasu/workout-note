@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -334,4 +334,17 @@ test('締切1日前のプッシュ通知: 4時間以内に24時間前を迎え�
   assert.deepEqual(late.map((r) => r.at), [null]);
   // 締切を過ぎたら送らない
   assert.equal(dueDeadlineReminders([s], {}, new Date('2026-10-23T00:00:00Z')).length, 0);
+});
+
+test('申込締切: 柱の会会員枠（(2)）を含む「(1)〜(3)枠」の締切だけを、枠の名前で扱う', () => {
+  const s = {
+    year: 2026, month: 10, day: 27, title: '「ここからだ」公演', members: ['渡邉葵心'],
+    deadlines: [
+      { label: '(1)〜(3)枠', year: 2026, month: 10, day: 20, hour: 16, minute: 0 },
+      { label: '(4)〜(6)枠', year: 2026, month: 10, day: 22, hour: 16, minute: 0 },
+    ],
+  };
+  const [only] = onlyFrame([s], { number: 2, name: '柱の会会員枠' });
+  assert.deepEqual(only.deadlines.map((d) => `${d.label} ${d.month}/${d.day}`), ['柱の会会員枠 10/20']);
+  assert.equal(onlyFrame([s], null)[0].deadlines.length, 2);
 });
