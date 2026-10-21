@@ -308,8 +308,6 @@ test('申込開始のプッシュ通知文（ntfy）', async () => {
     year: 2026, month: 10, day: 27, hour: 18, minute: 30, title: '「ここからだ」公演', members: ['渡邉葵心'], applyUrl: 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830',
     deadlines: [{ label: '(1)〜(3)枠', year: 2026, month: 10, day: 20, hour: 16, minute: 0 }],
   };
-  assert.equal(
-    openedPlain([s, { ...s, day: 29, members: ['奥本カイリ'] }]),
-    '10/27(火) 18:30 「ここからだ」公演（渡邉葵心）\n10/29(木) 18:30 「ここからだ」公演（奥本カイリ）',
-  );
+  assert.equal(openedPlain([{ ...s, month: 11, day: 9 }, s, { ...s, day: 29 }]), '10/27(火)〜11/9(月) の推しの公演 3件');
+  assert.equal(openedPlain([s]), '10/27(火) の推しの公演 1件');
 });

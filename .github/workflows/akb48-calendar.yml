@@ -141,7 +141,8 @@ jobs:
           curl -fsS -H "Title: テスト通知" -H "Tags: white_check_mark" \
             -d "AKB48 申込開始のお知らせは、この形で届きます。" "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
 
-      # 同じ内容を ntfy でスマホにプッシュ通知する（Secrets の NTFY_TOPIC を購読している人全員に届く）
+      # ntfy でスマホにまとめて1つプッシュ通知する（Secrets の NTFY_TOPIC を購読している人全員に届く）。
+      # タップすると AKB48チケットセンター（ZAIKO）が開く
       - name: Push application open (ntfy)
         if: ${{ !inputs.probe && hashFiles('notify-apply.txt') != '' }}
         env:
@@ -151,7 +152,7 @@ jobs:
           curl -fsS \
             -H "Title: 🎫 推しの公演の申込が始まりました" \
             -H "Tags: ticket" \
-            -H "Click: $(cat notify-apply.url)" \
+            -H "Click: https://akb48.zaiko.io/" \
             --data-binary @notify-apply.txt \
             "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
 
