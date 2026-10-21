@@ -301,3 +301,15 @@ test('公演のご案内: 日付の書き間違い（曜日が合わない）は
   // 直せないときは読まない
   assert.deepEqual(extractCasts(lines.slice(2), { today }), []);
 });
+
+test('申込開始のプッシュ通知文（ntfy）', async () => {
+  const { openedPlain } = await import('./lib.mjs');
+  const s = {
+    year: 2026, month: 10, day: 27, hour: 18, minute: 30, title: '「ここからだ」公演', members: ['渡邉葵心'], applyUrl: 'https://akb48.zaiko.io/ja/e/ko2026-1027-1830',
+    deadlines: [{ label: '(1)〜(3)枠', year: 2026, month: 10, day: 20, hour: 16, minute: 0 }],
+  };
+  assert.equal(
+    openedPlain([s]),
+    '10/27(火) 18:30 「ここからだ」公演（渡邉葵心）\n申込: https://akb48.zaiko.io/ja/e/ko2026-1027-1830\n締切: (1)〜(3)枠 10/20(火) 16:00',
+  );
+});

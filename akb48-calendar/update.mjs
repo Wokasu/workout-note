@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -198,6 +198,8 @@ if (config.deadlineCalendar) {
   const opened = newlyOpened(previous, events);
   if (opened.length && args.notify && !stateReset) {
     await writeFile(args.notify, openedMessage(opened));
+    await writeFile(args.notify.replace(/\.md$/, '') + '.txt', openedPlain(opened));
+    await writeFile(args.notify.replace(/\.md$/, '') + '.url', opened[0].applyUrl);
     console.log(`申込開始: ${opened.length} 公演`);
   }
 }
