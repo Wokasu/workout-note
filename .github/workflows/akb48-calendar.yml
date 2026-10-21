@@ -59,7 +59,7 @@ jobs:
           if [ -n "$PROBE" ]; then
             node akb48-calendar/update.mjs --out feed --dump dump --probe "$PROBE"
           else
-            node akb48-calendar/update.mjs --out feed --dump dump
+            node akb48-calendar/update.mjs --out feed --dump dump --notify notify-apply.md
           fi
 
       - name: Show fetched text (for debugging)
@@ -116,6 +116,16 @@ jobs:
               gh issue create --repo "${{ github.repository }}" --title "$title" --body "$body"
             fi
           done < ../changed-sns.txt
+
+      # 推しが出る公演の申込が始まったら Issue で知らせる（GitHub の通知が届く）
+      - name: Notify application open
+        if: ${{ !inputs.probe && hashFiles('notify-apply.md') != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --repo "${{ github.repository }}" \
+            --title "申込開始 $(TZ=Asia/Tokyo date '+%-m/%-d %H:%M')" \
+            --body-file notify-apply.md
 
       # 新しい月の出演告知文ができたら、自分の X アカウントに投稿する（Secrets に X の認証情報があるときだけ）
       - name: Post to X

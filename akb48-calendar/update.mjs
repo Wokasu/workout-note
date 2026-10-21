@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildAnnouncement, buildIcs, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { buildAnnouncement, buildDeadlineIcs, buildIcs, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -14,7 +14,7 @@ const outDir = args.out ?? join(here, 'feed');
 const dumpDir = args.dump;
 const config = JSON.parse(await readFile(join(here, 'config.json'), 'utf8'));
 const allMembers = config.calendars.flatMap((c) => c.members);
-const today = new Date();
+const today = args.today ? new Date(args.today) : new Date(); // --today は動作確認用
 
 async function fetchHtml(url) {
   const res = await fetch(url, {
@@ -183,6 +183,22 @@ for (const cal of config.calendars) {
   const ics = buildIcs(cal, shows, { durationMinutes: config.durationMinutes, location: config.location, now: today });
   await writeFile(join(outDir, `${cal.id}.ics`), ics);
   console.log(`${cal.id}.ics: ${shows.length} 件`);
+}
+
+// 申込締切カレンダー（締切の1日前に通知）
+if (config.deadlineCalendar) {
+  const ics = buildDeadlineIcs(config.deadlineCalendar, events, { now: today });
+  await writeFile(join(outDir, `${config.deadlineCalendar.id}.ics`), ics);
+  console.log(`${config.deadlineCalendar.id}.ics: ${(ics.match(/BEGIN:VEVENT/g) ?? []).length} 件`);
+}
+
+// 申込開始の通知: 前回は申込リンクがなく、今回ついた推しの公演があれば --notify のファイルに書く
+{
+  const opened = newlyOpened(previous, events);
+  if (opened.length && args.notify) {
+    await writeFile(args.notify, openedMessage(opened));
+    console.log(`申込開始: ${opened.length} 公演`);
+  }
 }
 
 // SNS告知文: 来月以降の月ごと・推しメンごとに sns/YYYY-MM/<名前>.txt と、3人ぶんをまとめた sns/YYYY-MM.txt を作る

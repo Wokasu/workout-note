@@ -25,6 +25,11 @@
       ]
     }
   ],
+  "deadlineCalendar": {
+    "id": "deadlines",
+    "name": "AKB48 申込締切",
+    "color": "#FF9500"
+  },
   "calendars": [
     {
       "id": "momoka",

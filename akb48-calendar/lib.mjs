@@ -69,6 +69,18 @@ const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
 // 公演ごとの申込ページへのリンク（htmlToLines が残した ⟨URL⟩）。チケットセンターのトップへのリンクは除く
 const APPLY_LINK_RE = /⟨(https:\/\/akb48\.zaiko\.io\/(?:[a-z]{2}\/)?e\/[^⟩\s]+)⟩/;
 
+// 「【(1)～(3)枠の販売スケジュール】」の次の「＜受付期間＞2026年10月18日(日)16:00まで」を締切として読む（ロビー観覧チケットは除く）
+const SALE_LABEL_RE = /^【(.+)の販売スケジュール】$/;
+const DEADLINE_RE = /^[<＜]受付期間[>＞]\s*(20\d{2})年(\d{1,2})月(\d{1,2})日\s*\(.\)\s*(\d{1,2}):(\d{2})まで/;
+function readDeadline(line, label) {
+  const m = line.match(DEADLINE_RE);
+  if (!m || !label || /ロビー/.test(label)) return null;
+  return {
+    label: label.replace(/[~～]/g, '〜'),
+    year: Number(m[1]), month: Number(m[2]), day: Number(m[3]), hour: Number(m[4]), minute: Number(m[5]),
+  };
+}
+
 const SCHEDULE_DAY_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S*(?: (\d{1,2}):(\d{2}) ?[~～])?$/;
 
 /**
@@ -95,14 +107,19 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
     const l = lines[i];
     const t = l.match(/^(\d{1,2}):(\d{2})開演$/);
     if (t && /公演|イベント/.test(lines[i - 1])) {
-      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null });
+      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null, deadlines: [], label: null });
     } else if (l === '休館日') {
-      details.push({ title: null, names: [], applyUrl: null });
+      details.push({ title: null, names: [], applyUrl: null, deadlines: [], label: null });
     } else if (l === '【出演メンバー】' && details.length && !details.at(-1).names.length) {
       details.at(-1).names = readMembers(lines, i + 1);
     } else if (APPLY_LINK_RE.test(l) && details.length && !details.at(-1).applyUrl) {
       // 申込が始まった公演には「★お申し込みはコチラ」などのリンクが付く
       details.at(-1).applyUrl = l.match(APPLY_LINK_RE)[1];
+    } else if (details.length && SALE_LABEL_RE.test(l)) {
+      details.at(-1).label = l.match(SALE_LABEL_RE)[1];
+    } else if (details.length && DEADLINE_RE.test(l)) {
+      const d = readDeadline(l, details.at(-1).label);
+      if (d) details.at(-1).deadlines.push(d);
     }
   }
   if (!entries.length || entries.length !== details.length) return [];
@@ -112,7 +129,7 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
   });
   if (!same) return [];
   return entries
-    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, kind: 'top', sourceUrl }))
+    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, kind: 'top', sourceUrl }))
     .filter((c) => c.title !== null && c.names.length);
 }
 
@@ -152,7 +169,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
   let cur = null; // { year, month, day, title, times, kind }
   const push = (times, names) => {
     for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, kind: cur.kind, sourceUrl };
+      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, kind: cur.kind, sourceUrl };
       out.push(cast);
       cur.casts.push(cast);
     }
@@ -163,13 +180,13 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
     if ((m = line.match(MONTHLY_RE))) {
       const month = Number(m[1]);
       const day = Number(m[2]);
-      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [] };
+      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines: [], label: null };
     } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
       const next = lines[i + 1];
       cur = {
         year: Number(m[1]), month: Number(m[2]), day: Number(m[3]),
         title: normalizeTitle(next.replace(/\d{1,2}:\d{2}.*$/, '')),
-        times: parseTimes(next), kind: 'single', casts: [],
+        times: parseTimes(next), kind: 'single', casts: [], deadlines: [], label: null,
       };
       i++;
     } else if (cur && (m = line.match(CAST_HEAD_RE))) {
@@ -181,6 +198,12 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
       } else {
         push(cur.times, names);
       }
+    } else if (cur && SALE_LABEL_RE.test(line)) {
+      cur.label = line.match(SALE_LABEL_RE)[1];
+    } else if (cur && DEADLINE_RE.test(line)) {
+      // 締切はその日の公演（昼夜とも）に共通。cur.deadlines は cast と同じ配列なので、後から読んだ分も反映される
+      const d = readDeadline(line, cur.label);
+      if (d) cur.deadlines.push(d);
     } else if (cur && APPLY_LINK_RE.test(line)) {
       // 申込ページへのリンクは、まだリンクのない公演に書かれた順に付ける
       const cast = cur.casts.find((c) => !c.applyUrl);
@@ -205,6 +228,9 @@ export function buildShows(casts, schedule, members) {
   // 申込ページのリンクは、どの記事に書かれていたものでも使う（日付・公演名・開演時刻で対応させる）
   const timeKey = (s) => `${performanceKey(s)}|${s.hour}:${s.minute}`;
   const urls = new Map(casts.filter((c) => c.applyUrl && c.hour != null).map((c) => [timeKey(c), c.applyUrl]));
+  // 申込締切は日付・公演名ごと（昼夜の公演で共通）
+  const deadlines = new Map();
+  for (const c of casts) if (c.deadlines?.length && !deadlines.has(performanceKey(c))) deadlines.set(performanceKey(c), c.deadlines);
   const groups = new Map();
   for (const c of casts) {
     const key = performanceKey(c);
@@ -224,7 +250,7 @@ export function buildShows(casts, schedule, members) {
         : schedule.filter((s) => performanceKey(s) === performanceKey(c)).map(({ hour, minute }) => ({ hour, minute }));
       for (const t of times.length ? times : [{ hour: null, minute: null }]) {
         const show = { year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, sourceUrl: c.sourceUrl };
-        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null });
+        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [] });
       }
     }
   }
@@ -247,6 +273,7 @@ export function mergeShows(list) {
     else {
       prev.members = [...new Set([...prev.members, ...s.members])];
       prev.applyUrl ??= s.applyUrl;
+      if (!prev.deadlines?.length) prev.deadlines = s.deadlines;
     }
   }
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
@@ -454,4 +481,95 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
   }
   lines.push('END:VCALENDAR');
   return lines.map(fold).join('\r\n') + '\r\n';
+}
+
+// ---- 申込締切カレンダー ----
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+const md = (y, m, d) => `${m}/${d}(${WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]})`;
+
+/**
+ * 推しが出る公演の申込締切を、締切日時と応募枠ごとに1つの予定にまとめる（締切の1日前に通知）。
+ * 予定は締切の30分前から締切まで。
+ */
+export function buildDeadlineIcs(calendar, shows, { now = new Date() } = {}) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const groups = new Map();
+  for (const s of shows) {
+    if (s.kind === 'event') continue;
+    for (const d of s.deadlines ?? []) {
+      const end = jstToUtc(d.year, d.month, d.day, d.hour, d.minute);
+      if (end <= now) continue;
+      const key = `${end.toISOString()}|${d.label}`;
+      if (!groups.has(key)) groups.set(key, { end, d, shows: [] });
+      groups.get(key).shows.push(s);
+    }
+  }
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//workout-note//akb48-calendar//JA',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    `X-WR-CALNAME:${escapeText(calendar.name)}`,
+    'X-WR-TIMEZONE:Asia/Tokyo',
+    `X-APPLE-CALENDAR-COLOR:${calendar.color}`,
+    'REFRESH-INTERVAL;VALUE=DURATION:PT6H',
+    'X-PUBLISHED-TTL:PT6H',
+  ];
+  const sorted = [...groups.values()].sort((a, b) => a.end - b.end || a.d.label.localeCompare(b.d.label));
+  for (const { end, d, shows: list } of sorted) {
+    list.sort((a, b) => showKey(a).localeCompare(showKey(b)));
+    const first = list[0];
+    const summary = `📝申込締切 ${d.label} ${md(first.year, first.month, first.day)}${first.title}${list.length > 1 ? ` ほか${list.length - 1}公演` : ''}`;
+    const desc = [
+      `${d.label}の受付は ${md(d.year, d.month, d.day)} ${d.hour}:${pad(d.minute)} までです。`,
+      '',
+      ...list.flatMap((s) => [
+        `${md(s.year, s.month, s.day)} ${s.hour == null ? '' : `${s.hour}:${pad(s.minute)} `}${s.title}（${s.members.join('・')}）`,
+        s.applyUrl ? `申込: ${s.applyUrl}` : '',
+      ]).filter(Boolean),
+    ].join('\n');
+    const start = new Date(end.getTime() - 30 * 60_000);
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:deadline-${utcStamp(end)}-${Buffer.from(d.label).toString('hex').slice(0, 16)}@akb48-calendar`,
+      `DTSTAMP:${utcStamp(now)}`,
+      `DTSTART:${utcStamp(start)}`,
+      `DTEND:${utcStamp(end)}`,
+      `SUMMARY:${escapeText(summary)}`,
+      `DESCRIPTION:${escapeText(desc)}`,
+      ...(first.applyUrl ? [`URL:${first.applyUrl}`] : []),
+      'BEGIN:VALARM',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${escapeText(`明日締切: ${summary}`)}`,
+      'TRIGGER:-PT23H30M',
+      'END:VALARM',
+      'END:VEVENT',
+    );
+  }
+  lines.push('END:VCALENDAR');
+  return lines.map(fold).join('\r\n') + '\r\n';
+}
+
+/** 前回は申込リンクがなく、今回ついた推しの公演（＝申込が始まった公演） */
+export function newlyOpened(previous, current) {
+  const before = new Map(previous.map((s) => [showKey(s), s]));
+  return current.filter((s) => s.kind !== 'event' && s.applyUrl && !before.get(showKey(s))?.applyUrl);
+}
+
+/** 申込開始の通知文（GitHub Issue 用の Markdown） */
+export function openedMessage(list) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return [
+    '推しが出る劇場公演の申込が始まりました。',
+    '',
+    ...list.flatMap((s) => {
+      const dl = (s.deadlines ?? []).map((d) => `${d.label} ${md(d.year, d.month, d.day)} ${d.hour}:${pad(d.minute)}まで`).join(' ／ ');
+      return [
+        `- **${md(s.year, s.month, s.day)} ${s.hour == null ? '' : `${s.hour}:${pad(s.minute)} `}${s.title}**（${s.members.join('・')}）`,
+        `  - 申込: ${s.applyUrl}`,
+        ...(dl ? [`  - 締切: ${dl}`] : []),
+      ];
+    }),
+  ].join('\n') + '\n';
 }
