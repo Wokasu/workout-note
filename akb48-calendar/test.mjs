@@ -348,3 +348,16 @@ test('申込締切: 柱の会会員枠（(2)）を含む「(1)〜(3)枠」の締
   assert.deepEqual(only.deadlines.map((d) => `${d.label} ${d.month}/${d.day}`), ['柱の会会員枠 10/20']);
   assert.equal(onlyFrame([s], null)[0].deadlines.length, 2);
 });
+
+test('生誕祭・女性限定公演の但し書きを読む（時刻付きはその回だけ）', () => {
+  const top = extractTopCasts(fixture('top-page.txt'));
+  assert.equal(top.find((c) => c.month === 10 && c.day === 19).note, '坂川陽香 生誕祭');
+  assert.equal(top.find((c) => c.month === 10 && c.day === 11 && c.hour === 17).note, '女性限定公演');
+  assert.equal(top.find((c) => c.month === 10 && c.day === 18 && c.hour === 13).note, null);
+  const casts = extractCasts(fixture('schedule-notice.txt'), { today });
+  const nov8 = casts.filter((c) => c.month === 11 && c.day === 8).map((c) => [c.hour, c.note]);
+  assert.deepEqual(nov8, [[13, null], [17, '女性限定公演']]);
+  const { shows } = buildShows(casts, [], members);
+  assert.equal(shows.find((s) => s.month === 11 && s.day === 8 && s.hour === 17).note, '女性限定公演');
+  assert.equal(shows.find((s) => s.month === 11 && s.day === 2).note, '長友彩海 生誕祭');
+});
