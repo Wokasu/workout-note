@@ -266,7 +266,7 @@ const links = events
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,
     // 生誕祭・女性限定公演は公演名の後ろに【】で付ける
-    title: s.note ? `${s.title}【${s.note}】` : s.title,
+    title: s.tag ? `${s.title}【${s.tag}】` : s.title,
     members: s.members,
     url: s.applyUrl,
   }));
