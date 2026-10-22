@@ -361,3 +361,10 @@ test('生誕祭・女性限定公演の但し書きを読む（時刻付きは�
   assert.equal(shows.find((s) => s.month === 11 && s.day === 8 && s.hour === 17).note, '女性限定公演');
   assert.equal(shows.find((s) => s.month === 11 && s.day === 2).note, '長友彩海 生誕祭');
 });
+
+test('カレンダーの予定名にも生誕祭・女性限定公演を付ける', () => {
+  const show = { year: 2026, month: 11, day: 8, hour: 17, minute: 30, title: '「ここからだ」公演', members: ['奥本カイリ'], note: '女性限定公演' };
+  const ics = buildIcs({ name: 'x', color: '#000000' }, [show, { ...show, hour: 13, minute: 0, note: null }], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
+  assert.match(ics, /SUMMARY:「ここからだ」公演【女性限定公演】（奥本カイリ）/);
+  assert.match(ics, /SUMMARY:「ここからだ」公演（奥本カイリ）/);
+});

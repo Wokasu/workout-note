@@ -508,7 +508,7 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
       lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`);
     }
     lines.push(
-      `SUMMARY:${escapeText(`${s.title}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
+      `SUMMARY:${escapeText(`${s.title}${s.note ? `【${s.note}】` : ''}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
       `DESCRIPTION:${escapeText(desc)}`,
     );
     const place = s.kind === 'event' ? s.location : location;
