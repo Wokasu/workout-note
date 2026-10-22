@@ -5,8 +5,6 @@
 # 使い方: launcher.bat をダブルクリックして、モードを選ぶ
 #   1. 申込ページを開く … 選んだ公演の申込ページを、アカウントごとに順番に開く
 #   2. ログイン確認    … チケットセンターを、アカウントごとに順番に開く（申込前にログインを確かめる）
-# 柱の会会員枠の申込ページ（https://akb48.zaiko.io/apply/…）は公演ページのURLから作れないので、
-# 初めての公演では1回だけURLを貼ってもらい、hashira.txt に覚えておく。2回目からは直接そのページを開く
 # 準備: Chromeのプロファイル名を「AKB 01」「AKB 02」…のように「AKB」で始め、番号は2桁にしておく
 param(
   [ValidateSet('', 'apply', 'login')]
@@ -18,7 +16,6 @@ param(
   [string]$Links = 'https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/links.json',
   [string]$ProfilePrefix = 'AKB',
   [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
-  [string]$Hashira,         # 柱の会会員枠のURLを覚えておくファイル（既定は launcher.bat と同じフォルダの hashira.txt）
   [string]$ChromePath
 )
 
@@ -26,7 +23,6 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [Text.Encoding]::UTF8
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $weekdays = '日', '月', '火', '水', '木', '金', '土'
-if (-not $Hashira) { $Hashira = Join-Path $here 'hashira.txt' }
 
 function Stop-WithMessage([string]$message) {
   Write-Host ''
@@ -77,18 +73,6 @@ function Get-Shows {
     $json = $client.DownloadString("$Links`?t=$([DateTime]::Now.Ticks)")
   }
   return @($json | ConvertFrom-Json)
-}
-
-# hashira.txt: 1行に「公演ページのURL<タブ>柱の会会員枠のURL」
-function Get-HashiraLinks {
-  $map = @{}
-  if (Test-Path $Hashira) {
-    foreach ($line in Get-Content -Encoding UTF8 $Hashira) {
-      $parts = @($line -split "`t")
-      if ($parts.Count -eq 2 -and $parts[1].Trim() -match '^https://') { $map[$parts[0].Trim()] = $parts[1].Trim() }
-    }
-  }
-  $map
 }
 
 function Format-Show($show) {
@@ -172,36 +156,11 @@ try { $picked = Expand-Selection $Select $shows.Count } catch { Stop-WithMessage
 $targets = @($picked | ForEach-Object { $shows[$_ - 1] } | Where-Object { $_.url })
 if ($targets.Count -eq 0) { Stop-WithMessage '申込が始まっている公演が選ばれていません。' }
 
-$hashiraLinks = Get-HashiraLinks
-$missing = @($targets | Where-Object { -not $hashiraLinks.ContainsKey($_.url) })
-if ($missing.Count -gt 0 -and -not $NoWait -and -not $DryRun) {
-  Write-Host ''
-  Write-Host "柱の会会員枠のページがまだ分からない公演が $($missing.Count) 件あります。" -ForegroundColor Cyan
-  Write-Host "最初のアカウント（$($profiles[0].Name)）で公演ページを開くので、「柱の会会員枠」を押して開いたページのURLを貼り付けてください。"
-  Write-Host '何も入れずに Enter を押すと、その公演はいつもどおり公演ページを開きます。'
-  foreach ($show in $missing) {
-    Write-Host ''
-    Write-Host "  $(Format-Show $show)" -ForegroundColor Yellow
-    Start-Process -FilePath $chrome -ArgumentList @("--profile-directory=`"$($profiles[0].Dir)`"", $show.url)
-    $pasted = (Read-Host '  柱の会会員枠のURL').Trim()
-    if ($pasted -match '^https://akb48\.zaiko\.io/\S+$') {
-      $hashiraLinks[$show.url] = $pasted
-      Add-Content -Encoding UTF8 -Path $Hashira -Value "$($show.url)`t$pasted"
-      Write-Host '  覚えました。次からはこのページを直接開きます。' -ForegroundColor Green
-    } elseif ($pasted) {
-      Write-Host '  チケットセンターのURLではないので、公演ページを開きます。' -ForegroundColor DarkGray
-    }
-  }
-}
-
 Write-Host ''
 Write-Host "次の $($targets.Count) 公演を、$($profiles.Count) 個のアカウントで1つずつ開きます:" -ForegroundColor Cyan
-$targets | ForEach-Object {
-  $where = if ($hashiraLinks.ContainsKey($_.url)) { '柱の会会員枠' } else { '公演ページ' }
-  Write-Host "  - $(Format-Show $_)  → $where"
-}
+$targets | ForEach-Object { Write-Host "  - $(Format-Show $_)" }
 
-Open-PerProfile @($targets | ForEach-Object { if ($hashiraLinks.ContainsKey($_.url)) { $hashiraLinks[$_.url] } else { $_.url } }) '申し込みが終わったら Enter で次のアカウントへ'
+Open-PerProfile @($targets | ForEach-Object { $_.url }) '申し込みが終わったら Enter で次のアカウントへ'
 
 Write-Host ''
 Write-Host 'おつかれさまでした！' -ForegroundColor Magenta
