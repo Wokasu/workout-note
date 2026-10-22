@@ -351,20 +351,34 @@ test('申込締切: 柱の会会員枠（(2)）を含む「(1)〜(3)枠」の締
 
 test('生誕祭・女性限定公演の但し書きを読む（時刻付きはその回だけ）', () => {
   const top = extractTopCasts(fixture('top-page.txt'));
-  assert.equal(top.find((c) => c.month === 10 && c.day === 19).note, '坂川陽香 生誕祭');
-  assert.equal(top.find((c) => c.month === 10 && c.day === 11 && c.hour === 17).note, '女性限定公演');
-  assert.equal(top.find((c) => c.month === 10 && c.day === 18 && c.hour === 13).note, null);
+  assert.equal(top.find((c) => c.month === 10 && c.day === 19).tag, '坂川陽香 生誕祭');
+  assert.equal(top.find((c) => c.month === 10 && c.day === 11 && c.hour === 17).tag, '女性限定公演');
+  assert.equal(top.find((c) => c.month === 10 && c.day === 18 && c.hour === 13).tag, null);
   const casts = extractCasts(fixture('schedule-notice.txt'), { today });
-  const nov8 = casts.filter((c) => c.month === 11 && c.day === 8).map((c) => [c.hour, c.note]);
+  const nov8 = casts.filter((c) => c.month === 11 && c.day === 8).map((c) => [c.hour, c.tag]);
   assert.deepEqual(nov8, [[13, null], [17, '女性限定公演']]);
   const { shows } = buildShows(casts, [], members);
-  assert.equal(shows.find((s) => s.month === 11 && s.day === 8 && s.hour === 17).note, '女性限定公演');
-  assert.equal(shows.find((s) => s.month === 11 && s.day === 2).note, '長友彩海 生誕祭');
+  assert.equal(shows.find((s) => s.month === 11 && s.day === 8 && s.hour === 17).tag, '女性限定公演');
+  assert.equal(shows.find((s) => s.month === 11 && s.day === 2).tag, '長友彩海 生誕祭');
 });
 
 test('カレンダーの予定名にも生誕祭・女性限定公演を付ける', () => {
-  const show = { year: 2026, month: 11, day: 8, hour: 17, minute: 30, title: '「ここからだ」公演', members: ['奥本カイリ'], note: '女性限定公演' };
-  const ics = buildIcs({ name: 'x', color: '#000000' }, [show, { ...show, hour: 13, minute: 0, note: null }], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
+  const show = { year: 2026, month: 11, day: 8, hour: 17, minute: 30, title: '「ここからだ」公演', members: ['奥本カイリ'], tag: '女性限定公演' };
+  const ics = buildIcs({ name: 'x', color: '#000000' }, [show, { ...show, hour: 13, minute: 0, tag: null }], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
   assert.match(ics, /SUMMARY:「ここからだ」公演【女性限定公演】（奥本カイリ）/);
   assert.match(ics, /SUMMARY:「ここからだ」公演（奥本カイリ）/);
+});
+
+test('現場の予定の説明文（note）は予定名に付けない', () => {
+  const ev = { year: 2026, month: 11, day: 21, hour: 10, minute: 0, title: '2ショット写真会', members: ['伊藤百花'], kind: 'event', note: '<詳細> https://example.com\n長い説明' };
+  const ics = buildIcs({ name: 'x', color: '#000000' }, [ev], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
+  assert.match(ics, /SUMMARY:2ショット写真会（伊藤百花）\r\n/);
+});
+
+test('カレンダーの説明に推しメン以外も含む出演メンバー全員を書く', () => {
+  const { shows } = buildShows(extractCasts(fixture('schedule-notice.txt'), { today }), [], members);
+  const s = shows.find((x) => x.month === 11 && x.day === 6);
+  assert.deepEqual(s.cast, ['岩立沙穂', '奥本カイリ', '大賀彩姫', '近藤沙樹', '丸山ひなた', '田中沙友利', '牧戸愛茉', '渡邉葵心']);
+  const ics = buildIcs({ name: 'x', color: '#000000' }, [s], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
+  assert.match(ics, /DESCRIPTION:出演: 奥本カイリ、渡邉葵心\\n出演メンバー: 岩立沙穂・奥本カイリ・大賀彩姫・近藤沙樹・丸山ひなた・田中沙友利・牧戸愛茉・渡邉葵心\\n/);
 });

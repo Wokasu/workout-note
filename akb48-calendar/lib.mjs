@@ -83,7 +83,7 @@ function readDeadline(line, label) {
   };
 }
 
-// 公演名の下に書かれる「坂川陽香 生誕祭」「女性限定公演」などの但し書き。
+// 公演名の下に書かれる「坂川陽香 生誕祭」「女性限定公演」などの但し書き（tag。現場の予定の note とは別）。
 // 「17:30公演；女性限定公演」のように時刻が付いていたら、その回だけのもの
 const NOTE_RE = /生誕祭|女性限定/;
 function readNote(line) {
@@ -145,7 +145,7 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
   });
   if (!same) return [];
   return entries
-    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, note: noteFor(details[i].notes ?? [], e), kind: 'top', sourceUrl }))
+    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, tag: noteFor(details[i].notes ?? [], e), kind: 'top', sourceUrl }))
     .filter((c) => c.title !== null && c.names.length);
 }
 
@@ -185,7 +185,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
   let cur = null; // { year, month, day, title, times, kind }
   const push = (times, names) => {
     for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, note: noteFor(cur.notes, t), kind: cur.kind, sourceUrl };
+      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, tag: noteFor(cur.notes, t), kind: cur.kind, sourceUrl };
       out.push(cast);
       cur.casts.push(cast);
     }
@@ -267,7 +267,7 @@ export function buildShows(casts, schedule, members) {
   const deadlines = new Map();
   for (const c of casts) if (c.deadlines?.length && !deadlines.has(performanceKey(c))) deadlines.set(performanceKey(c), c.deadlines);
   // 生誕祭・女性限定公演などの但し書きも、どの記事に書かれていたものでも使う
-  const notes = new Map(casts.filter((c) => c.note && c.hour != null).map((c) => [timeKey(c), c.note]));
+  const tags = new Map(casts.filter((c) => c.tag && c.hour != null).map((c) => [timeKey(c), c.tag]));
   const groups = new Map();
   for (const c of casts) {
     const key = performanceKey(c);
@@ -286,8 +286,8 @@ export function buildShows(casts, schedule, members) {
         ? [{ hour: c.hour, minute: c.minute }]
         : schedule.filter((s) => performanceKey(s) === performanceKey(c)).map(({ hour, minute }) => ({ hour, minute }));
       for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-        const show = { year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, sourceUrl: c.sourceUrl };
-        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [], note: notes.get(timeKey(show)) ?? c.note ?? null });
+        const show = { year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, cast: c.names, sourceUrl: c.sourceUrl };
+        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [], tag: tags.get(timeKey(show)) ?? c.tag ?? null });
       }
     }
   }
@@ -310,7 +310,8 @@ export function mergeShows(list) {
     else {
       prev.members = [...new Set([...prev.members, ...s.members])];
       prev.applyUrl ??= s.applyUrl;
-      prev.note ??= s.note;
+      prev.tag ??= s.tag;
+      prev.cast ??= s.cast;
       if (!prev.deadlines?.length) prev.deadlines = s.deadlines;
     }
   }
@@ -485,6 +486,8 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
     const uid = `${showKey(s).replace(/[^\w-]/g, '')}-${Buffer.from(s.title).toString('hex').slice(0, 24)}@akb48-calendar`;
     const desc = [
       s.memberUnknown ? '出演: 出演メンバー未発表' : `出演: ${s.members.join('、')}`,
+      // 劇場公演は、推しメン以外も含めた出演メンバー全員を公式の並び順で書く
+      s.cast?.length ? `出演メンバー: ${s.cast.join('・')}` : '',
       s.applyUrl ? `申込: ${s.applyUrl}` : '',
       s.detailUrl ? `詳細: ${s.detailUrl}` : '',
       s.sourceUrl ? `出典: ${s.sourceUrl}` : '',
@@ -508,7 +511,7 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
       lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`);
     }
     lines.push(
-      `SUMMARY:${escapeText(`${s.title}${s.note ? `【${s.note}】` : ''}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
+      `SUMMARY:${escapeText(`${s.title}${s.tag ? `【${s.tag}】` : ''}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
       `DESCRIPTION:${escapeText(desc)}`,
     );
     const place = s.kind === 'event' ? s.location : location;
