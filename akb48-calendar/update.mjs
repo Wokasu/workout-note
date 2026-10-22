@@ -265,7 +265,8 @@ const links = events
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,
-    title: s.title,
+    // 生誕祭・女性限定公演は公演名の後ろに【】で付ける
+    title: s.note ? `${s.title}【${s.note}】` : s.title,
     members: s.members,
     url: s.applyUrl,
   }));

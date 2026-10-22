@@ -83,6 +83,16 @@ function readDeadline(line, label) {
   };
 }
 
+// 公演名の下に書かれる「坂川陽香 生誕祭」「女性限定公演」などの但し書き。
+// 「17:30公演；女性限定公演」のように時刻が付いていたら、その回だけのもの
+const NOTE_RE = /生誕祭|女性限定/;
+function readNote(line) {
+  if (/^[【※(]/.test(line) || !NOTE_RE.test(line)) return null;
+  const m = line.match(/^(\d{1,2}):(\d{2})公演\s*[;；:：、]\s*(.+)$/);
+  return m ? { hour: Number(m[1]), minute: Number(m[2]), text: m[3].trim() } : { hour: null, minute: null, text: line.trim() };
+}
+const noteFor = (notes, t) => notes.find((n) => n.hour == null || (n.hour === t.hour && n.minute === t.minute))?.text ?? null;
+
 const SCHEDULE_DAY_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S*(?: (\d{1,2}):(\d{2}) ?[~～])?$/;
 
 /**
@@ -108,8 +118,12 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
   for (let i = last + 1; i < lines.length; i++) {
     const l = lines[i];
     const t = l.match(/^(\d{1,2}):(\d{2})開演$/);
+    if (details.length && l.startsWith('【')) details.at(-1).header = false;
+    let n;
     if (t && /公演|イベント/.test(lines[i - 1])) {
-      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null, deadlines: [], label: null });
+      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null, deadlines: [], label: null, notes: [], header: true });
+    } else if (details.length && details.at(-1).header && (n = readNote(l))) {
+      details.at(-1).notes.push(n);
     } else if (l === '休館日') {
       details.push({ title: null, names: [], applyUrl: null, deadlines: [], label: null });
     } else if (l === '【出演メンバー】' && details.length && !details.at(-1).names.length) {
@@ -131,7 +145,7 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
   });
   if (!same) return [];
   return entries
-    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, kind: 'top', sourceUrl }))
+    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, note: noteFor(details[i].notes ?? [], e), kind: 'top', sourceUrl }))
     .filter((c) => c.title !== null && c.names.length);
 }
 
@@ -171,7 +185,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
   let cur = null; // { year, month, day, title, times, kind }
   const push = (times, names) => {
     for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, kind: cur.kind, sourceUrl };
+      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, note: noteFor(cur.notes, t), kind: cur.kind, sourceUrl };
       out.push(cast);
       cur.casts.push(cast);
     }
@@ -179,10 +193,11 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     let m;
+    if (cur && line.startsWith('【')) cur.header = false;
     if ((m = line.match(MONTHLY_RE))) {
       const month = Number(m[1]);
       const day = Number(m[2]);
-      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines: [], label: null };
+      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines: [], label: null, notes: [], header: true };
     } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
       const next = lines[i + 1];
       const year = Number(m[1]);
@@ -204,9 +219,11 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
       cur = {
         year, month, day,
         title: normalizeTitle(next.replace(/\d{1,2}:\d{2}.*$/, '')),
-        times: parseTimes(next), kind: 'single', casts: [], deadlines: [], label: null,
+        times: parseTimes(next), kind: 'single', casts: [], deadlines: [], label: null, notes: [], header: true,
       };
       i++;
+    } else if (cur?.header && (m = readNote(line))) {
+      cur.notes.push(m);
     } else if (cur && (m = line.match(CAST_HEAD_RE))) {
       const names = readMembers(lines, i + 1);
       if (!names.length) continue;
@@ -249,6 +266,8 @@ export function buildShows(casts, schedule, members) {
   // 申込締切は日付・公演名ごと（昼夜の公演で共通）
   const deadlines = new Map();
   for (const c of casts) if (c.deadlines?.length && !deadlines.has(performanceKey(c))) deadlines.set(performanceKey(c), c.deadlines);
+  // 生誕祭・女性限定公演などの但し書きも、どの記事に書かれていたものでも使う
+  const notes = new Map(casts.filter((c) => c.note && c.hour != null).map((c) => [timeKey(c), c.note]));
   const groups = new Map();
   for (const c of casts) {
     const key = performanceKey(c);
@@ -268,7 +287,7 @@ export function buildShows(casts, schedule, members) {
         : schedule.filter((s) => performanceKey(s) === performanceKey(c)).map(({ hour, minute }) => ({ hour, minute }));
       for (const t of times.length ? times : [{ hour: null, minute: null }]) {
         const show = { year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, sourceUrl: c.sourceUrl };
-        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [] });
+        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [], note: notes.get(timeKey(show)) ?? c.note ?? null });
       }
     }
   }
@@ -291,6 +310,7 @@ export function mergeShows(list) {
     else {
       prev.members = [...new Set([...prev.members, ...s.members])];
       prev.applyUrl ??= s.applyUrl;
+      prev.note ??= s.note;
       if (!prev.deadlines?.length) prev.deadlines = s.deadlines;
     }
   }
