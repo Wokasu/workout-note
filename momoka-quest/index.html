@@ -265,6 +265,11 @@ const TPL = {
     '.GGkSSSSSSSSkGG.', 'GrrkPPPwwPPPkrrG', 'GrrksPPwwPPskrrG', 'GrrksPPyyPPskrrG',
     'GrrrkPPPPPPkrrrG', 'GGrrkBBBBBBkrrGG', 'GGGrkBBkkBBkrGGG', 'GGGGkkk..kkkGGGG'],
     alt: { 15: 'GGGGkkkkkkkkGGGG' } },
+  manhole: { rows: [
+    '................', '................', '....kkkkkkkk....', '...kGGGGGGGGk...',
+    '..kGgGgGgGgGGk..', '..kGGGGGGGGGGk..', '..kGgGgGgGgGGk..', '..kGGGGGGGGGGk..',
+    '..kGgGgGgGgGGk..', '..kGGGGGGGGGGk..', '..kGgGgGgGgGGk..', '...kGGGGGGGGk...',
+    '....kkkkkkkk....', '................', '................', '................'] },
   memo: { rows: [
     '................', '................', '................', '................',
     '................', '.....kkkkkkk....', '.....kwwwwwk....', '.....kwGGGwk....',
@@ -363,9 +368,13 @@ function initSprites() {
     comp: frames('hero_down', { ...NOBAND, p: '#c8a040', P: '#7a5a18', h: 'n' })[0],
     lift: frames('fat', { p: '#e05a1a', P: '#8a2a08', H: 'y', Y: 'r' })[0],
   };
+  SPR.e.dafuru = frames('fat', { ...NOBAND, p: 'G', P: 'k', w: 'y', h: 'k' })[0];
+  SPR.dafuru = charSet('fat', { ...NOBAND, p: 'G', P: 'k', w: 'y', h: 'k' });
   SPR.e.hagashi = frames('hero_down', { p: 'k', P: 'k', H: 'y', Y: 'k', w: 'y' })[0];
   SPR.e.hashira = frames('fat', { p: 'k', P: 'y', H: 'y', Y: 'k', w: 'y' })[0];
   SPR.hashira = charSet('fat', { p: 'k', P: 'y', H: 'y', Y: 'k', w: 'y' });
+  SPR.manhole = { down: [buildSprite(TPL.manhole.rows), buildSprite(TPL.manhole.rows)] };
+  SPR.manhole.up = SPR.manhole.left = SPR.manhole.right = SPR.manhole.down;
   SPR.memo = { down: [buildSprite(TPL.memo.rows), buildSprite(TPL.memo.rows)] };
   SPR.memo.up = SPR.memo.left = SPR.memo.right = SPR.memo.down;
   SPR.e.flasta = frames('hero_down', { ...NOBAND, p: 'm', P: '#b85a88', w: 'w' })[0];
@@ -393,6 +402,7 @@ function initSprites() {
   prop('comp', [[13, 9, 3, 5, 'w'], [13, 9, 3, 1, 'm']]); // photo binder
   prop('tsuihai', [[13, 9, 3, 4, 'k'], [14, 10, 1, 2, 'c']]); // phone
   prop('onnawota', [[3, 4, 10, 2, 'k'], [4, 4, 2, 1, 'G'], [10, 4, 2, 1, 'G']]); // sunglasses
+  prop('dafuru', [[3, 4, 10, 2, 'k'], [5, 8, 6, 1, 'y'], [4, 9, 1, 3, 'y'], [11, 9, 1, 3, 'y'], [13, 11, 3, 3, 'w']]); // sunglasses, gold chain, ticket stack
   prop('hagashi', [[4, 9, 8, 2, 'y']]); // STAFF band
   prop('hashira', [[1, 8, 14, 1, 'y'], [6, 0, 4, 1, 'y']]);
   prop('flasta', [[12, 6, 4, 4, 'm'], [13, 7, 2, 2, 'w'], [13, 10, 2, 5, 'e']]); // flower stand
@@ -546,6 +556,7 @@ const TAUNT_FOR = {
 };
 function skillInfo(sk) {
   if (sk.kind === 'money') return '【こうげき】MP 0・せんとう中だけ\n所持金を ぜんぶ 使って、\n使った額の 1.5倍の ダメージ';
+  if (sk.kind === 'doutan') return '【かいふく】MP 12・せんとう中だけ\nHPが ぜんかいし、 その せんとうの\nあいだ こうげき力が 1.3倍';
   if (sk.kind === 'gundan') return '【こうげき】MP 4・せんとう中だけ\n元TOの 軍団 3〜5人が 駆けつけ、\nひとりずつ こうげき（各0.5倍）';
   if (sk.kind === 'taunt') return '【こうげき】MP 1・せんとう中だけ\nヲタクを 煽って ダメージ（1.1倍）\n50%で 1ターン 行動不能（ボスは25%）';
   if (sk.kind === 'heal') return `【かいふく】MP ${sk.mp} を つかう\nHPを やく ${Math.round((sk.pow[0] + sk.pow[1]) / 2 + P.lv)} かいふくする。\nいどう中も せんとう中も つかえる。`;
@@ -558,6 +569,7 @@ const WEAPONS = [
   { name: '光るキンブレ', atk: 18, price: 450 },
   { name: '伝説のサイリウム', atk: 28 },
   { name: '大漁旗ペンラ', atk: 22, price: 700 },
+  { name: '母のペンライト', atk: 34 },
 ];
 const ARMORS = [
   { name: 'Tシャツ', def: 1 },
@@ -574,6 +586,7 @@ const SKILLS = [
   // learned through episodes, not levels
   { name: 'まとめ出し', flag: 'skMatome', mp: 0, kind: 'money', mult: 1.5 },
   { name: '軍団呼び', flag: 'skGundan', mp: 4, kind: 'gundan', mult: 0.5 },
+  { name: '同担歓迎', flag: 'skDoutan', mp: 12, kind: 'doutan' },
   { name: 'ヲタ芸', lv: 3, mp: 2, kind: 'atk', mult: 1.8, text: 'ロマンスを うった！' },
   { name: 'サイリウム乱舞', lv: 6, mp: 5, kind: 'atk', mult: 2.6, text: 'サイリウムを ふりみだした！' },
   { name: '全力コール', lv: 8, mp: 6, kind: 'heal', pow: [70, 90], text: '腹の底から 全力で コールした！' },
@@ -659,7 +672,8 @@ function newGame() {
   P = { name: 'ヲタ太', lv: 1, hp: 22, mhp: 22, mp: 5, mmp: 5, str: 6, vit: 3, agi: 5, exp: 0, gold: 30, w: 0, a: 0, items: {} };
   flags = { chests: {} };
 }
-const atkOf = () => P.str + WEAPONS[P.w].atk;
+// 同担歓迎 raises attack for the rest of a battle
+const atkOf = () => Math.round((P.str + WEAPONS[P.w].atk) * (battleS.e && battleS.atkUp ? battleS.atkUp : 1));
 const defOf = () => P.vit + ARMORS[P.a].def;
 const addItem = (id, n = 1) => { P.items[id] = Math.min(9, (P.items[id] || 0) + n); };
 const useItemCount = id => { P.items[id]--; if (P.items[id] <= 0) delete P.items[id]; };
@@ -734,7 +748,7 @@ function saveMode() {
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
 const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel', 'minato', 'hall', 'studio', 'seitanhall', 'towerB', 'towerC'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp', 'dafuru', 'skDoutan', 'meeting', 'momEp'];
 const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4', 'h1', 'h2', 's1', 's2', 'j1', 'j2', 'b1', 'c1'];
 const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass', 'shoMinato', 'shoHaishin', 'shoSeitan'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
@@ -742,7 +756,7 @@ const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeA
 function makeCode() {
   const a = [1, P.name, P.lv, P.hp, P.mhp, P.mp, P.mmp, P.str, P.vit, P.agi, P.exp, P.gold, P.w, P.a,
     CODE_ITEMS.map(k => Math.min(9, P.items[k] || 0)).join(''), bitsOf(CODE_FLAGS.map(k => flags[k])),
-    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y, flags.cycle || 0, flags.yosegaki || 0, flags.flasta || 0];
+    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y, flags.cycle || 0, flags.yosegaki || 0, flags.flasta || 0, flags.honne || 0];
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   return b + codeSum(b);
 }
@@ -753,7 +767,7 @@ function parseCode(text) {
     const body = t.slice(0, -2);
     if (t.length < 10 || codeSum(body) !== t.slice(-2)) return null;
     const a = JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/')))));
-    if (!Array.isArray(a) || a[0] !== 1 || a.length < 20 || a.length > 23) return null;
+    if (!Array.isArray(a) || a[0] !== 1 || a.length < 20 || a.length > 24) return null;
     const n = a.slice(2, 14);
     if (typeof a[1] !== 'string' || !n.every(v => Number.isInteger(v) && v >= 0 && v < 1e6)) return null;
     const [lv, hp, mhp, mp, mmp, str, vit, agi, exp, gold, w, ar] = n;
@@ -766,6 +780,7 @@ function parseCode(text) {
     if (Number.isInteger(a[20]) && a[20] > 0 && a[20] < 100) fl.cycle = a[20];
     if ([1, 2, 3].includes(a[21])) fl.yosegaki = a[21];
     if ([1, 2, 3].includes(a[22])) fl.flasta = a[22];
+    if ([1, 2, 3].includes(a[23])) fl.honne = a[23];
     const map = CODE_MAPS[a[17]], m = MAPS[map];
     const x = clamp(a[18] | 0, 0, m.w - 1), y = clamp(a[19] | 0, 0, m.h - 1);
     return { P: { name: Array.from(a[1]).slice(0, NAME_MAX).join('') || 'ヲタ太', lv, hp: Math.min(hp, mhp), mhp, mp: Math.min(mp, mmp), mmp, str, vit, agi, exp, gold, w, a: ar, items }, flags: fl, map, x, y, dir: 'down' };
@@ -1678,6 +1693,13 @@ async function playerAct(e, act) {
     if (s.kind === 'taunt') { await taunt(e, s); return; }
     if (s.kind === 'money') { await matomeDashi(e, s); return; }
     if (s.kind === 'gundan') { await gundan(e, s); return; }
+    if (s.kind === 'doutan') {
+      await say('ヲタ太は 同担歓迎を となえた！', { append: true, auto: 22 });
+      await say('推し被りの 想いが ひとつに なった！', { append: true, auto: 30 });
+      P.hp = P.mhp; battleS.atkUp = 1.3; sfx('heal');
+      await say('HPが ぜんかいした！\nこうげき力が あがった！', { append: true, auto: 36 });
+      return;
+    }
     await say(`ヲタ太は ${s.name}を となえた！`, { append: true, auto: 22 });
     await say(s.text, { append: true, auto: 26 });
     if (s.kind === 'heal') {
@@ -1886,7 +1908,7 @@ async function battle(id, opt = {}) {
   const prevMode = game.mode;
   sfx('enc');
   for (let i = 0; i < 6; i++) { game.flash = 4; await framesWait(6); }
-  battleS.e = e; battleS.cancel = false; battleS.heroPending = false; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.burn = 0; battleS.lastAct = null; battleS.bg = opt.bg || game.map.bg || 'field';
+  battleS.e = e; battleS.atkUp = 0; battleS.cancel = false; battleS.heroPending = false; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.burn = 0; battleS.lastAct = null; battleS.bg = opt.bg || game.map.bg || 'field';
   game.mode = 'battle';
   playBgm(base.boss ? 'boss' : 'battle');
   const sw = statusWin(); extraWins.push(sw);
@@ -1988,9 +2010,22 @@ async function gameOver() {
 //  Story scripts
 // ------------------------------------------------------------
 async function talkMom() {
+  if (flags.meeting && !flags.momEp) {
+    flags.momEp = true;
+    await say('母「百花ちゃんの チケットが 買い占め？\n……ゆるせないわね。」');
+    await say('母「じつはね、 母さんも 昔は\nアイドルの 追っかけ だったのよ。」');
+    await say('母「毎週 劇場に かよって、\n一番前で ペンライトを 振ってた。」');
+    await say('母「推しはね、 お金じゃ 買えない\nものを くれるの。 だから 転売の\n席なんて、 本当の 席じゃ ない。」');
+    await say('母「これ、 母さんが 使ってた\nペンライト。 もっていきなさい。」', { noWait: true });
+    await jingle('get'); playBgm(game.map.bgm);
+    const mw = WEAPONS.findIndex(w => w.name === '母のペンライト');
+    if (WEAPONS[mw].atk > WEAPONS[P.w].atk) { P.w = mw; await say('母のペンライトを 受けとった！\nヲタ太は 母のペンライトを そうびした！'); }
+    else await say('母のペンライトを 受けとった！');
+  }
   if (!flags.show) await say('母「劇場は 町の 北東よ。\n百花ちゃんに よろしくね。」');
   else if (!flags.gou) await say('母「百花ちゃんが さらわれたんだって？\n…いってらっしゃい。 つかれたら\nいつでも 帰ってきなさい。」');
   else if (!flags.kyohiru) await say('母「推し被りの塔は 北東の 島に\nあるそうよ。 気をつけてね。」');
+  else if (flags.meeting) await say('母「いってらっしゃい。\n生誕祭、 母さんも 楽しみに してる。」');
   else { await say('母「りっぱに なったわね。」'); return; }
   if (await yesno('母「すこし 休んでいく？」')) {
     await fadeOut(16); P.hp = P.mhp; P.mp = P.mmp; await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
@@ -2334,7 +2369,70 @@ async function kyohiruEvent() {
   await say('百花「ヲタ太くん、 たすけてくれて\nほんとうに ありがとう！」');
   burst(m.px + 8, m.py, 'heart', 10);
   await say('百花「……じつはね、 気づいてたよ。\nいつも 一番前で 薄ピンクの\nペンライト ふってくれてたの。」');
+  await dafuruReveal();
+}
+const HONNE = ['百花ちゃんが 笑ってくれるなら、\nそれで いいんだ', '推し被りも 同担も、 みんな\n百花ちゃんが 好きなだけだよ', '続けても 辞めても、\nおれは ずっと 応援する'];
+async function dafuruReveal() {
+  await say('パチ…… パチ…… パチ……');
+  flags.dafuruOnStage = true;
+  await say('？？？「ご苦労だったな、 キョヒール。」');
+  await say('キョヒール「あ、 あんたは……\n『あの男』……！」');
+  await say('ダフール「転売大王 ダフールだ。\n百花の 復帰公演…… 生誕祭の\nチケットは すべて 私が 買い占めた。」');
+  await say('ダフール「定価の 10倍で 売るのさ。\nファン同士が いがみ合うほど\nチケットは 高く 売れるのだよ。」');
+  await say('ダフール「お前に 渡した チケットも\n元は 私の 商品だ。\nよく 働いてくれたな。」');
+  await say('キョヒール「おれは…… 利用されて\nいたのか……。」');
+  await say('ダフール「では 生誕祭の 日に。\n席が あれば だがな。\nハッハッハ！」');
+  await fadeOut(12); flags.dafuruOnStage = false; flags.dafuru = true; await fadeIn(12);
+  await say('キョヒール「……ヲタ太。 おれは もう\n同担を 拒否しない。」');
+  await say('キョヒール「推し被りの 想いを ひとつに\nする 技だ。 受け取れ！」', { noWait: true });
+  flags.skDoutan = true; await jingle('lvup'); playBgm('title', true);
+  await say('ヲタ太は 「同担歓迎」を おぼえた！\n（HPぜんかい＋ その戦闘中\nこうげき力アップ）');
   await say('ヲタ太は 百花と いっしょに\nアキハバラへ 帰った。');
+  await momokaHonne();
+  await strategyMeeting();
+}
+async function momokaHonne() {
+  await fadeOut(30);
+  flags.scene = 'night';
+  setMap('town', 19, 6, 'up');
+  const mo = npcById('momoka'); mo.x = 19; mo.y = 4; mo.px = 19 * 16; mo.py = 4 * 16;
+  playBgm(null);
+  await fadeIn(30);
+  await say('その夜。 劇場には ふたりきり……');
+  await walk(player, 'U', 1);
+  await say('百花「助けに 来てくれて、\nほんとうに ありがとう。」');
+  await say('百花「……わたしね、 アイドルを\n続けて いいのか 迷ってたの。」');
+  await say('百花「わたしの せいで、 ファンの\nみんなが ケンカして……\nキョヒールさんまで あんなふうに。」');
+  const r = await ask('ヲタ太は……', ['笑ってくれるなら それでいい', 'みんな 百花ちゃんが 好きなだけ', 'どんな道でも 応援する'], { x: 40, y: 76, w: 208, cancel: false });
+  flags.honne = r + 1;
+  await say(`ヲタ太「${HONNE[r]}」`);
+  await say(['百花「……うん。 わたしが 笑えば、\nみんなも 笑って くれるよね。」', '百花「……そっか。 みんな、 同じ 人を\n好きで いてくれたんだね。」', '百花「……ヲタ太くんは、\nずっと 変わらないね。」'][r]);
+  await say('百花「わたし、 生誕祭の ステージに\n立つ。 みんなが 入れるように……\nチケット、 取り返して くれる？」');
+  await say('ヲタ太は 力強く うなずいた。');
+}
+async function strategyMeeting() {
+  await fadeOut(30);
+  flags.scene = 'meeting';
+  setMap('town', 19, 6, 'up');
+  playBgm('town', true);
+  await fadeIn(30);
+  await say('次の日。 劇場に みんなが 集まった。');
+  await say('シキリ「生誕祭は 3日後。 チケットは\n1枚 残らず ダフールに\n押さえられた。」');
+  await say('バズリ「転売サイトを 追った。\nダフールの 倉庫は アキバの 地下……\n闇チケット市場だ。」');
+  await say('テツ「闇市の 入口なら 知ってる。\n町の 南東、 裏路地の\nマンホールだ。」');
+  await say('ゼンツウ「全国の 遠征仲間にも\n声を かけた。 転売の 買い手を\n止めてくれる。」');
+  await say('ハシラ「最前管理団も 手を 貸す。\n本物の ファンが 並べる 列を\n作ってやる。」');
+  await say('ゴウ「TOとして 号令だ！ 生誕祭は\nおれたち 全員で 取り戻す！」');
+  await say('キョヒール「……ヲタ太、 たのむ。\nおれの ぶんまで。」');
+  await say('みんな「おーーっ！！」');
+  await fadeOut(20); flags.scene = null; flags.meeting = true; setMap('town', 19, 6, 'down'); await fadeIn(20);
+  await say('（町の 南東の マンホールから\n闇チケット市場へ 行こう。\n家の 母にも 顔を 見せておこう）');
+}
+async function manhole() {
+  await say('マンホールの ふたが ずれている。\n下から 札束を かぞえる 音が\n聞こえる……');
+  if (!(await yesno('闇チケット市場へ おりますか？'))) return;
+  // 第8章の 闇チケット市場は まだ ない: いまは エンディングへ つなぐ
+  await say('（第8章「闇チケット市場」は 準備中です。\nいまは エンディングへ 進みます）');
   await ending();
 }
 async function ending() {
@@ -2375,6 +2473,7 @@ async function ending() {
   await say('百花「ヲタ太くん、 ありがとう。\n卒業公演も… やっぱり 一番前で\n薄ピンクの ペンライト ふってたね。」');
   await say('百花「それにね、 配信で いつも\n『おつかれさま』って くれてたの、\nヲタ太くん だよね？」');
   await say('百花「ぜんぶ 読めなくて ごめんね。\nでも ちゃんと 届いてたよ。」');
+  if (flags.honne) { await say('百花「迷ってた わたしに、\nヲタ太くんは 言ってくれたよね。」'); await say(`百花「『${HONNE[flags.honne - 1]}』って。」`); }
   await say('百花「わたし、 もう アイドルじゃ ないから…」');
   await say('百花「これからは ファンじゃなくて…\nヲタ太くんの となりに いても\nいいかな？」');
   while (true) {
@@ -2438,24 +2537,28 @@ T.npcs = [
   { id: 'mom', x: 6, y: 5, spr: 'mom', talk: talkMom, show: () => !flags.scene },
   { id: 'shop', x: 5, y: 13, spr: 'clerk', talk: () => talkShop() },
   { id: 'cafe', x: 16, y: 13, spr: 'cafe', talk: talkCafe },
-  { id: 'staff', x: 16, y: 7, spr: 'staff', talk: talkStaff, show: () => flags.scene !== 'epilogue' },
+  { id: 'staff', x: 16, y: 7, spr: 'staff', talk: talkStaff, show: () => !['epilogue', 'night', 'meeting'].includes(flags.scene) },
   { id: 'momoka', x: 19, y: 3, spr: 'momoka', fixed: 1, show: () => !flags.show || !!flags.scene,
     talk: async () => {
       if (flags.scene === 'epilogue') { await say('百花「ずっと いっしょだよ。」'); return; }
       await say('百花「♪〜」\n（百花が ステージで リハーサルを している）');
     } },
-  { id: 'fan1', x: 17, y: 5, spr: 'otaku1', show: () => flags.scene !== 'epilogue', talk: async () => {
+  { id: 'fan1', x: 17, y: 5, spr: 'otaku1', show: () => !['epilogue', 'night', 'meeting'].includes(flags.scene), talk: async () => {
     if (!flags.show) await say('ヲタク「百花ちゃんの 推しカラーは\n薄ピンク×薄ピンク！\n今日も 両手の ペンライトで 応援だ！」');
     else if (!flags.kyohiru) await say('ヲタク「百花ちゃんが さらわれた…\nおれたちの 百花ちゃんを\nとりもどしてくれ！」');
     else await say('ヲタク「推し被り 上等！\nみんなで 百花ちゃんを 応援しようぜ！」');
   } },
-  { id: 'fan2', x: 23, y: 5, spr: 'otaku3', show: () => flags.scene !== 'epilogue', talk: async () => {
+  { id: 'fan2', x: 23, y: 5, spr: 'otaku3', show: () => !['epilogue', 'night', 'meeting'].includes(flags.scene), talk: async () => {
     if (!flags.show) await say('ヲタク「おれは 百花ちゃんの\n笑顔に すくわれたんだ…」');
     else await say('ヲタク「キョヒールの 手下は\n握手会の レーンに いるらしい。\n気をつけろよ。」');
   } },
-  { id: 'fan3', x: 22, y: 7, spr: 'girl', show: () => flags.scene !== 'epilogue', talk: async () => {
+  { id: 'fan3', x: 22, y: 7, spr: 'girl', show: () => !['epilogue', 'night', 'meeting'].includes(flags.scene), talk: async () => {
     await say('女の子「百花ちゃん かわいいよね〜！\nわたしも 百花ちゃんみたいに\nなりたいな！」');
   } },
+  ...[['gouM', 16, 5, 'gou'], ['zentsuM', 18, 5, 'zentsu'], ['buzzriM', 20, 5, 'buzzri'], ['shikiriM', 22, 5, 'shikiri'],
+    ['hashiraM', 17, 7, 'hashira'], ['kyoM', 21, 7, 'kyohiru'], ['tetsuM', 23, 7, 'moto']]
+    .map(([id, x, y, spr]) => ({ id, x, y, spr, fixed: 1, dir: 'up', show: () => flags.scene === 'meeting' })),
+  { id: 'manhole', x: 25, y: 14, spr: 'manhole', fixed: 1, show: () => !!flags.meeting && !flags.scene, talk: manhole },
   { id: 'gouT', x: 16, y: 6, spr: 'gou', show: () => flags.scene === 'concert', talk: async () => { await say('ゴウ「TOとして 号令は まかせろ！」'); } },
   { id: 'kyoT', x: 23, y: 6, spr: 'kyohiru', show: () => flags.scene === 'concert', talk: async () => { await say('キョヒール「推し被りも… わるくないな。」'); } },
   { id: 'w1', x: 8, y: 10, spr: 'otaku2', wander: 1, talk: async () => {
@@ -2590,6 +2693,7 @@ TC.onStep = (x, y, t) => {
 const T2 = MAPS.tower2;
 T2.npcs = [
   { id: 'kyohiru', x: 7, y: 2, spr: 'kyohiru', fixed: 1, show: () => !flags.kyohiru, talk: kyohiruEvent },
+  { id: 'dafuruT', x: 6, y: 2, spr: 'dafuru', fixed: 1, show: () => !!flags.dafuruOnStage },
   { id: 'momoka2', x: 8, y: 1, spr: 'momoka', fixed: 1, talk: async () => { await say('百花「ヲタ太くん、 たすけて！」'); } },
 ];
 T2.chests = [
