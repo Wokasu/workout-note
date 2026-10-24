@@ -358,6 +358,10 @@ function initSprites() {
     comp: frames('hero_down', { ...NOBAND, p: '#c8a040', P: '#7a5a18', h: 'n' })[0],
     lift: frames('fat', { p: '#e05a1a', P: '#8a2a08', H: 'y', Y: 'r' })[0],
   };
+  SPR.e.zentsu_ota = frames('hero_down', { p: '#2a8a5a', P: '#14502e', H: 'w', Y: 'r' })[0];
+  SPR.e.zentsu = frames('fat', { p: '#d8a038', P: '#7a5010', H: 'w', Y: 'r', w: 'c' })[0];
+  SPR.zentsu = charSet('fat', { p: '#d8a038', P: '#7a5010', H: 'w', Y: 'r', w: 'c' });
+  SPR.fisher = charSet('hero', { ...NOBAND, p: 'b', P: 'B', h: 'g', w: 'w' });
   SPR.e.tsuihai = frames('hero_down', { ...NOBAND, p: '#4a4a6a', P: '#2a2a3a', h: 'k' })[0];
   SPR.e.onnawota = frames('hero_down', { ...NOBAND, p: '#5a8ad8', P: '#2a4a8a', h: '#c88a3a', w: 'y' })[0];
   // props drawn on top: [x, y, w, h, colour]
@@ -369,6 +373,7 @@ function initSprites() {
   prop('comp', [[13, 9, 3, 5, 'w'], [13, 9, 3, 1, 'm']]); // photo binder
   prop('tsuihai', [[13, 9, 3, 4, 'k'], [14, 10, 1, 2, 'c']]); // phone
   prop('onnawota', [[3, 4, 10, 2, 'k'], [4, 4, 2, 1, 'G'], [10, 4, 2, 1, 'G']]); // sunglasses
+  prop('zentsu', [[0, 9, 3, 6, 'n'], [0, 8, 3, 1, 'k'], [13, 9, 3, 6, 'n'], [13, 8, 3, 1, 'k']]); // two suitcases
   prop('lift', [[6, 0, 4, 1, 'y'], [5, 1, 1, 1, 'y'], [10, 1, 1, 1, 'y']]); // crown-ish band
 }
 
@@ -415,6 +420,7 @@ const TILES = {
   'B': { d: p => { p(0, 0, 16, 16, '#2848c8'); p(2, 0, 12, 16, '#b07838'); for (let y = 0; y < 16; y += 4) p(2, y, 12, 1, '#7a4a20'); p(1, 0, 1, 16, '#5a3418'); p(14, 0, 1, 16, '#5a3418'); } },
   'A': { d: p => { grass(p); p(1, 6, 5, 9, '#c8c8d0'); p(6, 2, 5, 13, '#9a9ab0'); p(11, 7, 4, 8, '#d8a0c8'); [[2, 8], [2, 11], [7, 4], [7, 7], [7, 10], [12, 9], [12, 12]].forEach(([x, y]) => p(x, y, 2, 1, '#f8f070')); p(8, 4, 2, 1, '#f890b8'); p(0, 15, 16, 1, '#2f8a2c'); } },
   'V': { d: p => { grass(p); p(2, 7, 12, 8, '#e8e8f0'); p(4, 4, 8, 3, '#e8e8f0'); p(6, 3, 4, 1, '#e8e8f0'); p(2, 13, 12, 2, '#9a9ab0'); p(7, 11, 2, 4, '#5a2490'); p(8, 0, 1, 4, '#4a4a5a'); p(9, 0, 3, 2, '#9a4ad8'); } },
+  'H': { d: p => { grass(p); p(0, 11, 16, 5, '#2848c8'); p(2, 4, 5, 7, '#e8d8b0'); p(1, 3, 7, 1, '#c83838'); p(9, 6, 5, 5, '#e8d8b0'); p(8, 5, 7, 1, '#3858c8'); p(3, 7, 2, 2, '#4a4a5a'); p(10, 8, 2, 2, '#4a4a5a'); p(5, 12, 7, 2, '#8a5a30'); p(8, 9, 1, 3, '#f8f8f8'); } },
   'O': { d: p => { grass(p); p(5, 3, 6, 12, '#5a2490'); p(4, 5, 8, 1, '#9a4ad8'); p(4, 9, 8, 1, '#9a4ad8'); p(6, 0, 4, 3, '#d83838'); p(7, 12, 2, 3, '#120c18'); p(7, 6, 2, 2, '#f8d838'); } },
   '#': { solid: 1, d: p => bricks(p, '#a04828', '#5a2410', '#c86840') },
   'f': { d: wood },
@@ -449,12 +455,13 @@ const ITEMS = {
   drink: { name: 'エナドリ', kind: 'hp', v: 30, price: 8 },
   drink2: { name: '高級エナドリ', kind: 'hp', v: 90, price: 30 },
   photo: { name: '推しの生写真', kind: 'mp', v: 20, price: 40 },
-  pass: { name: '通行証', kind: 'key' },
+  pass: { name: '通行証', kind: 'key', desc: '推し被りの塔への 通行証。\n橋の 行列に みせよう。' },
+  shoMinato: { name: '遠征の証', kind: 'key', desc: '遠征王ゼンツウから 受けとった。\n塔の 結界を とく 鍵の ひとつ。' },
 };
 // what an item / gear / skill does, shown under menus. A 【tag】 first line says what kind of thing it is.
 function itemInfo(id) {
   const it = ITEMS[id];
-  if (it.kind === 'key') return '【だいじなもの】つかっても なくならない\n推し被りの塔への 通行証。\n橋の 行列に みせよう。';
+  if (it.kind === 'key') return '【だいじなもの】つかっても なくならない\n' + it.desc;
   return `【どうぐ】1回 つかうと なくなる\n${it.kind === 'hp' ? 'HP' : 'MP'}を ${it.v} かいふくする。\nいどう中も せんとう中も つかえる。`;
 }
 function gearInfo(t, id) {
@@ -489,6 +496,8 @@ const TAUNT_FOR = {
   lift: 'たかいたかーい！\n赤ちゃん みたいだね',
   tsuihai: ['フォロワーは 多いのに、\n推しからの いいねは 0だな', '現場より タイムラインに\nいる 時間の 方が 長いだろ'],
   onnawota: 'お前が ヲタヲタしてる子、\n彼氏 できたってよ',
+  zentsu_ota: '全通しても、 推しの セトリ\n毎回 同じ 感想しか 言ってないだろ',
+  zentsu: '47都道府県 回って、\n推しとの 距離は 1ミリも 縮んでないな',
 };
 function skillInfo(sk) {
   if (sk.kind === 'money') return '【こうげき】MP 0・せんとう中だけ\n所持金を ぜんぶ 使って、\n使った額の 1.5倍の ダメージ';
@@ -503,6 +512,7 @@ const WEAPONS = [
   { name: '公式ペンライト', atk: 11, price: 180 },
   { name: '光るキンブレ', atk: 18, price: 450 },
   { name: '伝説のサイリウム', atk: 28 },
+  { name: '大漁旗ペンラ', atk: 22, price: 700 },
 ];
 const ARMORS = [
   { name: 'Tシャツ', def: 1 },
@@ -510,6 +520,7 @@ const ARMORS = [
   { name: '推しハッピ', def: 9, price: 150 },
   { name: '特攻服', def: 15, price: 400 },
   { name: '伝説の推しタオル', def: 22 },
+  { name: 'ご当地ハッピ', def: 18, price: 650 },
 ];
 const SKILLS = [
   { name: '推しコール', lv: 1, mp: 3, kind: 'heal', pow: [22, 30], text: '「百花ーーっ！」 推しの名を さけんだ！' },
@@ -543,6 +554,10 @@ const ENEMIES = {
     moves: [[3, 'atk'], [1, 'expose', 0, '晒しポスト！\nヲタ太の 写真が 拡散された！']], drop: ['drink', 0.1] },
   onnawota: { name: '女ヲタヲタ', hp: 75, atk: 17, def: 8, agi: 9, exp: 22, gold: 18,
     moves: [[3, 'atk'], [1, 'flee', 0, '「女ヲタ 見つけた！」と\n追いかけて いなくなった！']], drop: ['photo', 0.06] },
+  zentsu_ota: { name: '全通ヲタ', hp: 120, atk: 21, def: 14, agi: 9, exp: 40, gold: 35,
+    moves: [[3, 'atk'], [2, 'grow', 1.25, '全通の 根性！\nこうげき力が あがった！']], drop: ['drink2', 0.1] },
+  zentsu: { name: '遠征王ゼンツウ', short: 'ゼンツウ', hp: 380, atk: 26, def: 16, agi: 10, exp: 200, gold: 200, boss: 1,
+    moves: [[3, 'atk'], [2, 'multi', 0.75, '47都道府県 制覇アタック！', 4], [1, 'rage', 0, '全通の 誇りに 燃えている！'], [1, 'idle', 0, '遠征疲れで ふらついている…']] },
   lift: { name: 'リフトヲタ', hp: 160, atk: 27, def: 16, agi: 12, exp: 60, gold: 48,
     moves: [[3, 'atk'], [1, 'lift', 1.9, 'リフト！ 高く 上がって のしかかってきた！']], drop: ['drink2', 0.1] },
   gachikoi: { name: 'ガチ恋ヲタク', hp: 30, atk: 6, def: 3, agi: 3, exp: 5, gold: 6,
@@ -566,8 +581,9 @@ const ENEMIES = {
   kyohiru: { name: '同担拒否魔王キョヒール', short: 'キョヒール', hp: 440, atk: 38, def: 20, agi: 15, exp: 400, gold: 0, boss: 1,
     moves: [[3, 'atk'], [2, 'mult', 1.6, '同担拒否ビームを はなった！'], [2, 'mult', 1.4, 'ガチ恋口上・極を となえた！'], [1, 'rage', 0, 'はげしく いかっている！']] },
 };
-const EXP_TABLE = [0, 0, 8, 22, 45, 80, 130, 200, 290, 400, 540, 720, 950, 1250, 1600, 2000];
-const MAX_LV = 15;
+const EXP_TABLE = [0, 0, 8, 22, 45, 80, 130, 200, 290, 400, 540, 720, 950, 1250, 1600, 2000,
+  2450, 2950, 3500, 4100, 4800, 5600, 6500, 7500, 8600, 9800, 11100, 12500, 14000, 15600, 17300];
+const MAX_LV = 30;
 
 // ------------------------------------------------------------
 //  State
@@ -651,10 +667,10 @@ function saveMode() {
 }
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
-const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared'];
-const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4'];
-const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass'];
+const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel', 'minato', 'hall'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen'];
+const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4', 'h1', 'h2'];
+const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass', 'shoMinato'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
 const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 1296; return h.toString(36).padStart(2, '0'); };
 function makeCode() {
@@ -1162,7 +1178,7 @@ const MAPS = {
     R('^', 1, '~', 7, '.', 3, '^', 5, '.', 23, '^', 1),
     R('^', 1, '~', 6, '.', 5, '^', 3, '.', 9, ',', 3, '.', 12, '^', 1),
     R('^', 1, '~', 5, '.', 18, ',', 1, 'V', 1, ',', 1, '.', 12, '^', 1),
-    R('^', 1, '~', 4, '.', 19, ',', 3, '.', 12, '^', 1),
+    R('^', 1, '~', 4, 'H', 1, '.', 18, ',', 3, '.', 12, '^', 1),
     R('^', 1, '~', 2, '.', 36, '^', 1),
     R('^', 40)] },
   venue: { name: '握手会場', bgm: 'dungeon', fill: 'W', bg: 'venue', rows: [
@@ -1210,6 +1226,39 @@ const MAPS = {
     'WxWWWxWWWWxWWWxW',
     'WdxxxxxxxxxxxxxW',
     'WWWWWWWWWWWWWWWW'] },
+  minato: { name: '港町', bgm: 'town', fill: '~', rows: [
+    'TTTTTTTTTTT..TTTTTTTTTTT',
+    'T......................T',
+    'T.#######.....########.T',
+    'T.#ffbfb#.....########.T',
+    'T.#Cffff#.....########.T',
+    'T.#fffff#.....########.T',
+    'T.###f###.....###cc###.T',
+    'T....=..........=......T',
+    'T....============......T',
+    'T.#######..............T',
+    'T.#hhfhh#..............T',
+    'T.#fCCCf#..............T',
+    'T.#fffff#..............T',
+    'T.###f###..............T',
+    'T......................T',
+    '~~~~~~~~~BB~~~~~~~~~~~~~',
+    '~~~~~~~~~BB~~~~~~~~~~~~~'] },
+  hall: { name: '地方公演ホール', bgm: 'dungeon', fill: 'W', bg: 'venue', rows: [
+    'WWWWWWWWWWWWWWWWWWWW',
+    'WkkkkkkkkkkkkkkkkkkW',
+    'WccccccccccccccccccW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxqqqqqxqqqqqxqqqqxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxqqqqqxqqqqqxqqqqxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxqqqqqxqqqqqxqqqqxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWxxxxxxWWWWWWW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWWxWWWWWWWWWW'] },
   chapel: { name: 'チャペル', bgm: 'wedding', fill: ' ', rows: [
     '###########',
     '#fffocofff#',
@@ -1423,7 +1472,7 @@ async function itemMenu(inBattle) {
   if (r < 0) return false;
   const id = ids[r], it = ITEMS[id];
   if (it.kind === 'key') {
-    await say(id === 'pass' ? '推し被りの塔への 通行証だ。\nTOのゴウの サインが 入っている。' : it.name + 'だ。', inBattle ? { auto: 50 } : {});
+    await say(id === 'pass' ? '推し被りの塔への 通行証だ。\nTOのゴウの サインが 入っている。' : it.desc, inBattle ? { auto: 50 } : {});
     if (!inBattle) closeMsg();
     return false;
   }
@@ -1570,6 +1619,9 @@ async function enemyAct(e) {
     await say(`${nm}の HPが ${v} かいふくした！`, { append: true, auto: 30 });
   } else if (type === 'idle') {
     await say(`${nm}は ${text}`, { append: true, auto: 34 });
+  } else if (type === 'grow') {
+    e.atk = Math.round(e.atk * mult);
+    await say(`${nm}は ${text}`, { append: true, auto: 36 });
   } else if (type === 'expose') {
     await say(`${nm}は ${text}`, { append: true, auto: 40 });
     if ((battleS.pdown || 0) < 2) { battleS.pdown = (battleS.pdown || 0) + 1; await say('ヲタ太の 守りが さがった！', { append: true, auto: 34 }); }
@@ -1762,9 +1814,9 @@ async function talkCafe() {
   }
   await say('店員「またの ご利用を。」');
 }
-async function talkShop() {
+async function talkShop(stock) {
   const goods = ['drink', 'drink2', 'photo'];
-  const weapons = flags.gou ? [1, 2, 3] : [1, 2], armors = flags.gou ? [1, 2, 3] : [1, 2];
+  const weapons = stock ? stock.weapons : flags.gou ? [1, 2, 3] : [1, 2], armors = stock ? stock.armors : flags.gou ? [1, 2, 3] : [1, 2];
   await say('店員「いらっしゃい！ グッズ屋だよ。\nどうぐ・ぶき・ぼうぐ、\nどれを みていく？」', { noWait: true });
   extraWins.push(goldWin());
   const cat = openMenu({ items: ['どうぐ', 'ぶき', 'ぼうぐ', 'やめる'], x: 176, y: 40, w: 72 });
@@ -1820,6 +1872,57 @@ async function motoTO() {
   if (flags.skGundan) { flags.motoDone = true; await say('（軍団との 絆が さらに 深まった！）'); return; }
   flags.skGundan = true; flags.motoDone = true; await jingle('lvup'); playBgm(game.map.bgm);
   await say('ヲタ太は 「軍団呼び」を おぼえた！\n（仲間が 駆けつけて 連続こうげき）');
+}
+// which proofs the 同担拒否の結界 needs (grows as chapters are added)
+const BARRIER_KEYS = ['shoMinato'];
+const barrierOpen = () => BARRIER_KEYS.every(k => P.items[k]);
+async function towerGate() {
+  if (barrierOpen()) {
+    if (!flags.barrierOpen) {
+      flags.barrierOpen = true;
+      await say('遠征の証が 光りだした！\n同担拒否の 結界が きえていく……！');
+    }
+    sfx('door'); await fadeOut(8); setMap('tower1', 7, 12, 'up'); toast('推し被りの塔'); await fadeIn(8);
+    return;
+  }
+  sfx('bump'); game.shake = 10;
+  await say('ヲタ太は 見えない 壁に\nはじき返された！');
+  if (!flags.barrierSeen) {
+    flags.barrierSeen = true;
+    await say('ゴウ「待ってくれ！ 追いついた……」');
+    await say('ゴウ「塔には 同担拒否の 結界が ある。\nキョヒールの 四天王が\n守ってるんだ。」');
+    await say('ゴウ「一人目は 遠征王 ゼンツウ。\n南西の 港町の ホールを\n遠征軍団で 占拠してる。」');
+    await say('ゴウ「ゼンツウを 倒して\n『遠征の証』を 手に入れれば、\n結界は ゆるむはずだ！」');
+  } else await say('（南西の 港町で 遠征王ゼンツウを\n倒して 証を 手に入れよう）');
+  await fadeOut(8); setMap('field', 33, 4, 'down'); await fadeIn(8);
+}
+async function talkInn() {
+  await say('民宿の おかみ「遠征 おつかれさま！\nひと晩 20円 だよ。\n泊まって いくかい？」', { noWait: true });
+  extraWins.push(goldWin());
+  const ok = await pick({ items: ['はい', 'いいえ'], x: 184, y: 92, w: 64 }) === 0;
+  if (ok) {
+    if (P.gold < 20) { await say('おかみ「お金が たりないねえ…」'); return; }
+    P.gold -= 20;
+    await fadeOut(16); P.hp = P.mhp; P.mp = P.mmp; await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
+    await say('おかみ「よく 眠れたかい？\nHPと MPが ぜんかいしたよ。」');
+  }
+  if (await yesno('おかみ「冒険の きろくを つけとくかい？」')) {
+    if (saveGame(true)) await say('きろくを のこした。'); else await say('この画面では きろくが のこせないよ。\n「きろく」で ふっかつのじゅもんを\nメモしてね。');
+  }
+}
+async function zentsuEvent() {
+  await say('ゼンツウ「よく来たな。 おれは\n遠征王 ゼンツウ。 キョヒールさまの\n四天王の 一人だ。」');
+  await say('ゼンツウ「百花ちゃんが 戻る日の\n最前は 全通の おれたちの ものだ。\n地元の 連中には 渡さねえ！」');
+  const r = await battle('zentsu', { intro: '遠征王ゼンツウが\nたちはだかった！' });
+  if (r !== 'win') return;
+  flags.zentsu = true;
+  await say('ゼンツウ「…まいった。 遠征で\n鍛えた 足腰も、 推しへの 熱には\nかなわねえか。」');
+  await say('ゼンツウ「おれはな、 全通の ために\n仕事も 辞めたんだ。 全国 どこへでも\n夜行バスで 通った。」');
+  await say('ゼンツウ「でも 港町の 公演の 日、\n百花ちゃんは MCで 言ったんだ。\n『地元の みんなに 会えて うれしい』」');
+  await say('ゼンツウ「おれが 押しのけてた 地元の\nファンこそ、 百花ちゃんが\n会いたかった 人たち だったんだ。」');
+  await say('ゼンツウ「……これを もっていけ。\nホールは 地元の みんなに 返す。」', { noWait: true });
+  addItem('shoMinato'); await jingle('get'); playBgm(game.map.bgm);
+  await say('ヲタ太は 遠征の証を てにいれた！');
 }
 async function talkStaff() {
   if (!flags.show) await say('スタッフ「まもなく 開演です！\nステージ前へ どうぞ！」');
@@ -2004,7 +2107,7 @@ async function ending() {
 const T = MAPS.town;
 T.npcs = [
   { id: 'mom', x: 6, y: 5, spr: 'mom', talk: talkMom, show: () => !flags.scene },
-  { id: 'shop', x: 5, y: 13, spr: 'clerk', talk: talkShop },
+  { id: 'shop', x: 5, y: 13, spr: 'clerk', talk: () => talkShop() },
   { id: 'cafe', x: 16, y: 13, spr: 'cafe', talk: talkCafe },
   { id: 'staff', x: 16, y: 7, spr: 'staff', talk: talkStaff, show: () => flags.scene !== 'epilogue' },
   { id: 'momoka', x: 19, y: 3, spr: 'momoka', fixed: 1, show: () => !flags.show || !!flags.scene,
@@ -2062,7 +2165,8 @@ F.enc = (x, y) => {
 F.onStep = (x, y, t) => {
   if (t === 'A') return async () => { sfx('door'); await fadeOut(8); setMap('town', 11, 19, 'up'); toast('アキハバラ'); await fadeIn(8); };
   if (t === 'V') return async () => { sfx('door'); await fadeOut(8); setMap('venue', 9, 14, 'up'); toast('握手会場'); await fadeIn(8); await venueEnter(); };
-  if (t === 'O') return async () => { sfx('door'); await fadeOut(8); setMap('tower1', 7, 12, 'up'); toast('推し被りの塔'); await fadeIn(8); };
+  if (t === 'O') return towerGate;
+  if (t === 'H') return async () => { sfx('door'); await fadeOut(8); setMap('minato', 11, 1, 'down'); toast('港町'); await fadeIn(8); };
   return null;
 };
 
@@ -2114,6 +2218,47 @@ T2.onStep = (x, y, t) => {
   if (!flags.kyohiru && y === 3 && (x === 7 || x === 8)) return async () => { face(player, 'up'); await kyohiruEvent(); };
   return null;
 };
+
+const MN = MAPS.minato;
+MN.npcs = [
+  { id: 'inn', x: 3, y: 3, spr: 'mom', talk: talkInn },
+  { id: 'mshop', x: 5, y: 10, spr: 'clerk', talk: () => talkShop({ weapons: [3, 5], armors: [3, 5] }) },
+  { id: 'local', x: 10, y: 11, spr: 'girl', wander: 1, talk: async () => {
+    if (!flags.zentsu) await say('地元の 女の子「地方公演、 中止……。\nなのに 遠征の 人たちが\nホールから 出ていかないの。」');
+    else await say('地元の 女の子「ホールが 戻ってきた！\n百花ちゃんが 帰ってきたら、\n今度こそ 会いに 行くんだ！」');
+  } },
+  { id: 'fisher', x: 9, y: 14, spr: 'fisher', wander: 1, talk: async () => {
+    await say('漁師「最近 夜行バスで 来る 若いのが\n多くてな。 みんな 薄ピンクや\nいろんな 色の 棒を 振っとるわ。」');
+  } },
+  { id: 'hguard', x: 19, y: 7, spr: 'staff', talk: async () => {
+    if (!flags.barrierSeen) await say('係員「百花さんの 地方公演は\n中止に なりました……。」');
+    else if (!flags.zentsu) await say('係員「ホールの 中は 遠征軍団に\n占拠されて います。\n奥に いるのが 遠征王です！」');
+    else await say('係員「ホールを 取り戻して くれて\nありがとう ございます！」');
+  } },
+];
+MN.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 6, 16, 'right'); await fadeIn(8); };
+MN.onStep = (x, y) => {
+  if (y === 6 && (x === 17 || x === 18)) return async () => {
+    if (!flags.barrierSeen) { await say('係員「百花さんの 地方公演は\n中止に なりました。\nホールは しめきって います。」'); player.y = 7; player.py = 7 * TS; return; }
+    sfx('door'); await fadeOut(8); setMap('hall', 9, 12, 'up'); toast('地方公演ホール'); await fadeIn(8);
+  };
+  return null;
+};
+const HL = MAPS.hall;
+HL.npcs = [
+  { id: 'zentsu', x: 9, y: 2, spr: 'zentsu', fixed: 1, talk: async () => {
+    if (!flags.zentsu) await zentsuEvent();
+    else await say('ゼンツウ「これからは 地元の 人と\nいっしょに 盛り上げるさ。\n百花ちゃんを たのんだぞ。」');
+  } },
+];
+HL.chests = [
+  { id: 'h1', x: 1, y: 11, item: 'drink2', n: 2 },
+  { id: 'h2', x: 18, y: 11, gold: 250 },
+];
+HL.enc = () => ['zentsu_ota', 'zentsu_ota', 'ensei', 'kagijime', 'tsuihai'];
+HL.encRate = 1 / 12;
+HL.onExit = async () => { sfx('door'); await fadeOut(8); setMap('minato', 17, 7, 'down'); await fadeIn(8); };
+HL.onStep = (x, y) => (!flags.zentsu && x === 9 && y === 3) ? async () => { face(player, 'up'); await zentsuEvent(); } : null;
 
 const C = MAPS.chapel;
 C.npcs = [
