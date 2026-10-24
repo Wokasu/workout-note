@@ -92,6 +92,17 @@ button {
   cursor: pointer;
 }
 button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
+.name-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--dim); }
+.name-field[hidden] { display: none; }
+.name-row { display: flex; gap: 8px; }
+.name-row input {
+  flex: 1; min-width: 0;
+  font-family: var(--font); font-size: 18px;
+  color: var(--ink); background: #000;
+  border: 2px solid var(--shell-edge); border-radius: 6px; padding: 6px 10px;
+  -webkit-user-select: text; user-select: text;
+}
+.name-row input:focus-visible { outline: 2px solid var(--oshi); outline-offset: 1px; }
 .pad {
   display: none;
   justify-content: space-between;
@@ -137,6 +148,13 @@ button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
 <!--BODY-->
 <div class="console">
   <div class="screen-wrap"><canvas id="screen" tabindex="0" aria-label="百花クエスト ゲーム画面"></canvas></div>
+  <div class="name-field" id="name-field" hidden>
+    <label for="hero-name">キーボードで入力（漢字もOK・6文字まで）</label>
+    <div class="name-row">
+      <input id="hero-name" type="text" maxlength="6" autocomplete="off" enterkeyhint="done" placeholder="ヲタ太">
+      <button id="name-ok" type="button">けってい</button>
+    </div>
+  </div>
   <div class="bar">
     <div class="keys">
       <span><kbd>↑↓←→</kbd> いどう</span>
@@ -480,6 +498,7 @@ let modal = null;
 const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right',
   W: 'up', S: 'down', A: 'left', D: 'right', z: 'a', Z: 'a', Enter: 'a', ' ': 'a', x: 'b', X: 'b', Escape: 'b', Backspace: 'b' };
 window.addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') return;
   const k = KEYMAP[e.key]; if (!k) return;
   e.preventDefault(); audioWake();
   if (e.repeat && (k === 'a' || k === 'b')) return;
@@ -677,7 +696,9 @@ function waitAuto(n) {
   });
 }
 // say(text, {append, auto, noWait})
+const named = t => String(t).split('ヲタ太').join(P ? P.name : 'ヲタ太');
 async function say(text, o = {}) {
+  text = named(text);
   msg.visible = true;
   if (!o.append) msg.lines = [];
   const ls = wrap(text, msg.w - 20);
@@ -733,7 +754,7 @@ async function fadeOut(n = 12) { for (let i = 1; i <= n; i++) { game.fade = i / 
 async function fadeIn(n = 12) { for (let i = n - 1; i >= 0; i--) { game.fade = i / n; await framesWait(1); } }
 async function caption(lines, hold = 0) {
   closeMsg();
-  game.caption = { lines: Array.isArray(lines) ? lines : [lines], a: 0 };
+  game.caption = { lines: (Array.isArray(lines) ? lines : [lines]).map(named), a: 0 };
   for (let i = 1; i <= 20; i++) { game.caption.a = i / 20; await framesWait(1); }
   if (hold) await framesWait(hold); else { game.caption.arrow = true; await new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; res(); } }; }); game.caption.arrow = false; }
   for (let i = 19; i >= 0; i--) { game.caption.a = i / 20; await framesWait(1); }
@@ -994,7 +1015,7 @@ function statusWin(x = 8, y = 8) {
   return () => {
     const low = P.hp <= P.mhp / 4;
     drawWin(x, y, 72, 72, low ? '#f8a030' : '#fff');
-    txt(P.name, x + 10, y + 7, low ? '#f8a030' : '#fff');
+    txt(P.name, x + 10, y + 7, low ? '#f8a030' : '#fff', 12, 54);
     txt('Lv' + String(P.lv).padStart(3), x + 10, y + 23);
     txt('HP' + String(P.hp).padStart(4), x + 10, y + 39);
     txt('MP' + String(P.mp).padStart(4), x + 10, y + 55);
@@ -1597,6 +1618,88 @@ C.npcs = [
 // ------------------------------------------------------------
 //  Title & intro
 // ------------------------------------------------------------
+// ------------------------------------------------------------
+//  Name entry (DQ-style kana grid + keyboard field)
+// ------------------------------------------------------------
+const NAME_MAX = 6;
+const KANA_ROWS = ['あいうえおかきくけこ', 'さしすせそたちつてと', 'なにぬねのはひふへほ', 'まみむめもやゆよわを',
+  'らりるれろんぁぃぅぇ', 'がぎぐげござじずぜぞ', 'だぢづでどばびぶべぼ', 'ぱぴぷぺぽぉゃゅょっ'];
+const NAME_CMDS = [{ label: 'カナ', act: 'kana' }, { label: 'ー', act: 'ー' }, { label: 'けす', act: 'del' }, { label: 'おわる', act: 'ok' }];
+const toKata = t => t.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+const ne = { name: '', kata: false, r: 0, c: 0 };
+const nameField = document.getElementById('name-field');
+const nameInput = document.getElementById('hero-name');
+const clipName = v => Array.from(v.replace(/\s+/g, ' ').trim()).slice(0, NAME_MAX).join('');
+nameInput.addEventListener('input', () => { ne.name = Array.from(nameInput.value).slice(0, NAME_MAX).join(''); });
+function nameEntry() {
+  ne.name = ''; ne.kata = false; ne.r = 0; ne.c = 0;
+  nameInput.value = ''; nameField.hidden = false;
+  game.mode = 'name';
+  return new Promise(res => {
+    const finish = () => {
+      sfx('ok'); nameField.hidden = true; modal = null;
+      nameInput.blur(); cv.focus();
+      res(clipName(ne.name) || 'ヲタ太');
+    };
+    const sync = () => { nameInput.value = ne.name; };
+    const rowLen = r => r < KANA_ROWS.length ? 10 : NAME_CMDS.length;
+    nameInput.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); finish(); } };
+    document.getElementById('name-ok').onclick = finish;
+    modal = k => {
+      const rows = KANA_ROWS.length + 1;
+      if (k === 'up' || k === 'down') {
+        const or = ne.r; ne.r = (ne.r + (k === 'up' ? -1 : 1) + rows) % rows;
+        if (rowLen(or) !== rowLen(ne.r)) ne.c = Math.round(ne.c * (rowLen(ne.r) - 1) / (rowLen(or) - 1));
+        sfx('cur');
+      } else if (k === 'left' || k === 'right') {
+        ne.c = (ne.c + (k === 'left' ? -1 : 1) + rowLen(ne.r)) % rowLen(ne.r); sfx('cur');
+      } else if (k === 'b') {
+        ne.name = Array.from(ne.name).slice(0, -1).join(''); sync(); sfx('cur');
+      } else if (k === 'a') {
+        let add = null;
+        if (ne.r < KANA_ROWS.length) add = KANA_ROWS[ne.r][ne.c];
+        else {
+          const act = NAME_CMDS[ne.c].act;
+          if (act === 'kana') { ne.kata = !ne.kata; sfx('ok'); return; }
+          if (act === 'del') { ne.name = Array.from(ne.name).slice(0, -1).join(''); sync(); sfx('cur'); return; }
+          if (act === 'ok') { finish(); return; }
+          add = act;
+        }
+        if (Array.from(ne.name).length >= NAME_MAX) { sfx('ng'); return; }
+        ne.name += ne.kata ? toKata(add) : add; sync(); sfx('cur');
+      }
+    };
+  });
+}
+function drawName() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  drawWin(8, 6, 240, 48);
+  txt('主人公の なまえを きめてください', 20, 13);
+  const chars = Array.from(ne.name);
+  for (let i = 0; i < NAME_MAX; i++) {
+    const x = 74 + i * 18;
+    ctx.fillStyle = '#7a7488'; ctx.fillRect(x, 47, 14, 1);
+    if (chars[i]) txt(chars[i], x + 1, 32, '#fff', 12, 14);
+    else if (i === chars.length && (game.frame >> 4) % 2 === 0) { ctx.fillStyle = '#f7b0cc'; ctx.fillRect(x, 45, 14, 2); }
+  }
+  drawWin(8, 58, 240, 160);
+  const blink = (game.frame >> 4) % 2 === 0;
+  const arrow = (x, y) => { ctx.fillStyle = '#fff'; for (let k = 0; k < 4; k++) ctx.fillRect(x + k, y + k, 1, 8 - k * 2); };
+  KANA_ROWS.forEach((row, r) => {
+    Array.from(ne.kata ? toKata(row) : row).forEach((ch, c) => {
+      const x = 26 + c * 21 + (c >= 5 ? 6 : 0), y = 66 + r * 16;
+      txt(ch, x, y);
+      if (r === ne.r && c === ne.c && blink) arrow(x - 8, y + 2);
+    });
+  });
+  NAME_CMDS.forEach((cmd, c) => {
+    const x = 26 + c * 56, y = 198;
+    const label = cmd.act === 'kana' ? (ne.kata ? 'ひら' : 'カナ') : cmd.label;
+    txt(label, x, y, cmd.act === 'ok' ? '#f7b0cc' : '#fff');
+    if (ne.r === KANA_ROWS.length && ne.c === c && blink) arrow(x - 8, y + 2);
+  });
+}
+
 const STARS = Array.from({ length: 60 }, () => [rnd(0, W - 1), rnd(0, 150), rnd(0, 3)]);
 async function titleScreen() {
   game.mode = 'title'; game.busy = true; game.fx = [];
@@ -1616,6 +1719,14 @@ async function titleScreen() {
     return;
   }
   newGame();
+  game.fade = 0;
+  while (true) {
+    P.name = await nameEntry();
+    game.mode = 'title';
+    if (await yesno(`「${P.name}」で よろしいですか？`)) break;
+  }
+  closeMsg();
+  await fadeOut(20);
   playBgm(null);
   game.mode = 'map';
   setMap('town', 4, 4, 'down');
@@ -1647,8 +1758,9 @@ function drawWin(x, y, w, h, border = '#fff') {
   ctx.fillRect(x + 1, y + 3, 2, h - 6); ctx.fillRect(x + w - 3, y + 3, 2, h - 6);
   ctx.fillRect(x + 2, y + 2, 2, 2); ctx.fillRect(x + w - 4, y + 2, 2, 2); ctx.fillRect(x + 2, y + h - 4, 2, 2); ctx.fillRect(x + w - 4, y + h - 4, 2, 2);
 }
-function txt(s, x, y, col = '#fff', size = 12) {
-  ctx.font = size + 'px ' + FONT; ctx.textBaseline = 'top'; ctx.fillStyle = col; ctx.fillText(s, x, y);
+function txt(s, x, y, col = '#fff', size = 12, maxW) {
+  ctx.font = size + 'px ' + FONT; ctx.textBaseline = 'top'; ctx.fillStyle = col;
+  if (maxW) ctx.fillText(s, x, y, maxW); else ctx.fillText(s, x, y);
 }
 function drawUI() {
   for (const w of extraWins) w();
@@ -1784,7 +1896,7 @@ function drawEnd() {
   ctx.drawImage(SPR.hero.right[f], 92, 108, 32, 32);
   ctx.drawImage(SPR.momoka.down[f], 132, 108, 32, 32);
   heartAt(125, 100 + Math.round(Math.sin(game.frame / 15) * 2), '#f890b8');
-  txt(`ヲタ太 Lv${P.lv}`, W / 2, 150, '#fff', 12);
+  txt(`${P.name} Lv${P.lv}`, W / 2, 150, '#fff', 12);
   txt('推し活 おつかれさまでした！', W / 2, 168, '#fff', 12);
   if (game.endT > 120 && (game.frame >> 5) % 2 === 0) txt('A / Z で タイトルへ', W / 2, 190, '#9d92b8', 10);
   ctx.textAlign = 'left';
@@ -1797,6 +1909,7 @@ function draw() {
   if (game.mode === 'title') drawTitle();
   else if (game.mode === 'battle') drawBattle();
   else if (game.mode === 'end') drawEnd();
+  else if (game.mode === 'name') drawName();
   else if (game.map) drawMap();
   else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
   ctx.restore();
