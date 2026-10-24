@@ -411,6 +411,24 @@ const ITEMS = {
   photo: { name: '推しの生写真', kind: 'mp', v: 20, price: 40 },
   pass: { name: '通行証', kind: 'key' },
 };
+// what an item / gear / skill does, shown under menus. A 【tag】 first line says what kind of thing it is.
+function itemInfo(id) {
+  const it = ITEMS[id];
+  if (it.kind === 'key') return '【だいじなもの】つかっても なくならない\n推し被りの塔への 通行証。\n橋の 行列に みせよう。';
+  return `【どうぐ】1回 つかうと なくなる\n${it.kind === 'hp' ? 'HP' : 'MP'}を ${it.v} かいふくする。\nいどう中も せんとう中も つかえる。`;
+}
+function gearInfo(t, id) {
+  const w = t === 'w', g = w ? WEAPONS[id] : ARMORS[id], cur = w ? WEAPONS[P.w] : ARMORS[P.a];
+  const stat = w ? 'こうげき力' : 'しゅび力', v = w ? g.atk : g.def, cv = w ? cur.atk : cur.def, now = w ? atkOf() : defOf();
+  const last = (w ? P.w : P.a) === id ? 'いま そうびしている。'
+    : v <= cv ? 'いまの そうびの ほうが つよい。'
+    : `${stat} ${now} → ${now - cv + v} にアップ！`;
+  return `【${w ? 'ぶき' : 'ぼうぐ'}】そうびすると ずっと こうか\n${stat} +${v}（いまの そうびは +${cv}）\n${last}`;
+}
+function skillInfo(sk) {
+  if (sk.kind === 'heal') return `【かいふく】MP ${sk.mp} を つかう\nHPを やく ${Math.round((sk.pow[0] + sk.pow[1]) / 2 + P.lv)} かいふくする。\nいどう中も せんとう中も つかえる。`;
+  return `【こうげき】MP ${sk.mp} を つかう\nふつうの こうげきより つよい\n（ダメージ やく ${sk.mult}倍）。 せんとう中だけ。`;
+}
 const WEAPONS = [
   { name: 'ふつうのペンラ', atk: 2 },
   { name: '推しカラーペンラ', atk: 6, price: 50 },
@@ -820,7 +838,7 @@ async function say(text, o = {}) {
 const closeMsg = () => { msg.visible = false; msg.lines = []; };
 
 function openMenu(o) {
-  const m = { items: o.items, x: o.x, y: o.y, w: o.w, idx: o.idx || 0, cancel: o.cancel !== false, title: o.title || null, active: false, lh: o.lh || 16 };
+  const m = { items: o.items, x: o.x, y: o.y, w: o.w, idx: o.idx || 0, cancel: o.cancel !== false, title: o.title || null, active: false, lh: o.lh || 16, info: o.info || null };
   m.h = o.h || (m.items.length * m.lh + 12 + (m.title ? 4 : 0));
   menus.push(m); return m;
 }
@@ -1161,8 +1179,8 @@ function itemList() { return Object.keys(P.items).filter(id => P.items[id] > 0);
 async function itemMenu(inBattle) {
   const ids = itemList();
   if (!ids.length) { await say('どうぐを なにも もっていない。'); closeMsg(); return false; }
-  const items = ids.map(id => ({ label: ITEMS[id].name + (ITEMS[id].kind === 'key' ? '' : ' ×' + P.items[id]) }));
-  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156 });
+  const items = ids.map(id => ({ label: ITEMS[id].name, right: ITEMS[id].kind === 'key' ? '★' : '×' + P.items[id] }));
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156, info: i => itemInfo(ids[i]) });
   if (r < 0) return false;
   const id = ids[r], it = ITEMS[id];
   if (it.kind === 'key') {
@@ -1186,7 +1204,7 @@ function learned() { return SKILLS.filter(s => s.lv <= P.lv); }
 async function skillMenu(inBattle) {
   const list = learned();
   const items = list.map(s => ({ label: s.name, right: 'MP' + s.mp, disabled: (!inBattle && s.kind !== 'heal') }));
-  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156 });
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156, info: i => skillInfo(list[i]) });
   if (r < 0) return null;
   const s = list[r];
   if (P.mp < s.mp) { await say('MPが たりない！', inBattle ? { auto: 40 } : {}); if (!inBattle) closeMsg(); return null; }
@@ -1405,35 +1423,43 @@ async function talkCafe() {
   await say('店員「またの ご利用を。」');
 }
 async function talkShop() {
-  const stock = [['i', 'drink'], ['i', 'drink2'], ['i', 'photo'], ['w', 1], ['w', 2], ['a', 1], ['a', 2]];
-  if (flags.gou) stock.push(['w', 3], ['a', 3]);
-  await say('店員「いらっしゃい！ 推しグッズの 店だよ。\nなにを かっていく？」', { noWait: true });
+  const goods = ['drink', 'drink2', 'photo'];
+  const weapons = flags.gou ? [1, 2, 3] : [1, 2], armors = flags.gou ? [1, 2, 3] : [1, 2];
+  await say('店員「いらっしゃい！ グッズ屋だよ。\nどうぐ・ぶき・ぼうぐ、\nどれを みていく？」', { noWait: true });
   extraWins.push(goldWin());
-  const label = ([t, id]) => {
-    const it = t === 'i' ? ITEMS[id] : t === 'w' ? WEAPONS[id] : ARMORS[id];
-    return { label: it.name, price: it.price };
-  };
-  const items = stock.map(s => { const l = label(s); return { label: l.label, right: l.price + '円' }; });
-  let idx = 0;
+  const cat = openMenu({ items: ['どうぐ', 'ぶき', 'ぼうぐ', 'やめる'], x: 176, y: 40, w: 72 });
   while (true) {
-    const m = openMenu({ items, x: 24, y: 8, w: 148, idx });
-    const r = await chooseMenu(m); closeMenu(m);
-    if (r < 0) break;
-    idx = r;
-    const [t, id] = stock[r]; const l = label(stock[r]);
-    if (P.gold < l.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
-    if (t === 'i') {
-      if ((P.items[id] || 0) >= 9) { await say('店員「それ以上は もてないよ！」', { noWait: true }); await framesWait(50); continue; }
-      P.gold -= l.price; addItem(id); sfx('ok');
-      await say(`店員「まいど！ ${l.label}だね。」\n（${ITEMS[id].name} ×${P.items[id]}）`, { noWait: true }); await framesWait(40);
-    } else {
-      const cur = t === 'w' ? WEAPONS[P.w].atk : ARMORS[P.a].def;
-      const nv = t === 'w' ? WEAPONS[id].atk : ARMORS[id].def;
-      if (nv <= cur) { await say('店員「いまの そうびの ほうが\nつよいみたいだよ。」', { noWait: true }); await framesWait(60); continue; }
-      P.gold -= l.price; if (t === 'w') P.w = id; else P.a = id; sfx('ok');
-      await say(`店員「まいど！」\nヲタ太は ${l.label}を そうびした！`, { noWait: true }); await framesWait(60);
+    const c = await chooseMenu(cat);
+    if (c < 0 || c === 3) break;
+    const gear = c === 1 ? weapons.map(id => ['w', id]) : armors.map(id => ['a', id]);
+    let idx = 0;
+    while (true) {
+      const list = c === 0
+        ? goods.map(id => ({ label: ITEMS[id].name, right: ITEMS[id].price + '円' }))
+        : gear.map(([t, id]) => { const g = t === 'w' ? WEAPONS[id] : ARMORS[id]; return { label: g.name, right: (t === 'w' ? P.w : P.a) === id ? 'E' : g.price + '円' }; });
+      const info = c === 0 ? i => itemInfo(goods[i]) : i => gearInfo(...gear[i]);
+      const r = await pick({ items: list, x: 8, y: 8, w: 160, idx, info });
+      if (r < 0) break;
+      idx = r;
+      if (c === 0) {
+        const id = goods[r], it = ITEMS[id];
+        if (P.gold < it.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
+        if ((P.items[id] || 0) >= 9) { await say('店員「それ以上は もてないよ！」', { noWait: true }); await framesWait(50); continue; }
+        P.gold -= it.price; addItem(id); sfx('ok');
+        await say(`店員「まいど！ ${it.name}だね。」\n（${it.name} ×${P.items[id]} になった）`, { noWait: true }); await framesWait(40);
+      } else {
+        const [t, id] = gear[r], g = t === 'w' ? WEAPONS[id] : ARMORS[id];
+        const cur = t === 'w' ? WEAPONS[P.w].atk : ARMORS[P.a].def, nv = t === 'w' ? g.atk : g.def;
+        if ((t === 'w' ? P.w : P.a) === id) { await say('店員「それは もう そうびしてるよ。」', { noWait: true }); await framesWait(50); continue; }
+        if (nv <= cur) { await say('店員「いまの そうびの ほうが\nつよいみたいだよ。」', { noWait: true }); await framesWait(60); continue; }
+        if (P.gold < g.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
+        P.gold -= g.price; if (t === 'w') P.w = id; else P.a = id; sfx('ok');
+        await say(`店員「まいど！」\nヲタ太は ${g.name}を そうびした！`, { noWait: true }); await framesWait(60);
+      }
     }
+    await say('店員「ほかに みていく？」', { noWait: true });
   }
+  closeMenu(cat);
   await say('店員「推し活 がんばってね！」');
 }
 async function talkStaff() {
@@ -1885,6 +1911,10 @@ function drawUI() {
         for (let k = 0; k < 4; k++) ctx.fillRect(cx + k, cy + k, 1, 8 - k * 2);
       }
     });
+    if (m.info && m.active) {
+      drawWin(8, 144, 240, 76);
+      String(m.info(m.idx)).split('\n').forEach((l, i) => txt(l, 20, 154 + i * 20, l.startsWith('【') ? '#f7b0cc' : '#fff', 12, 216));
+    }
   }
 }
 function heartAt(x, y, col) {
@@ -2066,7 +2096,7 @@ async function boot() {
   cv.focus();
   titleScreen();
 }
-window.__mq = { wrap, game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
+window.__mq = { wrap, menus, game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
 boot();
 </script>
 <!--/BODY-->
