@@ -357,6 +357,8 @@ function initSprites() {
     comp: frames('hero_down', { ...NOBAND, p: '#c8a040', P: '#7a5a18', h: 'n' })[0],
     lift: frames('fat', { p: '#e05a1a', P: '#8a2a08', H: 'y', Y: 'r' })[0],
   };
+  SPR.e.tsuihai = frames('hero_down', { ...NOBAND, p: '#4a4a6a', P: '#2a2a3a', h: 'k' })[0];
+  SPR.e.onnawota = frames('hero_down', { ...NOBAND, p: '#5a8ad8', P: '#2a4a8a', h: '#c88a3a', w: 'y' })[0];
   // props drawn on top: [x, y, w, h, colour]
   const prop = (id, rects) => { const g = SPR.e[id].getContext('2d'); rects.forEach(([x, y, w, h, c]) => { g.fillStyle = PAL[c] || c; g.fillRect(x, y, w, h); }); };
   prop('zaitaku', [[2, 2, 1, 5, 'k'], [13, 2, 1, 5, 'k'], [3, 0, 10, 1, 'k'], [1, 4, 2, 3, 'G'], [13, 4, 2, 3, 'G']]); // headphones
@@ -364,6 +366,8 @@ function initSprites() {
   prop('seitan', [[1, 11, 3, 2, 'y']]); // armband
   prop('ensei', [[0, 10, 3, 5, 'n'], [0, 9, 3, 1, 'k']]); // suitcase
   prop('comp', [[13, 9, 3, 5, 'w'], [13, 9, 3, 1, 'm']]); // photo binder
+  prop('tsuihai', [[13, 9, 3, 4, 'k'], [14, 10, 1, 2, 'c']]); // phone
+  prop('onnawota', [[3, 4, 10, 2, 'k'], [4, 4, 2, 1, 'G'], [10, 4, 2, 1, 'G']]); // sunglasses
   prop('lift', [[6, 0, 4, 1, 'y'], [5, 1, 1, 1, 'y'], [10, 1, 1, 1, 'y']]); // crown-ish band
 }
 
@@ -482,6 +486,8 @@ const TAUNT_FOR = {
   ensei: '全通？ でも、 推しに\n見つかって ないんじゃなあ（）',
   comp: 'コンプは 完璧。\n本物の 推しは 何回 見た？',
   lift: 'たかいたかーい！\n赤ちゃん みたいだね',
+  tsuihai: ['フォロワーは 多いのに、\n推しからの いいねは 0だな', '現場より タイムラインに\nいる 時間の 方が 長いだろ'],
+  onnawota: 'お前が ヲタヲタしてる子、\n彼氏 できたってよ',
 };
 function skillInfo(sk) {
   if (sk.kind === 'taunt') return '【こうげき】MP 1・せんとう中だけ\nヲタクを 煽って ダメージ（1.1倍）\n50%で 1ターン 行動不能（ボスは25%）';
@@ -527,6 +533,10 @@ const ENEMIES = {
     moves: [[3, 'atk'], [1, 'heal', 18, '遠征自慢を はじめた！ 自分に 酔っている！']], drop: ['drink2', 0.1] },
   comp: { name: '生写真コンプ勢', hp: 30, atk: 18, def: 16, agi: 18, exp: 40, gold: 40,
     moves: [[3, 'atk'], [1, 'flee', 0, '「ダブり 交換に 行かなきゃ」と 去っていった！']], drop: ['photo', 0.6] },
+  tsuihai: { name: 'ツイ廃', hp: 20, atk: 10, def: 5, agi: 10, exp: 11, gold: 10,
+    moves: [[3, 'atk'], [1, 'expose', 0, '晒しポスト！\nヲタ太の 写真が 拡散された！']], drop: ['drink', 0.1] },
+  onnawota: { name: '女ヲタヲタ', hp: 26, atk: 15, def: 8, agi: 9, exp: 14, gold: 12,
+    moves: [[3, 'atk'], [1, 'flee', 0, '「女ヲタ 見つけた！」と\n追いかけて いなくなった！']], drop: ['photo', 0.06] },
   lift: { name: 'リフトヲタ', hp: 58, atk: 30, def: 16, agi: 12, exp: 38, gold: 32,
     moves: [[3, 'atk'], [1, 'lift', 1.9, 'リフト！ 高く 上がって のしかかってきた！']], drop: ['drink2', 0.1] },
   gachikoi: { name: 'ガチ恋ヲタク', hp: 9, atk: 7, def: 2, agi: 3, exp: 3, gold: 4,
@@ -1452,6 +1462,8 @@ async function playerHurt(d) {
   if (d > 0) { sfx('hurt'); game.shake = 14; game.flash = 3; await say(`ヲタ太は ${d}ポイントの\nダメージを うけた！`, { append: true, auto: 34 }); }
   else { sfx('miss'); await say('ミス！ ヲタ太は ダメージを うけない！', { append: true, auto: 34 }); }
 }
+// 晒しポスト lowers the player's defence for the rest of the battle (30% per post, down to 40%)
+const battleDef = () => defOf() * Math.max(0.4, 1 - 0.3 * (battleS.pdown || 0));
 async function enemyHurt(e, d) {
   if (e.guard && d > 0) { d = Math.max(1, Math.floor(d / 2)); e.guard = 0; }
   e.hp = Math.max(0, e.hp - d);
@@ -1494,7 +1506,8 @@ async function taunt(e, s) {
     await say('ヲタ太の 心が 折れた！\nつぎの ターン うごけない！', { append: true, auto: 44 });
     return;
   }
-  const line = TAUNT_FOR[e.id] && chance(0.5) ? TAUNT_FOR[e.id] : TAUNTS[rnd(0, TAUNTS.length - 1)];
+  const own = [].concat(TAUNT_FOR[e.id] || []);
+  const line = own.length && chance(0.5) ? own[rnd(0, own.length - 1)] : TAUNTS[rnd(0, TAUNTS.length - 1)];
   await say('ヲタ太は 煽った！', { append: true, auto: 22 });
   await say(`「${line}」`, { append: true, auto: 50 });
   await say(`${nm}の 心に ぐさっと 刺さった！`, { append: true, auto: 26 });
@@ -1516,13 +1529,13 @@ async function enemyAct(e) {
   const rage = e.rage ? 1.5 : 1;
   if (type === 'atk') {
     await say(`${nm}の こうげき！`, { append: true, auto: 22 });
-    await playerHurt(dmgTo(e.atk * rage, defOf())); e.rage = 0;
+    await playerHurt(dmgTo(e.atk * rage, battleDef())); e.rage = 0;
   } else if (type === 'mult') {
     await say(`${nm}は ${text}`, { append: true, auto: 30 });
-    await playerHurt(dmgTo(e.atk * mult * rage, defOf())); e.rage = 0;
+    await playerHurt(dmgTo(e.atk * mult * rage, battleDef())); e.rage = 0;
   } else if (type === 'multi') {
     await say(`${nm}は ${text}`, { append: true, auto: 30 });
-    for (let i = 0; i < hits && P.hp > 0; i++) await playerHurt(dmgTo(e.atk * mult * rage, defOf()));
+    for (let i = 0; i < hits && P.hp > 0; i++) await playerHurt(dmgTo(e.atk * mult * rage, battleDef()));
     e.rage = 0;
   } else if (type === 'heal') {
     const v = Math.min(e.mhp - e.hp, mult); e.hp += v; sfx('heal');
@@ -1530,6 +1543,10 @@ async function enemyAct(e) {
     await say(`${nm}の HPが ${v} かいふくした！`, { append: true, auto: 30 });
   } else if (type === 'idle') {
     await say(`${nm}は ${text}`, { append: true, auto: 34 });
+  } else if (type === 'expose') {
+    await say(`${nm}は ${text}`, { append: true, auto: 40 });
+    if ((battleS.pdown || 0) < 2) { battleS.pdown = (battleS.pdown || 0) + 1; await say('ヲタ太の 守りが さがった！', { append: true, auto: 34 }); }
+    else await say('しかし もう これ以上 恥は かかない！', { append: true, auto: 34 });
   } else if (type === 'flee') {
     await say(`${nm}は ${text}`, { append: true, auto: 44 });
     e.fled = 1;
@@ -1548,7 +1565,7 @@ async function enemyAct(e) {
     await say(`${nm}は ${text}`, { append: true, auto: 34 });
   } else if (type === 'lift') {
     await say(`${nm}の ${text}`, { append: true, auto: 34 });
-    await playerHurt(dmgTo(e.atk * mult * rage, defOf())); e.rage = 0; e.rest = 1;
+    await playerHurt(dmgTo(e.atk * mult * rage, battleDef())); e.rage = 0; e.rest = 1;
   } else if (type === 'rage') {
     e.rage = 1;
     await say(`${nm}は ${text}`, { append: true, auto: 34 });
@@ -1602,7 +1619,7 @@ async function battle(id, opt = {}) {
   const prevMode = game.mode;
   sfx('enc');
   for (let i = 0; i < 6; i++) { game.flash = 4; await framesWait(6); }
-  battleS.e = e; battleS.blink = 0; battleS.alpha = 1; battleS.bg = opt.bg || game.map.bg || 'field';
+  battleS.e = e; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.bg = opt.bg || game.map.bg || 'field';
   game.mode = 'battle';
   playBgm(base.boss ? 'boss' : 'battle');
   const sw = statusWin(); extraWins.push(sw);
@@ -1953,8 +1970,8 @@ F.npcs = [
 F.enc = (x, y) => {
   if (y <= 5 && x >= 30) return ['kosan', 'yakkai', 'ensei'];
   if (x < 14) return ['gachikoi', 'gachikoi', 'ninchi', 'zaitaku'];
-  if (x < 27) return ['ninchi', 'kosan', 'dd'];
-  return flags.gou ? ['kosan', 'yakkai', 'kagijime'] : ['ninchi', 'kosan', 'kagijime'];
+  if (x < 27) return ['ninchi', 'kosan', 'dd', 'tsuihai'];
+  return flags.gou ? ['kosan', 'yakkai', 'kagijime', 'tsuihai'] : ['ninchi', 'kosan', 'kagijime', 'tsuihai'];
 };
 F.onStep = (x, y, t) => {
   if (t === 'A') return async () => { sfx('door'); await fadeOut(8); setMap('town', 11, 19, 'up'); toast('アキハバラ'); await fadeIn(8); };
@@ -1979,7 +1996,7 @@ V.chests = [
   { id: 'v2', x: 18, y: 1, gold: 120 },
   { id: 'v3', x: 18, y: 14, item: 'photo' },
 ];
-V.enc = () => ['kosan', 'mix', 'penra', 'seitan', 'sesshoku'];
+V.enc = () => ['kosan', 'mix', 'penra', 'seitan', 'sesshoku', 'onnawota'];
 V.encRate = 1 / 13;
 V.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 25, 16, 'down'); await fadeIn(8); };
 V.onStep = (x, y) => (!flags.gou && x === 10 && y === 2) ? gouEvent : null;
