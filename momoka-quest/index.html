@@ -2015,8 +2015,11 @@ async function talkMom() {
     await say('母「百花ちゃんの チケットが 買い占め？\n……ゆるせないわね。」');
     await say('母「じつはね、 母さんも 昔は\nアイドルの 追っかけ だったのよ。」');
     await say('母「毎週 劇場に かよって、\n一番前で ペンライトを 振ってた。」');
+    await say('母「父さんとは そこで 出会ったの。\nおそろいの ペンライトを\n片方ずつ 持ってね。」');
+    await say('母「……でも ある日、 父さんは\nいなくなった。 あんたが まだ\n小さい ころよ。」');
     await say('母「推しはね、 お金じゃ 買えない\nものを くれるの。 だから 転売の\n席なんて、 本当の 席じゃ ない。」');
-    await say('母「これ、 母さんが 使ってた\nペンライト。 もっていきなさい。」', { noWait: true });
+    await say('母「これは その おそろいの 片方。\nもう 片方は…… 父さんが\n持っていったわ。」');
+    await say('母「これ、 もっていきなさい。」', { noWait: true });
     await jingle('get'); playBgm(game.map.bgm);
     const mw = WEAPONS.findIndex(w => w.name === '母のペンライト');
     if (WEAPONS[mw].atk > WEAPONS[P.w].atk) { P.w = mw; await say('母のペンライトを 受けとった！\nヲタ太は 母のペンライトを そうびした！'); }
@@ -2381,6 +2384,9 @@ async function dafuruReveal() {
   await say('ダフール「定価の 10倍で 売るのさ。\nファン同士が いがみ合うほど\nチケットは 高く 売れるのだよ。」');
   await say('ダフール「お前に 渡した チケットも\n元は 私の 商品だ。\nよく 働いてくれたな。」');
   await say('キョヒール「おれは…… 利用されて\nいたのか……。」');
+  await say('ダフール「……ん？ お前……」');
+  await say('ダフールは 一瞬、 ヲタ太の 顔を\nじっと 見つめた。');
+  await say('ダフール「……ふん。 ただの ヲタクか。」');
   await say('ダフール「では 生誕祭の 日に。\n席が あれば だがな。\nハッハッハ！」');
   await fadeOut(12); flags.dafuruOnStage = false; flags.dafuru = true; await fadeIn(12);
   await say('キョヒール「……ヲタ太。 おれは もう\n同担を 拒否しない。」');
