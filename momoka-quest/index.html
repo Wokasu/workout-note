@@ -94,6 +94,7 @@ button {
 button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
 .name-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--dim); }
 .name-field[hidden] { display: none; }
+.err { margin: 0; font-size: 12px; line-height: 1.5; color: #f8c070; overflow-wrap: anywhere; }
 .code-panel textarea {
   font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 13px; line-height: 1.4;
   color: var(--ink); background: #000; border: 2px solid var(--shell-edge); border-radius: 6px;
@@ -172,6 +173,7 @@ button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
       <button id="code-close" type="button">とじる</button>
     </div>
   </div>
+  <p class="err" id="err" hidden></p>
   <div class="bar">
     <div class="keys">
       <span><kbd>↑↓←→</kbd> いどう</span>
@@ -541,7 +543,9 @@ function saveGame(force) {
     // the cloud copy is written on a change, at most every 20 s while walking, right away when forced
     if (json !== STORE.cloudJson && !STORE.writing && (force || now - STORE.cloudAt > 20000)) {
       STORE.writing = true; STORE.cloudAt = now;
-      STORE.cloud.set({ ...JSON.parse(json), savedAt: now })
+      let w;
+      try { w = STORE.cloud.set({ ...JSON.parse(json), savedAt: now }); } catch (e) { w = Promise.reject(e); }
+      w
         .then(() => { STORE.cloudJson = json; STORE.cloudData = { ...JSON.parse(json), savedAt: now }; },
           e => { if (e && ['invalid_argument', 'revoked', 'not_granted', 'capability_disabled', 'capability_removed', 'quota_exceeded'].includes(e.code)) STORE.cloudState = 'off'; })
         .finally(() => { STORE.writing = false; });
@@ -704,6 +708,9 @@ function noise(t0, d, v = 0.5) {
   const s = c.createBufferSource(), g = c.createGain(); s.buffer = buf; g.gain.value = v; s.connect(g); g.connect(SND.master); s.start(t0);
 }
 function sfx(name) {
+  try { sfxRaw(name); } catch (e) { console.error(e); }
+}
+function sfxRaw(name) {
   const c = SND.ctx; if (!c || !SND.on) return; const t = c.currentTime + 0.005;
   switch (name) {
     case 'cur': tone(1320, t, 0.035, 'square', 0.25); break;
@@ -856,6 +863,9 @@ function stopBgm() {
   }
 }
 function playBgm(name, force) {
+  try { playBgmRaw(name, force); } catch (e) { console.error(e); }
+}
+function playBgmRaw(name, force) {
   if (!force && name === SND.bgmName && SND.bgm) return;
   stopBgm(); SND.bgmName = name;
   if (!name) return;
@@ -878,7 +888,8 @@ function playBgm(name, force) {
       }
     }
   };
-  tick(); b.timer = setInterval(tick, 40); SND.bgm = b;
+  const safeTick = () => { try { tick(); } catch (e) { console.error(e); } };
+  safeTick(); b.timer = setInterval(safeTick, 40); SND.bgm = b;
 }
 // one-shot jingle; resolves when finished
 function jingle(name) {
@@ -998,9 +1009,23 @@ async function ask(text, items, o = {}) {
 const yesno = text => ask(text, ['はい', 'いいえ']).then(r => r === 0);
 function textW(s) { ctx.font = '12px ' + FONT; return ctx.measureText(typeof s === 'string' ? s : s.label).width; }
 
+const errBox = document.getElementById('err');
+let errShown = 0;
+function reportError(e) {
+  console.error(e);
+  if (errShown++ > 3) return;
+  errBox.hidden = false;
+  errBox.textContent = '不具合が起きたので 画面を立て直しました。くり返し起きるときは、この文をスクショして教えてください：' + (e && (e.stack || e.message) ? String(e.message || e).slice(0, 160) : String(e));
+}
+// put the screen back into a playable map state after a script failed half-way
+function recoverScreen() {
+  if (game.mode === 'battle') { game.mode = 'map'; battleS.e = null; }
+  game.fade = 0; game.flash = 0; game.shake = 0; game.caption = null; game.lights = false;
+  if (game.map) { try { playBgm(game.map.bgm); } catch (e) {} }
+}
 async function runScript(fn) {
   game.busy = true;
-  try { await fn(); } catch (e) { console.error(e); }
+  try { await fn(); } catch (e) { reportError(e); recoverScreen(); }
   finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; autosave(true); }
 }
 async function fadeOut(n = 12) { for (let i = 1; i <= n; i++) { game.fade = i / n; await framesWait(1); } }
@@ -2249,12 +2274,13 @@ function update() {
 }
 let last = 0, acc = 0;
 function loop(t) {
+  // schedule the next frame first, so one error can never stop the game
+  requestAnimationFrame(loop);
   if (!last) last = t;
   acc += Math.min(100, t - last); last = t;
   let n = 0;
-  while (acc >= 1000 / 60 && n < 4) { update(); acc -= 1000 / 60; n++; }
-  if (n) draw();
-  requestAnimationFrame(loop);
+  try { while (acc >= 1000 / 60 && n < 4) { update(); acc -= 1000 / 60; n++; } } catch (e) { acc = 0; reportError(e); }
+  try { if (n) draw(); } catch (e) { reportError(e); }
 }
 async function boot() {
   initSprites(); initTiles();
