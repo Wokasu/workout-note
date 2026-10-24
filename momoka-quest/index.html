@@ -17,7 +17,7 @@
   --shell-edge: #33264a;
   --ink: #efe9fb;
   --dim: #9d92b8;
-  --oshi: #a45ee8;
+  --oshi: #f4a6c6;
   --btn: #2b2040;
   --btn-press: #4a3570;
   --font: "DotGothic16", "Hiragino Kaku Gothic ProN", "MS Gothic", monospace;
@@ -118,10 +118,10 @@ button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
 .ab { display: flex; gap: 18px; align-items: center; transform: rotate(-12deg); }
 .ab button {
   width: 64px; height: 64px; border-radius: 50%;
-  background: var(--oshi); border-color: #c99af8; font-size: 20px;
+  background: var(--oshi); border-color: #ffd6e6; color: #3a1828; font-size: 20px;
 }
-.ab .b { background: #6a3f9a; margin-top: 34px; }
-.ab button.on { background: #d6b0ff; color: #1c1428; }
+.ab .b { background: #d77ea6; margin-top: 34px; }
+.ab button.on { background: #ffe4ef; color: #3a1828; }
 @media (pointer: coarse) {
   .console { --reserve: 270px; }
   .pad { display: flex; }
@@ -179,7 +179,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 // ------------------------------------------------------------
 const PAL = {
   k: '#120c18', w: '#f8f8f8', s: '#f8c8a0', S: '#d8986c', h: '#2a1c16',
-  p: '#9a4ad8', P: '#5a2490', l: '#d4aef8', b: '#3858c8', B: '#22307a',
+  p: '#f7b0cc', P: '#d47aa0', l: '#fde2ee', b: '#3858c8', B: '#22307a',
   g: '#a0a0ae', G: '#4a4a5a', r: '#d83838', R: '#8a1c1c', y: '#f8d838',
   n: '#8a5a30', e: '#3a9a3a', o: '#f89838', c: '#78d8f8', m: '#f890b8',
   H: '#f8f8f8', Y: '#d83838',
@@ -456,6 +456,14 @@ const SAVE_KEY = 'momoka-quest.save.v1';
 function saveGame() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ P, flags, map: game.mapId, x: player.x, y: player.y, dir: player.dir })); return true; } catch (e) { return false; }
 }
+let lastAuto = 0;
+// quiet save while walking around the map; never mid-event or during the ending
+function autosave() {
+  if (game.mode !== 'map' || game.busy || player.mv || flags.scene || !game.map) return;
+  saveGame(); lastAuto = game.frame;
+}
+window.addEventListener('pagehide', () => autosave());
+document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(); });
 function loadSave() {
   try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
 }
@@ -632,8 +640,13 @@ function wrap(text, maxW) {
   for (const para of String(text).split('\n')) {
     let line = '';
     for (const ch of para) {
-      if (ctx.measureText(line + ch).width > maxW && line && !'、。」』！？…ー）'.includes(ch)) { out.push(line); line = ch === ' ' ? '' : ch; }
-      else line += ch;
+      if (ctx.measureText(line + ch).width > maxW && line && !'、。」』！？…ー）'.includes(ch)) {
+        // break at the last space so words stay whole, like DQ text
+        const sp = line.lastIndexOf(' ');
+        if (ch === ' ') { out.push(line); line = ''; }
+        else if (sp > 0) { out.push(line.slice(0, sp)); line = line.slice(sp + 1) + ch; }
+        else { out.push(line); line = ch; }
+      } else line += ch;
     }
     out.push(line);
   }
@@ -667,7 +680,7 @@ function waitAuto(n) {
 async function say(text, o = {}) {
   msg.visible = true;
   if (!o.append) msg.lines = [];
-  const ls = wrap(text, msg.w - 24);
+  const ls = wrap(text, msg.w - 20);
   for (const t of ls) {
     if (msg.lines.length >= 3) {
       if (o.append) msg.lines.shift();
@@ -714,7 +727,7 @@ function textW(s) { ctx.font = '12px ' + FONT; return ctx.measureText(typeof s =
 async function runScript(fn) {
   game.busy = true;
   try { await fn(); } catch (e) { console.error(e); }
-  finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; }
+  finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; autosave(); }
 }
 async function fadeOut(n = 12) { for (let i = 1; i <= n; i++) { game.fade = i / n; await framesWait(1); } }
 async function fadeIn(n = 12) { for (let i = n - 1; i >= 0; i--) { game.fade = i / n; await framesWait(1); } }
@@ -728,7 +741,7 @@ async function caption(lines, hold = 0) {
 }
 function toast(text) { game.toast = { text, t: 120 }; }
 function burst(x, y, kind = 'heart', n = 8) {
-  for (let i = 0; i < n; i++) game.fx.push({ x: x + rnd(-6, 6), y: y + rnd(-4, 4), vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.7, life: 60 + rnd(0, 40), kind, col: ['#f890b8', '#9a4ad8', '#f8d838', '#d4aef8'][i % 4] });
+  for (let i = 0; i < n; i++) game.fx.push({ x: x + rnd(-6, 6), y: y + rnd(-4, 4), vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.7, life: 60 + rnd(0, 40), kind, col: ['#f890b8', '#f7b0cc', '#f8d838', '#fde2ee'][i % 4] });
 }
 
 // ------------------------------------------------------------
@@ -1009,8 +1022,8 @@ async function showStats() {
   const win = () => {
     drawWin(84, 8, 164, 208);
     rows.forEach(([k, v], i) => { txt(k, 96, 16 + i * 15); txt(String(v), 236 - textW(String(v)), 16 + i * 15); });
-    txt('ぶき ' + WEAPONS[P.w].name, 96, 168, '#d4aef8');
-    txt('ぼうぐ ' + ARMORS[P.a].name, 96, 186, '#d4aef8');
+    txt('ぶき ' + WEAPONS[P.w].name, 96, 168, '#f7b0cc');
+    txt('ぼうぐ ' + ARMORS[P.a].name, 96, 186, '#f7b0cc');
   };
   const hidden = menus.splice(0);
   extraWins.push(win);
@@ -1314,8 +1327,8 @@ async function showConcert() {
   await say('ヲタクたち「百花ーーーっ！！」');
   await say('♪ 〜 百花の 歌声が\n劇場いっぱいに ひびきわたる 〜 ♪');
   burst(19 * 16 + 8, 3 * 16, 'heart', 10);
-  await say('ヲタ太は 紫の ペンライトを\n全力で ふった！');
-  await say('百花「あっ！ いつも 一番前で\n紫の ペンライトを ふってくれてる 人だ！\nありがとう！」');
+  await say('ヲタ太は 両手の 薄ピンクの\nペンライトを 全力で ふった！');
+  await say('百花「あっ！ 一番前で 薄ピンクの\nペンライトを ふってくれてる 人だ！\nありがとう！」');
   await say('ヲタ太の むねが たかなった！');
   await say('百花「このあと 握手会場で\n握手会が あります！\nみんな 来てね〜！」');
   game.lights = false;
@@ -1324,7 +1337,7 @@ async function showConcert() {
 }
 async function venueEnter() {
   if (!flags.show) {
-    await say('スタッフ「握手会は まだ はじまって いないよ。\n先に アキハバラの 劇場で\n公演を 見てきたら？」');
+    await say('スタッフ「握手会は まだだよ。\n先に アキハバラの 劇場で\n公演を 見てきたら？」');
     await fadeOut(8); setMap('field', 25, 16, 'down'); await fadeIn(8);
     return;
   }
@@ -1335,12 +1348,12 @@ async function venueEnter() {
   await walk(st, 'L', 2); face(st, 'down');
   await say('スタッフ「同担拒否魔王 キョヒールが\nあらわれて 百花ちゃんを\nさらっていった！」');
   await say('スタッフ「『百花は おれだけの 推しだ！\n推し被りは ゆるさん！』とか いって…\n北東の 島にある 推し被りの塔へ！」');
-  await say('スタッフ「この会場も キョヒールの 手下に\n占拠されちまった。 奥にいる 手下の ボス\n『TOのゴウ』が 塔の 通行証を もってる！」');
+  await say('スタッフ「会場も キョヒールの 手下に\n占拠されちまった。 奥にいる ボス\n『TOのゴウ』が 通行証を もってる！」');
   await say('ヲタ太は 百花を 救うことを\nちかった！');
 }
 async function gouEvent() {
   await say('ゴウ「おれは TOの ゴウ！\nキョヒールさまの 右腕よ！」');
-  await say('ゴウ「百花ちゃんの いちばんの ヲタクは\nおれたちだ！ 推し被りは ここで\nひきかえせーっ！」');
+  await say('ゴウ「百花ちゃんの 一番の ヲタクは\nおれたちだ！ 推し被りは ここで\nひきかえせーっ！」');
   const r = await battle('gou');
   if (r !== 'win') return;
   flags.gou = true;
@@ -1375,7 +1388,7 @@ async function kyohiruEvent() {
   await walk(player, 'R', 1); face(player, 'up');
   await say('百花「ヲタ太くん、 たすけてくれて\nほんとうに ありがとう！」');
   burst(m.px + 8, m.py, 'heart', 10);
-  await say('百花「……じつはね、 気づいてたよ。\nいつも 一番前で 紫の ペンライト\nふってくれてたの。」');
+  await say('百花「……じつはね、 気づいてたよ。\nいつも 一番前で 薄ピンクの\nペンライト ふってくれてたの。」');
   await say('ヲタ太は 百花と いっしょに\nアキハバラへ 帰った。');
   await ending();
 }
@@ -1389,7 +1402,7 @@ async function ending() {
   await fadeIn(30);
   await say('百花「みんな、 しんぱい かけて\nごめんね！ ただいまーっ！」');
   await say('ヲタクたち「おかえりーーっ！！」');
-  await say('百花「今日は たすけてくれた ヲタ太くんと\nみんなへの ありがとうを こめて\n歌います！」');
+  await say('百花「今日は ヲタ太くんと\nみんなへの ありがとうを こめて\n歌います！」');
   burst(19 * 16 + 8, 3 * 16, 'note', 12);
   await say('キョヒール「百花ーっ！！\n…推し被りの みんなも\nいっしょに コールしようぜ！」');
   await say('ゴウ「TOとして 号令を かける！\nせーのっ！」');
@@ -1408,9 +1421,9 @@ async function ending() {
   await fadeIn(30);
   await say('卒業公演が おわった あとの 劇場……');
   await walk(player, 'U', 1);
-  await say('百花「ヲタ太くん、 来てくれて ありがとう。\n卒業公演も… やっぱり 一番前で\n紫の ペンライト ふってくれてたね。」');
+  await say('百花「ヲタ太くん、 ありがとう。\n卒業公演も… やっぱり 一番前で\n薄ピンクの ペンライト ふってたね。」');
   await say('百花「わたし、 もう アイドルじゃ ないから…」');
-  await say('百花「これからは ファンとして じゃなくて…\nヲタ太くんの となりに いても\nいいかな？」');
+  await say('百花「これからは ファンじゃなくて…\nヲタ太くんの となりに いても\nいいかな？」');
   while (true) {
     const r = await ask('ヲタ太は……', ['百花ちゃん、結婚してください！', 'これからも 推しつづけます！'], { x: 24, y: 92, w: 224, cancel: false });
     if (r === 0) break;
@@ -1442,7 +1455,7 @@ async function ending() {
   await say('キョヒール「推しの しあわせが\nおれの しあわせだ……！\nおめでとう！！」');
   await say('母「ヲタ太… りっぱに なって……」');
   burst(5 * 16, 2 * 16, 'heart', 20);
-  await say('紫の ペンライトが\nチャペルいっぱいに ゆれた。');
+  await say('薄ピンクの ペンライトが\nチャペルいっぱいに ゆれた。');
   closeMsg();
   await fadeOut(40);
   await caption(['こうして ヲタ太と 百花は', 'いつまでも しあわせに', 'くらしました。']);
@@ -1468,8 +1481,8 @@ T.npcs = [
       await say('百花「♪〜」\n（百花が ステージで リハーサルを している）');
     } },
   { id: 'fan1', x: 17, y: 5, spr: 'otaku1', show: () => flags.scene !== 'epilogue', talk: async () => {
-    if (!flags.show) await say('ヲタク「百花ちゃんの 推しカラーは 紫！\n今日も 紫の ペンライトで\n応援するぞ！」');
-    else if (!flags.kyohiru) await say('ヲタク「百花ちゃんが さらわれた なんて…\nおれたちの 百花ちゃんを\nとりもどしてくれ！」');
+    if (!flags.show) await say('ヲタク「百花ちゃんの 推しカラーは\n薄ピンク×薄ピンク！\n今日も 両手の ペンライトで 応援だ！」');
+    else if (!flags.kyohiru) await say('ヲタク「百花ちゃんが さらわれた…\nおれたちの 百花ちゃんを\nとりもどしてくれ！」');
     else await say('ヲタク「推し被り 上等！\nみんなで 百花ちゃんを 応援しようぜ！」');
   } },
   { id: 'fan2', x: 23, y: 5, spr: 'otaku3', show: () => flags.scene !== 'epilogue', talk: async () => {
@@ -1490,10 +1503,10 @@ T.npcs = [
     await say('ヲタク「Bボタン（Xキー）で メニュー。\n「スキル」の 推しコールで\nHPを かいふくできるぞ。」');
   } },
   { id: 'w3', x: 14, y: 18, spr: 'otaku1', wander: 1, talk: async () => {
-    await say('ヲタク「ショップの 推しカラーペンラは\nこうげき力が ぐっと あがるぞ。\n紫に ひかるんだ！」');
+    await say('ヲタク「推しカラーペンラは\nこうげき力が ぐっと あがるぞ。\n薄ピンクに ひかるんだ！」');
   } },
   { id: 'w4', x: 6, y: 15, spr: 'girl', wander: 1, talk: async () => {
-    await say('女の子「ネットカフェで 冒険の きろくを\nのこせるんだって。 お母さんに\nたのんでも いいみたい。」');
+    await say('女の子「冒険は 自動で きろくされるの。\nやめても タイトルの『つづきから』で\n再開 できるんだって！」');
   } },
 ];
 T.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 4, 8, 'down'); toast('フィールド'); await fadeIn(8); };
@@ -1609,7 +1622,7 @@ async function titleScreen() {
   game.fade = 1;
   await caption(['ここは 電気の街 アキハバラ。']);
   await caption(['ひとりの ヲタクが いた。', 'その名は ヲタ太。']);
-  await caption(['ヲタ太の 推しは', 'アイドル『伊藤百花』。', '推しカラーは 紫。']);
+  await caption(['ヲタ太の 推しは', 'アイドル『伊藤百花』。', '推しカラーは 薄ピンク×薄ピンク。']);
   await caption(['これは ヲタ太が 推しを 救い、', 'しあわせを つかむまでの', '物語である──']);
   playBgm('town');
   await fadeIn(30);
@@ -1698,7 +1711,7 @@ function drawMap() {
   if (game.lights) {
     ctx.save(); ctx.globalAlpha = 0.18 + 0.06 * Math.sin(game.frame / 8);
     const sx = 19 * TS - cx + 8, sy = 2 * TS - cy;
-    [['#f890b8', -40], ['#9a4ad8', 0], ['#78d8f8', 40]].forEach(([c, o], i) => {
+    [['#f7b0cc', -40], ['#fde2ee', 0], ['#f7b0cc', 40]].forEach(([c, o], i) => {
       ctx.fillStyle = c; ctx.beginPath(); const sw = Math.sin(game.frame / 20 + i) * 20;
       ctx.moveTo(sx + o, sy - 20); ctx.lineTo(sx + sw - 18, sy + 80); ctx.lineTo(sx + sw + 18, sy + 80); ctx.closePath(); ctx.fill();
     });
@@ -1743,14 +1756,14 @@ function drawBattle() {
 }
 function drawTitle() {
   ctx.fillStyle = '#0a0614'; ctx.fillRect(0, 0, W, H);
-  for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#d4aef8' : '#fff'; ctx.fillRect(x, y, 1, 1); } }
+  for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#fde2ee' : '#fff'; ctx.fillRect(x, y, 1, 1); } }
   // stage floor
-  ctx.fillStyle = '#2a1c48'; ctx.fillRect(0, 128, W, 96); ctx.fillStyle = '#5a2490'; ctx.fillRect(0, 128, W, 2);
-  ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#9a4ad8';
+  ctx.fillStyle = '#2a1c48'; ctx.fillRect(0, 128, W, 96); ctx.fillStyle = '#d47aa0'; ctx.fillRect(0, 128, W, 2);
+  ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#f7b0cc';
   ctx.beginPath(); ctx.moveTo(120, 0); ctx.lineTo(136, 0); ctx.lineTo(176, 140); ctx.lineTo(80, 140); ctx.fill(); ctx.restore();
   ctx.textAlign = 'center';
-  txt('MOMOKA QUEST', W / 2, 22, '#d4aef8', 10);
-  txt('百花クエスト', W / 2 + 2, 40, '#5a2490', 30);
+  txt('MOMOKA QUEST', W / 2, 22, '#fde2ee', 10);
+  txt('百花クエスト', W / 2 + 2, 40, '#c0507e', 30);
   txt('百花クエスト', W / 2, 38, '#fff', 30);
   txt('〜 推し被りの塔 〜', W / 2, 76, '#f8d838', 12);
   ctx.textAlign = 'left';
@@ -1766,7 +1779,7 @@ function drawEnd() {
   for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#f890b8' : '#fff'; ctx.fillRect(x, y + 20, 1, 1); } }
   ctx.textAlign = 'center';
   txt('THE END', W / 2, 40, '#fff', 30);
-  txt('百花クエスト 〜推し被りの塔〜', W / 2, 84, '#d4aef8', 12);
+  txt('百花クエスト 〜推し被りの塔〜', W / 2, 84, '#fde2ee', 12);
   const f = (game.frame >> 4) % 2;
   ctx.drawImage(SPR.hero.right[f], 92, 108, 32, 32);
   ctx.drawImage(SPR.momoka.down[f], 132, 108, 32, 32);
@@ -1813,7 +1826,7 @@ function update() {
   const keys = keyQ.splice(0);
   const free = [];
   for (const k of keys) { if (modal) modal(k); else free.push(k); }
-  if (game.mode === 'map' && game.map) { updateMap(); freeInput(free); }
+  if (game.mode === 'map' && game.map) { updateMap(); freeInput(free); if (game.frame - lastAuto > 300) autosave(); }
   for (let i = waiters.length - 1; i >= 0; i--) {
     const w = waiters[i];
     if (w.fn()) { waiters.splice(i, 1); w.res(); }
@@ -1836,7 +1849,7 @@ async function boot() {
   cv.focus();
   titleScreen();
 }
-window.__mq = { game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
+window.__mq = { wrap, game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
 boot();
 </script>
 <!--/BODY-->
