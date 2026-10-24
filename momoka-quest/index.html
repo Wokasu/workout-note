@@ -2279,7 +2279,10 @@ async function motoTO() {
 // which proofs the 同担拒否の結界 needs (grows as chapters are added)
 const BARRIER_KEYS = ['shoMinato', 'shoHaishin', 'shoSeitan'];
 const NEXT_HINT = { shoMinato: '（南西の 港町で 遠征王ゼンツウを\n倒して 証を 手に入れよう）', shoHaishin: '（北の 配信スタジオで ツイ廃王\nバズリを 倒して 証を 手に入れよう）', shoSeitan: '（東の 生誕祭の 準備会場で\n委員長シキリを 倒して 証を 手に入れよう）' };
-const barrierOpen = () => BARRIER_KEYS.every(k => P.items[k]);
+const PROOF_OF = { zentsu: 'shoMinato', buzzri: 'shoHaishin', shikiri: 'shoSeitan' };
+// a beaten 四天王 always leaves its proof behind (repairs saves that lost one)
+function repairProofs() { for (const b in PROOF_OF) if (flags[b] && !P.items[PROOF_OF[b]]) addItem(PROOF_OF[b]); }
+const barrierOpen = () => { repairProofs(); return BARRIER_KEYS.every(k => P.items[k]); };
 async function towerGate() {
   if (barrierOpen()) {
     if (!flags.barrierOpen) {
@@ -2325,11 +2328,6 @@ async function zentsuEvent() {
   const r = await battle('zentsu', { intro: '遠征王ゼンツウが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.zentsu = true;
-  await flashback({ title: 'ゼンツウの 記憶', who: 'zentsu', at: [19, 6], cast: STAGE(), body: async () => {
-    await say('ゼンツウが はじめて 遠征した 日。');
-    await say('百花「遠くから 来てくれたの？\nすっごく うれしい！」');
-    await say('ゼンツウ（この 笑顔の ためなら、\nどこへでも 行ける。）');
-  } });
   await say('ゼンツウ「…まいった。 遠征で\n鍛えた 足腰も、 推しへの 熱には\nかなわねえか。」');
   await say('ゼンツウ「おれはな、 全通の ために\n仕事も 辞めたんだ。 全国 どこへでも\n夜行バスで 通った。」');
   await say('ゼンツウ「でも 港町の 公演の 日、\n百花ちゃんは MCで 言ったんだ。\n『地元の みんなに 会えて うれしい』」');
@@ -2338,6 +2336,11 @@ async function zentsuEvent() {
   addItem('shoMinato'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 遠征の証を てにいれた！');
   await say('ゼンツウ「次の 四天王は ツイ廃王\nバズリ。 北の 配信スタジオから\n百花ちゃんの デマを 流してる。」');
+  await flashback({ title: 'ゼンツウの 記憶', who: 'zentsu', at: [19, 6], cast: STAGE(), body: async () => {
+    await say('ゼンツウが はじめて 遠征した 日。');
+    await say('百花「遠くから 来てくれたの？\nすっごく うれしい！」');
+    await say('ゼンツウ（この 笑顔の ためなら、\nどこへでも 行ける。）');
+  } });
 }
 async function buzzriEvent() {
   await say('バズリ「おっと、 噂の アキバの ヲタクか。\nいい ネタに なりそうだ。」');
@@ -2345,11 +2348,6 @@ async function buzzriEvent() {
   const r = await battle('buzzri', { intro: 'ツイ廃王バズリが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.buzzri = true;
-  await flashback({ title: 'バズリの 記憶', who: 'buzzri', at: [19, 7], cast: STAGE(), body: async () => {
-    await say('バズリが はじめて 公演を 見た 日。');
-    await say('百花「今日の こと、 たくさんの\n人に 伝えてくれたら うれしいな！」');
-    await say('バズリ（よし…… 百花ちゃんの 良さ、\nおれが 広めてみせる。）');
-  } });
   await say('バズリ「……最初は ただ 百花ちゃんの\n良さを 広めたかったんだ。」');
   await say('バズリ「布教垢を 作って、 公演の\n感想を 書いて…… 初めて バズった夜、\nうれしくて 眠れなかった。」');
   await say('バズリ「気づいたら 推しより、\nいいねの 数ばかり 見てた。\nデマでも バズれば よかったんだ……」');
@@ -2357,6 +2355,11 @@ async function buzzriEvent() {
   addItem('shoHaishin'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 配信の証を てにいれた！');
   await say('バズリ「最後の 四天王は 生誕委員長\nシキリ。 東の 準備会場で\n生誕祭の お金を 握ってる。」');
+  await flashback({ title: 'バズリの 記憶', who: 'buzzri', at: [19, 7], cast: STAGE(), body: async () => {
+    await say('バズリが はじめて 公演を 見た 日。');
+    await say('百花「今日の こと、 たくさんの\n人に 伝えてくれたら うれしいな！」');
+    await say('バズリ（よし…… 百花ちゃんの 良さ、\nおれが 広めてみせる。）');
+  } });
 }
 async function commentEpisode() {
   flags.commentEp = true;
@@ -2406,11 +2409,6 @@ async function shikiriEvent() {
   const r = await battle('shikiri', { intro: '生誕委員長シキリが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.shikiri = true;
-  await flashback({ title: 'シキリの 記憶', who: 'shikiri', at: [19, 6], cast: STAGE(), body: async () => {
-    await say('シキリが はじめて 生誕祭に\n参加した 日。');
-    await say('百花「こんなに お祝いして もらえる\nなんて…… みんな、 ありがとう！」');
-    await say('シキリ（来年は おれが、 もっと\nすごい 生誕祭に してみせる。）');
-  } });
   await say('シキリ「……おれは、 仕切ることでしか\n推しと 関われなかった。」');
   await say('シキリ「毎年 生誕委員長を やってきた。\n段取りも 集金も 完璧に。\nでも 百花ちゃんは……」');
   await say('シキリ「委員長が 誰かも 知らない。\nだから キョヒールに 『一番 近くに\nいさせてやる』と 言われて……」');
@@ -2418,6 +2416,11 @@ async function shikiriEvent() {
   await say('シキリ「……これを もっていけ。\n最後の 証だ。」', { noWait: true });
   addItem('shoSeitan'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 生誕の証を てにいれた！\n四天王の 証が 3つ そろった！');
+  await flashback({ title: 'シキリの 記憶', who: 'shikiri', at: [19, 6], cast: STAGE(), body: async () => {
+    await say('シキリが はじめて 生誕祭に\n参加した 日。');
+    await say('百花「こんなに お祝いして もらえる\nなんて…… みんな、 ありがとう！」');
+    await say('シキリ（来年は おれが、 もっと\nすごい 生誕祭に してみせる。）');
+  } });
 }
 async function alliesArrive() {
   flags.allies = true;
@@ -2455,14 +2458,14 @@ async function hashiraEvent() {
   const r = await battle('hashira', { intro: '最前管理団長ハシラが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.hashira = true;
+  await say('ハシラ「……列を 守るのに 必死で、\n推しの 顔を 見る ひまも\nなかったのかも しれん。」');
+  await say('ハシラ「行け。 最上階で キョヒールが\n待っている。」');
+  const h = npcById('hashira'); await walk(h, 'L', 1); face(h, 'down');
   await flashback({ title: 'ハシラの 記憶', who: 'hashira', at: [19, 4], cast: STAGE(), body: async () => {
     await say('ハシラが はじめて 最前に 立った 日。');
     await say('百花「わあ、 近い！\nいつも 応援 ありがとう！」');
     await say('ハシラ（この 笑顔を、 いちばん\n近くで 守りたい。）');
   } });
-  await say('ハシラ「……列を 守るのに 必死で、\n推しの 顔を 見る ひまも\nなかったのかも しれん。」');
-  await say('ハシラ「行け。 最上階で キョヒールが\n待っている。」');
-  const h = npcById('hashira'); await walk(h, 'L', 1); face(h, 'down');
 }
 async function gradEpisode() {
   flags.gradEp = true;
@@ -2521,11 +2524,6 @@ async function gouEvent() {
   const r = await battle('gou');
   if (r !== 'win') return;
   flags.gou = true;
-  await flashback({ title: 'ゴウの 記憶', who: 'gou', at: [19, 4], cast: STAGE(), body: async () => {
-    await say('ゴウが はじめて 握手した 日。');
-    await say('百花「来てくれて ありがとう！\nまた 来てね！」');
-    await say('ゴウ（……また 来よう。 何度でも。\nいつか 名前を 呼んでもらえる\nその日まで。）');
-  } });
   await say('ゴウ「ぐっ… なんて 熱い 推しへの 愛だ…」');
   await say('ゴウ「おれも わかってたんだ。\n推しを 独り占め するなんて\nヲタクの 道に はずれてるって…」');
   await say('ゴウ「…おれな、 TOなのに 一度も\n百花ちゃんに 名前を\n呼ばれたことが ないんだ。」');
@@ -2534,6 +2532,11 @@ async function gouEvent() {
   await say('ゴウ「これは 推し被りの塔への 通行証だ。\n百花ちゃんを… たのんだぞ！」', { noWait: true });
   addItem('pass'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 通行証を てにいれた！');
+  await flashback({ title: 'ゴウの 記憶', who: 'gou', at: [19, 4], cast: STAGE(), body: async () => {
+    await say('ゴウが はじめて 握手した 日。');
+    await say('百花「来てくれて ありがとう！\nまた 来てね！」');
+    await say('ゴウ（……また 来よう。 何度でも。\nいつか 名前を 呼んでもらえる\nその日まで。）');
+  } });
 }
 async function bridgeTalk() {
   if (!P.items.pass) { await say('ヲタク「この先は 推し被りの塔。\nキョヒールさまの 許可が ないと\nだれも 通さないぜ！」'); return; }
@@ -3242,12 +3245,15 @@ async function flashback({ title, who = 'hero', at = [19, 7], cast = [], body })
   setMap('town', at[0], at[1], 'up');
   cast.forEach(([id, x, y, spr, dir]) => game.npcs.push({ id, x, y, px: x * TS, py: y * TS, hx: x, hy: y, spr, fixed: 1, fb: 1, dir: dir || 'down', mv: null, wt: 999 }));
   playBgm('title', true); game.lights = true;
-  await fadeIn(20);
-  await say(`── ${title} ──`);
-  await body();
-  await fadeOut(20);
-  game.flashback = false; game.heroSpr = null; game.lights = false; cv.style.filter = '';
-  setMap(back.id, back.x, back.y, back.dir); playBgm(bgm);
+  try {
+    await fadeIn(20);
+    await say(`── ${title} ──`);
+    await body();
+    await fadeOut(20);
+  } finally {
+    game.flashback = false; game.heroSpr = null; game.lights = false; cv.style.filter = '';
+    setMap(back.id, back.x, back.y, back.dir); playBgm(bgm);
+  }
   await fadeIn(20);
 }
 const STAGE = (x = 19) => [['fbMomoka', x, 3, 'momoka']];
@@ -3289,6 +3295,7 @@ async function resume(save) {
   if (game.fade < 1) await fadeOut(20);
   newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
   if (flags.kidnap) flags.skMatome = true;
+  repairProofs();
   game.mode = 'map';
   setMap(save.map, save.x, save.y, save.dir);
   toast(game.map.name);
