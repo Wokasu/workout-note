@@ -487,10 +487,10 @@ const TILES = {
   'o': { solid: 1, d: p => { carpet(p); p(6, 9, 4, 6, '#e8e8f0'); p(3, 2, 10, 7, '#3a9a3a'); [[4, 3, '#f8f8f8'], [8, 2, '#f890b8'], [10, 5, '#f8f8f8'], [5, 6, '#f890b8']].forEach(([x, y, c]) => p(x, y, 3, 3, c)); } },
   'a': { solid: 1, d: p => { carpet(p); p(1, 4, 14, 10, '#f0f0f8'); p(1, 4, 14, 2, '#f8d838'); p(7, 0, 2, 5, '#f8d838'); p(5, 1, 6, 1, '#f8d838'); } },
   // アキハバラ landmarks
-  'S': { solid: 1, anim: 1, d: (p, g, f) => { p(0, 0, 16, 16, '#2a1c16'); p(0, 3, 16, 10, '#c82838'); p(0, 4, 16, 8, '#f8f0e0'); for (let x = f ? 1 : 3; x < 16; x += 4) { p(x, 1, 2, 1, '#f8d838'); p(x, 14, 2, 1, '#f8d838'); } p(3, 6, 2, 4, '#c82838'); p(7, 6, 2, 4, '#d47aa0'); p(11, 6, 2, 4, '#c82838'); } },
-  'M': { solid: 1, d: p => { p(0, 0, 16, 16, '#f7b0cc'); for (let x = 0; x < 16; x += 4) { p(x, 0, 2, 2, '#ffffff'); p(x + 2, 14, 2, 2, '#ffffff'); } p(0, 2, 16, 1, '#ffffff'); p(0, 13, 16, 1, '#ffffff'); p(5, 5, 2, 2, '#d83868'); p(9, 5, 2, 2, '#d83868'); p(5, 7, 6, 2, '#d83868'); p(6, 9, 4, 1, '#d83868'); p(7, 10, 2, 1, '#d83868'); } },
-  'P': { solid: 1, d: p => { p(0, 0, 16, 16, '#3a2a24'); p(0, 2, 16, 12, '#f8d838'); p(0, 2, 16, 1, '#fff6a0'); p(0, 13, 16, 1, '#a88a20'); p(2, 5, 3, 6, '#d83838'); p(6, 5, 3, 6, '#3858c8'); p(10, 5, 4, 2, '#d83838'); p(10, 9, 4, 2, '#d83838'); } },
-  'g': { solid: 1, d: p => { p(0, 0, 16, 16, '#9a9aa8'); [[1, '#d83838'], [9, '#3858c8']].forEach(([x, c]) => { p(x, 1, 6, 14, c); p(x + 1, 2, 4, 5, '#d8f0ff'); p(x + 2, 3, 1, 1, '#f8d838'); p(x + 3, 5, 1, 1, '#f890b8'); p(x + 1, 9, 4, 2, '#f8f8f8'); p(x + 2, 12, 2, 2, '#2a1c16'); }); } },
+  'S': { solid: 1, d: p => { p(0, 0, 16, 16, '#5a4038'); p(0, 3, 16, 10, '#c8a0a8'); p(0, 4, 16, 8, '#f4ece4'); for (let x = 3; x < 16; x += 4) { p(x, 1, 2, 1, '#e8d8a0'); p(x, 14, 2, 1, '#e8d8a0'); } p(5, 7, 6, 2, '#c890a8'); } },
+  'M': { solid: 1, d: p => { p(0, 0, 16, 16, '#f2c8d6'); for (let x = 0; x < 16; x += 4) { p(x, 0, 2, 2, '#ffffff'); p(x + 2, 14, 2, 2, '#ffffff'); } p(0, 2, 16, 1, '#ffffff'); p(0, 13, 16, 1, '#ffffff'); p(5, 5, 2, 2, '#c87890'); p(9, 5, 2, 2, '#c87890'); p(5, 7, 6, 2, '#c87890'); p(6, 9, 4, 1, '#c87890'); p(7, 10, 2, 1, '#c87890'); } },
+  'P': { solid: 1, d: p => { p(0, 0, 16, 16, '#5a4a40'); p(0, 2, 16, 12, '#f0e6d0'); p(0, 2, 16, 1, '#fbf6ea'); p(0, 13, 16, 1, '#c8b898'); p(3, 6, 10, 1, '#8a7a6a'); p(3, 9, 7, 1, '#8a7a6a'); } },
+  'g': { solid: 1, d: p => { p(0, 0, 16, 16, '#9a9aa8'); [[1, '#c08088'], [9, '#8090b0']].forEach(([x, c]) => { p(x, 1, 6, 14, c); p(x + 1, 2, 4, 5, '#d8f0ff'); p(x + 2, 3, 1, 1, '#f8d838'); p(x + 3, 5, 1, 1, '#f890b8'); p(x + 1, 9, 4, 2, '#f8f8f8'); p(x + 2, 12, 2, 2, '#2a1c16'); }); } },
   ' ': { solid: 1, d: p => p(0, 0, 16, 16, '#000000') },
 };
 const tileImg = {};
@@ -502,9 +502,12 @@ function initTiles() {
     themeImg[th] = {}; themeDeco[th] = {};
     for (const k in THEMES[th].tiles) { const f = THEMES[th].tiles[k]; themeImg[th][k] = [mkTile((p, g) => f(p, g, 0)), THEMES[th].anim && THEMES[th].anim[k] ? mkTile((p, g) => f(p, g, 1)) : null]; }
     for (const k in THEMES[th].deco || {}) themeDeco[th][k] = THEMES[th].deco[k].map(f => [mkTile((p, g) => f(p, g, 0)), mkTile((p, g) => f(p, g, 1))]);
+    if (THEMES[th].accent) themeDeco[th].accent = THEMES[th].accent.map(f => [mkTile((p, g) => f(p, g, 0)), null]);
   }
 }
 // per-dungeon looks: replacement floor/wall tiles plus occasional decorated variants
+// calm building face: one colour per block, a regular grid of windows
+function akibaBldg(p, base, shade) { p(0, 0, 16, 16, base); p(0, 15, 16, 1, shade); [[2, 2], [9, 2], [2, 9], [9, 9]].forEach(([x, y]) => { p(x, y, 5, 4, '#56606e'); p(x, y, 5, 1, '#7a8494'); }); }
 function checker(p, a, b, n = 8) { for (let y = 0; y < 16; y += n) for (let x = 0; x < 16; x += n) p(x, y, n, n, ((x + y) / n) % 2 ? b : a); }
 const THEMES = {
   // 握手会場: bright event hall, white partitions with a pink stripe
@@ -564,21 +567,18 @@ const THEMES = {
   },
   // アキハバラ: paved sidewalks, roads, and sign-covered buildings instead of forest
   akiba: {
-    rate: { T: 1 },
+    rate: { T: 1 }, block: 3,
     tiles: {
-      '.': p => { p(0, 0, 16, 16, '#b8b0a4'); p(0, 7, 16, 1, '#9a9288'); p(0, 15, 16, 1, '#9a9288'); p(7, 0, 1, 7, '#9a9288'); p(15, 8, 1, 7, '#9a9288'); p(1, 1, 6, 1, '#c8c0b4'); p(8, 9, 7, 1, '#c8c0b4'); },
-      ',': p => { p(0, 0, 16, 16, '#8a8a92'); p(1, 1, 14, 14, '#5a3a20'); [[3, 3, '#f7b0cc'], [9, 4, '#ffffff'], [5, 9, '#ffffff'], [11, 10, '#f7b0cc']].forEach(([x, y, c]) => { p(x - 1, y + 1, 4, 2, '#3a8a3a'); p(x, y, 2, 2, c); }); },
-      '=': p => { p(0, 0, 16, 16, '#4a4a52'); p(0, 0, 16, 1, '#5a5a62'); p(3, 6, 4, 1, '#56565e'); p(10, 12, 3, 1, '#3e3e46'); },
-      T: p => { p(0, 0, 16, 16, '#7a7884'); p(0, 15, 16, 1, '#4a4852'); [[2, 2], [9, 2], [2, 9], [9, 9]].forEach(([x, y]) => { p(x, y, 5, 4, '#3a4a6a'); p(x, y, 5, 1, '#8aa0c8'); }); },
+      '.': p => { p(0, 0, 16, 16, '#bdb6ac'); p(0, 7, 16, 1, '#ada69c'); p(0, 15, 16, 1, '#ada69c'); p(7, 0, 1, 7, '#ada69c'); p(15, 8, 1, 7, '#ada69c'); },
+      ',': p => { p(0, 0, 16, 16, '#9a968e'); p(1, 1, 14, 14, '#6a5038'); [[3, 3, '#f7d4e2'], [9, 4, '#f4f0ea'], [5, 9, '#f4f0ea'], [11, 10, '#f7d4e2']].forEach(([x, y, c]) => { p(x - 1, y + 1, 4, 2, '#5a8a5a'); p(x, y, 2, 2, c); }); },
+      '=': p => { p(0, 0, 16, 16, '#6a6a70'); p(0, 0, 16, 1, '#747479'); },
+      T: p => akibaBldg(p, '#8e8c92', '#76747c'),
     },
     deco: {
-      T: [p => THEMES.akiba.tiles.T(p),
-        (p, g, f) => { p(0, 0, 16, 16, '#5a5866'); p(0, 15, 16, 1, '#3a3842'); p(5, 0, 6, 16, '#c82838'); for (let y = 2; y < 15; y += 4) p(7, y, 2, 2, f ? '#ffffff' : '#f8d838'); p(1, 3, 3, 3, '#3a4a6a'); p(12, 9, 3, 3, '#3a4a6a'); },
-        p => { p(0, 0, 16, 16, '#2a5aa8'); p(0, 3, 16, 5, '#f8d838'); p(2, 4, 3, 3, '#2a5aa8'); p(6, 4, 1, 3, '#2a5aa8'); p(8, 4, 3, 1, '#2a5aa8'); p(8, 6, 3, 1, '#2a5aa8'); p(12, 4, 2, 3, '#d83838'); p(1, 10, 6, 4, '#a8d8f8'); p(9, 10, 6, 4, '#a8d8f8'); p(0, 15, 16, 1, '#1a3a78'); },
-        p => { p(0, 0, 16, 16, '#f0c8dc'); p(2, 1, 12, 12, '#ffffff'); p(3, 2, 10, 10, '#f7b0cc'); p(5, 3, 6, 6, '#f8d8c0'); p(4, 2, 8, 3, '#5a3418'); p(4, 5, 1, 5, '#5a3418'); p(11, 5, 1, 5, '#5a3418'); p(6, 6, 1, 1, '#3a2a52'); p(9, 6, 1, 1, '#3a2a52'); p(7, 8, 2, 1, '#d83868'); p(0, 15, 16, 1, '#b888a0'); },
-        (p, g, f) => { p(0, 0, 16, 16, '#24222c'); p(1, 2, 14, 4, '#14121a'); const c = f ? '#58f878' : '#28a848'; p(2, 3, 2, 2, c); p(5, 3, 2, 2, '#f8d838'); p(8, 3, 2, 2, c); p(11, 3, 2, 2, '#f890b8'); p(2, 9, 5, 5, '#3a4a6a'); p(9, 9, 5, 5, '#3a4a6a'); p(0, 15, 16, 1, '#0e0c12'); },
-        p => { p(0, 0, 16, 16, '#d8c8a8'); p(0, 15, 16, 1, '#a89878'); p(1, 1, 14, 5, '#3a2a52'); p(2, 2, 4, 3, '#f890b8'); p(7, 2, 3, 3, '#78d8f8'); p(11, 2, 3, 3, '#f8d838'); p(2, 9, 5, 4, '#3a4a6a'); p(9, 9, 5, 4, '#3a4a6a'); }],
+      T: [p => akibaBldg(p, '#8e8c92', '#76747c'), p => akibaBldg(p, '#a89e90', '#8e8476'), p => akibaBldg(p, '#848a96', '#6c7280')],
     },
+    // occasional small pale-pink shop sign on a building
+    accent: [p => { akibaBldg(p, '#8e8c92', '#76747c'); p(2, 1, 12, 5, '#f4f0ea'); p(2, 1, 12, 1, '#e8b4c8'); p(4, 3, 8, 1, '#a07888'); }],
   },
   // 闇チケット市場: wet asphalt, bare concrete, neon signs and ticket stalls
   market: {
@@ -3447,12 +3447,19 @@ function drawMap() {
   for (let ty = ty0; ty <= ty0 + Math.ceil(H / TS); ty++) for (let tx = tx0; tx <= tx0 + Math.ceil(W / TS); tx++) {
     const ch = tileAt(m, tx, ty); let im = (m.theme && themeImg[m.theme][ch]) || tileImg[ch] || tileImg[' '];
     const deco = m.theme && themeDeco[m.theme][ch];
-    if (deco && tx >= -1 && ty >= -1 && tx <= m.w && ty <= m.h) {
+    if (deco && (THEMES[m.theme].block || (tx >= -1 && ty >= -1 && tx <= m.w && ty <= m.h))) {
       // decorate roughly one tile in seven; wall decorations only where the wall faces a walkable tile
       const hsh = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
       const rate = (THEMES[m.theme].rate || {})[ch] || 7;
       const below = tileAt(m, tx, ty + 1), face = rate === 1 || !TILES[ch].solid || (TILES[below] && !TILES[below].solid);
-      if (face && hsh % rate === 0) im = deco[(hsh >>> 3) % deco.length];
+      const bk = THEMES[m.theme].block;
+      if (bk) {
+        // whole blocks share a colour so the street reads as buildings, not noise
+        const bh = ((Math.floor(tx / bk) * 73856093) ^ (Math.floor(ty / bk) * 19349663)) >>> 0;
+        im = deco[(bh >>> 3) % deco.length];
+        const acc = themeDeco[m.theme].accent, below2 = TILES[tileAt(m, tx, ty + 1)];
+        if (acc && below2 && !below2.solid && hsh % 5 === 0) im = acc[0];
+      } else if (face && hsh % rate === 0) im = deco[(hsh >>> 3) % deco.length];
     }
     ctx.drawImage((tf && im[1]) ? im[1] : im[0], tx * TS - cx, ty * TS - cy);
   }
