@@ -527,7 +527,9 @@ function audioWake() {
     try {
       SND.ctx = new (window.AudioContext || window.webkitAudioContext)();
       SND.master = SND.ctx.createGain(); SND.master.gain.value = SND.on ? 0.14 : 0;
-      SND.master.connect(SND.ctx.destination);
+      const comp = SND.ctx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.15;
+      SND.master.connect(comp); comp.connect(SND.ctx.destination);
       if (SND.pending) { const n = SND.pending; SND.pending = null; playBgm(n); }
     } catch (e) { SND.ctx = null; }
   }
@@ -610,6 +612,7 @@ function voice(f, t0, d, ins, dest) {
     o.frequency.setValueAtTime(f, t0); o.connect(g); o.start(t0); o.stop(end + 0.12);
   }
 }
+const DRUM_LEVEL = 1.9;
 function drumHit(kind, t0, dest) {
   const c = SND.ctx; if (!c) return;
   if (!SND.noiseBuf) {
@@ -617,7 +620,7 @@ function drumHit(kind, t0, dest) {
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     SND.noiseBuf = b;
   }
-  const env = (node, v, len) => { const g = c.createGain(); g.gain.setValueAtTime(v, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + len); node.connect(g); g.connect(dest); };
+  const env = (node, v, len) => { const g = c.createGain(); g.gain.setValueAtTime(v * DRUM_LEVEL, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + len); node.connect(g); g.connect(dest); };
   const nz = (type, freq, v, len) => {
     const s = c.createBufferSource(); s.buffer = SND.noiseBuf;
     const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = freq; s.connect(fl);
@@ -625,13 +628,14 @@ function drumHit(kind, t0, dest) {
   };
   if (kind === 'K') {
     const o = c.createOscillator(); o.frequency.setValueAtTime(150, t0); o.frequency.exponentialRampToValueAtTime(42, t0 + 0.12);
-    env(o, 0.9, 0.18); o.start(t0); o.stop(t0 + 0.2);
+    env(o, 1, 0.22); o.start(t0); o.stop(t0 + 0.24);
+    nz('highpass', 3000, 0.35, 0.012); // beater click for punch
   } else if (kind === 'S') {
-    nz('bandpass', 1700, 0.55, 0.14);
+    nz('bandpass', 1700, 0.7, 0.16);
     const o = c.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(200, t0); o.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
-    env(o, 0.35, 0.08); o.start(t0); o.stop(t0 + 0.1);
-  } else if (kind === 'H') nz('highpass', 7000, 0.16, 0.04);
-  else if (kind === 'O') nz('highpass', 6000, 0.16, 0.2);
+    env(o, 0.45, 0.09); o.start(t0); o.stop(t0 + 0.11);
+  } else if (kind === 'H') nz('highpass', 7000, 0.2, 0.045);
+  else if (kind === 'O') nz('highpass', 6000, 0.2, 0.2);
 }
 // song-writing helpers: rep repeats a phrase; bass8 pumps a root in octaves for one bar; arp16 is a 16th-note arpeggio bar
 const rep = (str, n) => Array(n).fill(str).join(' ');
