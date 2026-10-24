@@ -265,6 +265,11 @@ const TPL = {
     '.GGkSSSSSSSSkGG.', 'GrrkPPPwwPPPkrrG', 'GrrksPPwwPPskrrG', 'GrrksPPyyPPskrrG',
     'GrrrkPPPPPPkrrrG', 'GGrrkBBBBBBkrrGG', 'GGGrkBBkkBBkrGGG', 'GGGGkkk..kkkGGGG'],
     alt: { 15: 'GGGGkkkkkkkkGGGG' } },
+  memo: { rows: [
+    '................', '................', '................', '................',
+    '................', '.....kkkkkkk....', '.....kwwwwwk....', '.....kwGGGwk....',
+    '.....kwwwwwk....', '.....kwGGwwk....', '.....kwwwwwk....', '.....kkkkkkk....',
+    '................', '................', '................', '................'] },
   chest: { rows: [
     '................', '................', '................', '...kkkkkkkkkk...',
     '..knnnnnnnnnnk..', '..knyyyyyyyynk..', '..knnnnnnnnnnk..', '..kkkkkyykkkkk..',
@@ -358,6 +363,11 @@ function initSprites() {
     comp: frames('hero_down', { ...NOBAND, p: '#c8a040', P: '#7a5a18', h: 'n' })[0],
     lift: frames('fat', { p: '#e05a1a', P: '#8a2a08', H: 'y', Y: 'r' })[0],
   };
+  SPR.e.hagashi = frames('hero_down', { p: 'k', P: 'k', H: 'y', Y: 'k', w: 'y' })[0];
+  SPR.e.hashira = frames('fat', { p: 'k', P: 'y', H: 'y', Y: 'k', w: 'y' })[0];
+  SPR.hashira = charSet('fat', { p: 'k', P: 'y', H: 'y', Y: 'k', w: 'y' });
+  SPR.memo = { down: [buildSprite(TPL.memo.rows), buildSprite(TPL.memo.rows)] };
+  SPR.memo.up = SPR.memo.left = SPR.memo.right = SPR.memo.down;
   SPR.e.flasta = frames('hero_down', { ...NOBAND, p: 'm', P: '#b85a88', w: 'w' })[0];
   SPR.e.yosegaki = frames('hero_down', { p: 'y', P: 'o', H: 'w', Y: 'm' })[0];
   SPR.e.tshirt = frames('fat', { ...NOBAND, p: 'w', P: 'g', w: 'm', y: 'm' })[0];
@@ -383,6 +393,8 @@ function initSprites() {
   prop('comp', [[13, 9, 3, 5, 'w'], [13, 9, 3, 1, 'm']]); // photo binder
   prop('tsuihai', [[13, 9, 3, 4, 'k'], [14, 10, 1, 2, 'c']]); // phone
   prop('onnawota', [[3, 4, 10, 2, 'k'], [4, 4, 2, 1, 'G'], [10, 4, 2, 1, 'G']]); // sunglasses
+  prop('hagashi', [[4, 9, 8, 2, 'y']]); // STAFF band
+  prop('hashira', [[1, 8, 14, 1, 'y'], [6, 0, 4, 1, 'y']]);
   prop('flasta', [[12, 6, 4, 4, 'm'], [13, 7, 2, 2, 'w'], [13, 10, 2, 5, 'e']]); // flower stand
   prop('yosegaki', [[11, 8, 5, 6, 'w'], [12, 9, 3, 1, 'm'], [12, 11, 2, 1, 'b']]); // colour board
   prop('shikiri', [[2, 9, 12, 1, 'r'], [12, 9, 4, 5, 'n'], [13, 10, 2, 3, 'w']]); // sash + clipboard
@@ -436,6 +448,11 @@ const TILES = {
   'B': { d: p => { p(0, 0, 16, 16, '#2848c8'); p(2, 0, 12, 16, '#b07838'); for (let y = 0; y < 16; y += 4) p(2, y, 12, 1, '#7a4a20'); p(1, 0, 1, 16, '#5a3418'); p(14, 0, 1, 16, '#5a3418'); } },
   'A': { d: p => { grass(p); p(1, 6, 5, 9, '#c8c8d0'); p(6, 2, 5, 13, '#9a9ab0'); p(11, 7, 4, 8, '#d8a0c8'); [[2, 8], [2, 11], [7, 4], [7, 7], [7, 10], [12, 9], [12, 12]].forEach(([x, y]) => p(x, y, 2, 1, '#f8f070')); p(8, 4, 2, 1, '#f890b8'); p(0, 15, 16, 1, '#2f8a2c'); } },
   'V': { d: p => { grass(p); p(2, 7, 12, 8, '#e8e8f0'); p(4, 4, 8, 3, '#e8e8f0'); p(6, 3, 4, 1, '#e8e8f0'); p(2, 13, 12, 2, '#9a9ab0'); p(7, 11, 2, 4, '#5a2490'); p(8, 0, 1, 4, '#4a4a5a'); p(9, 0, 3, 2, '#9a4ad8'); } },
+  ...Object.fromEntries(['1', '2', '3', '4'].map(n => [n, { d: p => {
+    stone(p); p(2, 0, 12, 16, '#6a4020'); p(3, 1, 10, 14, '#8a5a30'); p(11, 8, 1, 2, '#f8d838');
+    const D = { 1: ['.#.', '##.', '.#.', '.#.', '###'], 2: ['##.', '..#', '.#.', '#..', '###'], 3: ['##.', '..#', '.#.', '..#', '##.'], 4: ['#.#', '#.#', '###', '..#', '..#'] }[n];
+    D.forEach((row, y) => [...row].forEach((c, x) => { if (c === '#') p(6 + x, 4 + y, 1, 1, '#f8f8f8'); }));
+  } }])),
   'J': { d: p => { grass(p); p(2, 5, 12, 10, '#e8d8c8'); p(1, 4, 14, 1, '#d47aa0'); p(7, 11, 2, 4, '#5a3418'); [[3, 7], [11, 7]].forEach(([x, y]) => { p(x, y, 3, 3, '#f7b0cc'); p(x + 1, y + 1, 1, 1, '#f8f8f8'); }); p(4, 1, 8, 3, '#f8f8f8'); p(5, 2, 6, 1, '#d47aa0'); } },
   'Y': { d: p => { grass(p); p(4, 3, 8, 12, '#9a9ab0'); p(4, 3, 8, 1, '#c8c8d8'); p(7, 0, 2, 3, '#4a4a5a'); p(7, 0, 2, 1, '#d83838'); [[5, 5], [9, 5], [5, 8], [9, 8]].forEach(([x, y]) => p(x, y, 2, 2, '#38a8f8')); p(7, 12, 2, 3, '#120c18'); } },
   'H': { d: p => { grass(p); p(0, 11, 16, 5, '#2848c8'); p(2, 4, 5, 7, '#e8d8b0'); p(1, 3, 7, 1, '#c83838'); p(9, 6, 5, 5, '#e8d8b0'); p(8, 5, 7, 1, '#3858c8'); p(3, 7, 2, 2, '#4a4a5a'); p(10, 8, 2, 2, '#4a4a5a'); p(5, 12, 7, 2, '#8a5a30'); p(8, 9, 1, 3, '#f8f8f8'); } },
@@ -583,6 +600,10 @@ const ENEMIES = {
     moves: [[3, 'atk'], [1, 'expose', 0, '晒しポスト！\nヲタ太の 写真が 拡散された！']], drop: ['drink', 0.1] },
   onnawota: { name: '女ヲタヲタ', hp: 75, atk: 17, def: 8, agi: 9, exp: 22, gold: 18,
     moves: [[3, 'atk'], [1, 'flee', 0, '「女ヲタ 見つけた！」と\n追いかけて いなくなった！']], drop: ['photo', 0.06] },
+  hagashi: { name: '剥がしの鬼', hp: 190, atk: 40, def: 18, agi: 18, exp: 110, gold: 70,
+    moves: [[3, 'atk'], [2, 'cancel', 0, '「はい 時間です！」']], drop: ['drink2', 0.12] },
+  hashira: { name: '最前管理団長ハシラ', short: 'ハシラ', hp: 700, atk: 44, def: 26, agi: 15, exp: 700, gold: 500, boss: 1,
+    moves: [[3, 'atk'], [2, 'fortify', 1.5, '最前防衛ライン！\n守りを 固めた！'], [1, 'mult', 1.6, '最前を 死守してきた！'], [1, 'multi', 0.7, '管理団 全員で 押し返してきた！', 3]] },
   flasta: { name: 'フラスタ職人', hp: 170, atk: 34, def: 18, agi: 9, exp: 95, gold: 70,
     moves: [[3, 'atk'], [1, 'fortify', 1.6, 'フラスタの 陰に かくれた！\n守りが ぐんと あがった！']], drop: ['drink2', 0.12] },
   yosegaki: { name: '寄せ書き回収係', short: '回収係', hp: 160, atk: 35, def: 16, agi: 12, exp: 92, gold: 65,
@@ -712,9 +733,9 @@ function saveMode() {
 }
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
-const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel', 'minato', 'hall', 'studio', 'seitanhall'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen'];
-const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4', 'h1', 'h2', 's1', 's2', 'j1', 'j2'];
+const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel', 'minato', 'hall', 'studio', 'seitanhall', 'towerB', 'towerC'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp'];
+const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4', 'h1', 'h2', 's1', 's2', 'j1', 'j2', 'b1', 'c1'];
 const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass', 'shoMinato', 'shoHaishin', 'shoSeitan'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
 const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 1296; return h.toString(36).padStart(2, '0'); };
@@ -1265,6 +1286,35 @@ const MAPS = {
     'WxxxxxxxxxxxxxxW',
     'WxxxxxxxxxxxxxxW',
     'WWWWWWWxWWWWWWWW'] },
+  towerB: { name: '推し被りの塔 2F', bgm: 'dungeon', fill: 'W', bg: 'tower', rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WxxxxxxUxxxxxxxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWW1WW2WW3WW4WW',
+    'WxxxxxxxxxxxxxxW',
+    'WxWWWWxWWxWWWWxW',
+    'WxWxxxxxxxxxxWxW',
+    'WxWxWWWWWWWWxWxW',
+    'WxxxWxxxxxxWxxxW',
+    'WWWxWxWWWWxWxWWW',
+    'WxxxxxxxxxxxxxxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWWWWWdWWWWWWWW',
+    'WWWWWWWWWWWWWWWW'] },
+  towerC: { name: '推し被りの塔 3F', bgm: 'dungeon', fill: 'W', bg: 'tower', rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WWWWWWWUWWWWWWWW',
+    'WWWWWWxcxWWWWWWW',
+    'WxxxxxxcxxxxxxxW',
+    'WxrrrrxcxrrrrrxW',
+    'WxxxxxxcxxxxxxxW',
+    'WxrrrrxcxrrrrrxW',
+    'WxxxxxxcxxxxxxxW',
+    'WWWWWWxcxWWWWWWW',
+    'WxxxxxxxxxxxxxxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWWWWWdWWWWWWWW',
+    'WWWWWWWWWWWWWWWW'] },
   tower2: { name: '推し被りの塔 最上階', bgm: 'dungeon', fill: 'W', bg: 'tower', rows: [
     'WWWWWWWWWWWWWWWW',
     'WWWWWWxxxxWWWWWW',
@@ -1705,6 +1755,11 @@ async function enemyAct(e) {
     await say(`${nm}の HPが ${v} かいふくした！`, { append: true, auto: 30 });
   } else if (type === 'idle') {
     await say(`${nm}は ${text}`, { append: true, auto: 34 });
+  } else if (type === 'cancel') {
+    // 剥がしの鬼: moving first peels the hero away before they can act
+    await say(`${nm}は ${text}`, { append: true, auto: 26 });
+    if (battleS.heroPending) { battleS.cancel = true; await say('ヲタ太は 剥がされて しまった！', { append: true, auto: 34 }); }
+    else { await say('…が、 もう 終わっていた！\nそのまま 肩を 押してきた！', { append: true, auto: 34 }); await playerHurt(dmgTo(e.atk * 0.8, battleDef())); }
   } else if (type === 'bigsteal') {
     // シキリ takes half the hero's money; the more it takes, the harder it hits (all returned on defeat)
     const amt = Math.floor(P.gold / 2);
@@ -1831,7 +1886,7 @@ async function battle(id, opt = {}) {
   const prevMode = game.mode;
   sfx('enc');
   for (let i = 0; i < 6; i++) { game.flash = 4; await framesWait(6); }
-  battleS.e = e; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.burn = 0; battleS.lastAct = null; battleS.bg = opt.bg || game.map.bg || 'field';
+  battleS.e = e; battleS.cancel = false; battleS.heroPending = false; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.burn = 0; battleS.lastAct = null; battleS.bg = opt.bg || game.map.bg || 'field';
   game.mode = 'battle';
   playBgm(base.boss ? 'boss' : 'battle');
   const sw = statusWin(); extraWins.push(sw);
@@ -1862,7 +1917,13 @@ async function battle(id, opt = {}) {
       // the enemy moves first at least about a third of the time, more often when it is quicker
       const pFirst = act.type === 'item' || act.type === 'stunned' || e.last || chance(clamp(0.62 + (P.agi - e.agi) * 0.02, 0.35, 0.8));
       if (pFirst) { await playerAct(e, act); if (e.hp > 0) await enemyAct(e); }
-      else { await enemyAct(e); if (P.hp > 0 && !e.fled) await playerAct(e, act); }
+      else {
+        battleS.heroPending = true;
+        await enemyAct(e);
+        battleS.heroPending = false;
+        if (battleS.cancel) { battleS.cancel = false; await say('ヲタ太の 行動は 消えてしまった！', { append: true, auto: 30 }); }
+        else if (P.hp > 0 && !e.fled) await playerAct(e, act);
+      }
     }
     battleS.lastAct = remember;
     // 炎上 burns at the end of each turn
@@ -2023,6 +2084,7 @@ async function towerGate() {
       flags.barrierOpen = true;
       await say('四天王の 証が 光りだした！\n同担拒否の 結界が きえていく……！');
     }
+    if (!flags.allies) await alliesArrive();
     sfx('door'); await fadeOut(8); setMap('tower1', 7, 12, 'up'); toast('推し被りの塔'); await fadeIn(8);
     return;
   }
@@ -2139,6 +2201,51 @@ async function shikiriEvent() {
   await say('シキリ「……これを もっていけ。\n最後の 証だ。」', { noWait: true });
   addItem('shoSeitan'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 生誕の証を てにいれた！\n四天王の 証が 3つ そろった！');
+}
+async function alliesArrive() {
+  flags.allies = true;
+  await say('「おーい！ 待ってくれー！」');
+  await say('ゴウ、 ゼンツウ、 バズリ、 シキリが\nかけつけて きた！');
+  await say('ゴウ「キョヒールは 最上階だ。\n3階では 最後の 四天王、\n最前管理団長 ハシラが 待ってる。」');
+  await say('バズリ「2階の 扉は 整理番号順。\n番号の ヒントは…… 推しカラーだ。」');
+  await say('ゼンツウ「おれと バズリは 塔の 中で\n回復の 手伝いを する。\nつらく なったら 声を かけろ。」');
+  await say('シキリ「生誕祭の 差し入れの 残りだ。\nもっていけ。」', { noWait: true });
+  addItem('drink2', 3); addItem('photo', 2); await jingle('get'); playBgm(game.map.bgm);
+  await say('高級エナドリ 3本と\n推しの生写真 2枚を もらった！');
+  await say('ゴウ「百花ちゃんを…… たのんだぞ！」');
+}
+// talk to a former 四天王 in the tower for a full heal
+const allyHeal = who => async () => {
+  await say(`${who}「よく ここまで 来たな。\n少し 休んでいけ。」`);
+  await fadeOut(10); P.hp = P.mhp; P.mp = P.mmp; sfx('heal'); await fadeIn(10);
+  await say('HPと MPが ぜんかいした！');
+};
+async function seiriDoor(n) {
+  if (n === 2) {
+    if (!flags.doorSolved) { flags.doorSolved = true; sfx('door'); await say('扉が しずかに 開いた。\n薄ピンク×薄ピンク…… 2本だ！'); }
+    return;
+  }
+  sfx('bump');
+  await say('ちがう 扉だった！\n「整理番号 守ってくださーい！」');
+  const r = await battle('hagashi', { intro: '剥がしの鬼が あらわれた！' });
+  if (r === 'lose') return;
+  await say('ヲタ太は 入口まで 剥がされた……');
+  await fadeOut(8); setMap('towerB', 7, 11, 'up'); await fadeIn(8);
+}
+async function hashiraEvent() {
+  await say('ハシラ「ここから 先は 最前だ。\n最前管理団長 ハシラが 通さん。」');
+  await say('ハシラ「誰よりも 積んで、 誰よりも\n通って、 この列を 守ってきた。\n推し被りに 渡す 場所は ない！」');
+  const r = await battle('hashira', { intro: '最前管理団長ハシラが\nたちはだかった！' });
+  if (r !== 'win') return;
+  flags.hashira = true;
+  await say('ハシラ「……列を 守るのに 必死で、\n推しの 顔を 見る ひまも\nなかったのかも しれん。」');
+  await say('ハシラ「行け。 最上階で キョヒールが\n待っている。」');
+  const h = npcById('hashira'); await walk(h, 'L', 1); face(h, 'down');
+}
+async function gradEpisode() {
+  flags.gradEp = true;
+  await say('（いつか 百花ちゃんが アイドルを\n卒業したら…… おれは どうするんだろう。）');
+  await say('（推しじゃ なくなっても、\n応援したい 気持ちは きっと\n変わらない。 そんな 気がする。）');
 }
 async function talkStaff() {
   if (!flags.show) await say('スタッフ「まもなく 開演です！\nステージ前へ どうぞ！」');
@@ -2431,7 +2538,54 @@ T1.chests = [
 T1.enc = () => ['mix', 'yakkai', 'chizou', 'ensei', 'mix', 'yakkai', 'chizou', 'ensei', 'comp'];
 T1.encRate = 1 / 13;
 T1.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 33, 4, 'down'); await fadeIn(8); };
-T1.onStep = (x, y, t) => t === 'U' ? async () => { sfx('door'); await fadeOut(8); setMap('tower2', 2, 10, 'right'); toast('最上階'); await fadeIn(8); } : null;
+T1.onStep = (x, y, t) => t === 'U' ? async () => { sfx('door'); await fadeOut(8); setMap('towerB', 7, 11, 'up'); toast('2F'); await fadeIn(8); } : null;
+const TB = MAPS.towerB;
+TB.npcs = [
+  { id: 'buzzriAlly', x: 9, y: 11, spr: 'buzzri', fixed: 1, show: () => !!flags.allies, talk: async () => {
+    await say('バズリ「扉の 番号は 推しカラーの\n『本数』だ。 お前なら わかるだろ？」');
+    await allyHeal('バズリ')();
+  } },
+  { id: 'memo1', x: 3, y: 6, spr: 'memo', fixed: 1, talk: async () => {
+    await say('古い ノートが 落ちている。\n「キョヒール」と 名前が 書いてある。');
+    await say('『はじめて 劇場に 来た日。\nだれも 知り合いが いなくて、\n一人で ペンライトを 振った。』');
+    await say('『百花が 一瞬 こっちを 見た。\nそれだけで 明日も 生きようと 思えた。』');
+  } },
+  { id: 'memo2', x: 12, y: 6, spr: 'memo', fixed: 1, talk: async () => {
+    await say('メモが 落ちている。\n『この先の 扉は 整理番号順。\n正しい 番号は 推しカラーの 本数。』');
+  } },
+];
+TB.chests = [{ id: 'b1', x: 1, y: 11, item: 'drink2', n: 2 }];
+TB.enc = () => ['hagashi', 'saizen', 'lift', 'yakkai', 'hagashi'];
+TB.encRate = 1 / 12;
+TB.onStep = (x, y, t) => {
+  if (t === 'd') return async () => { sfx('door'); await fadeOut(8); setMap('tower1', 13, 1, 'left'); await fadeIn(8); };
+  if (t === 'U') return async () => { sfx('door'); await fadeOut(8); setMap('towerC', 7, 10, 'up'); toast('3F'); await fadeIn(8); };
+  if ('1234'.includes(t) && y === 3) return () => seiriDoor(+t);
+  return null;
+};
+const TC = MAPS.towerC;
+TC.npcs = [
+  { id: 'hashira', x: 7, y: 2, spr: 'hashira', fixed: 1, talk: async () => {
+    if (!flags.hashira) await hashiraEvent();
+    else await say('ハシラ「最上階へ 行け。\n百花ちゃんが 待っている。」');
+  } },
+  { id: 'zentsuAlly', x: 2, y: 9, spr: 'zentsu', fixed: 1, show: () => !!flags.allies, talk: allyHeal('ゼンツウ') },
+  { id: 'memo3', x: 13, y: 9, spr: 'memo', fixed: 1, talk: async () => {
+    await say('ノートの 続きが 落ちている。');
+    await say('『あの男が 言った。 「お前だけが\n百花を 守れる。 ほかの ヲタクは\nみんな 敵だ」』');
+    await say('『あの男は チケットを たくさん\nくれた。 なんで あんなに\n持っているんだろう。』');
+  } },
+];
+TC.chests = [{ id: 'c1', x: 1, y: 10, item: 'photo', n: 2 }];
+TC.enc = () => ['hagashi', 'saizen', 'lift', 'hagashi'];
+TC.encRate = 1 / 12;
+TC.onStep = (x, y, t) => {
+  if (t === 'd') return async () => { sfx('door'); await fadeOut(8); setMap('towerB', 7, 2, 'down'); await fadeIn(8); };
+  if (t === 'U') return async () => { sfx('door'); await fadeOut(8); setMap('tower2', 2, 10, 'right'); toast('最上階'); await fadeIn(8); };
+  if (!flags.gradEp && x === 7 && y === 8) return gradEpisode;
+  if (!flags.hashira && x === 7 && y === 3) return async () => { face(player, 'up'); await hashiraEvent(); };
+  return null;
+};
 
 const T2 = MAPS.tower2;
 T2.npcs = [
@@ -2445,7 +2599,7 @@ T2.chests = [
 T2.enc = () => ['yakkai', 'chizou', 'saizen', 'lift'];
 T2.encRate = 1 / 13;
 T2.onStep = (x, y, t) => {
-  if (t === 'd') return async () => { sfx('door'); await fadeOut(8); setMap('tower1', 13, 1, 'left'); await fadeIn(8); };
+  if (t === 'd') return async () => { sfx('door'); await fadeOut(8); setMap('towerC', 8, 2, 'down'); await fadeIn(8); };
   if (!flags.kyohiru && y === 3 && (x === 7 || x === 8)) return async () => { face(player, 'up'); await kyohiruEvent(); };
   return null;
 };
