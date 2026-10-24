@@ -1,0 +1,1844 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--PAGE-->
+<title>百花クエスト</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<style>
+/* layout: one console column — the NES-ratio screen on top, controls under it */
+:root {
+  --bg: #0c0812;
+  --shell: #1c1428;
+  --shell-edge: #33264a;
+  --ink: #efe9fb;
+  --dim: #9d92b8;
+  --oshi: #a45ee8;
+  --btn: #2b2040;
+  --btn-press: #4a3570;
+  --font: "DotGothic16", "Hiragino Kaku Gothic ProN", "MS Gothic", monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.console {
+  --reserve: 96px;
+  width: min(100%, 768px, calc((100dvh - var(--reserve)) * 256 / 224));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.screen-wrap {
+  background: var(--shell);
+  border: 2px solid var(--shell-edge);
+  border-radius: 10px;
+  padding: 8px;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 256 / 224;
+  max-width: 100%;
+  background: #000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border-radius: 2px;
+  outline: none;
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.bar kbd {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--btn);
+  border: 1px solid var(--shell-edge);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.keys { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+button {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--btn);
+  border: 1px solid var(--shell-edge);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
+.pad {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px 0;
+  touch-action: none;
+}
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 54px);
+  grid-template-rows: repeat(3, 54px);
+}
+.dpad button, .ab button {
+  padding: 0;
+  font-size: 18px;
+  touch-action: none;
+}
+.dpad button.on, .ab button.on { background: var(--btn-press); }
+.dpad .u { grid-area: 1 / 2; border-radius: 8px 8px 0 0; }
+.dpad .l { grid-area: 2 / 1; border-radius: 8px 0 0 8px; }
+.dpad .r { grid-area: 2 / 3; border-radius: 0 8px 8px 0; }
+.dpad .d { grid-area: 3 / 2; border-radius: 0 0 8px 8px; }
+.dpad .c { grid-area: 2 / 2; background: var(--btn); border-radius: 0; pointer-events: none; }
+.ab { display: flex; gap: 18px; align-items: center; transform: rotate(-12deg); }
+.ab button {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--oshi); border-color: #c99af8; font-size: 20px;
+}
+.ab .b { background: #6a3f9a; margin-top: 34px; }
+.ab button.on { background: #d6b0ff; color: #1c1428; }
+@media (pointer: coarse) {
+  .console { --reserve: 270px; }
+  .pad { display: flex; }
+  .keys { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+<!--/PAGE-->
+</head>
+<body>
+<!--BODY-->
+<div class="console">
+  <div class="screen-wrap"><canvas id="screen" tabindex="0" aria-label="百花クエスト ゲーム画面"></canvas></div>
+  <div class="bar">
+    <div class="keys">
+      <span><kbd>↑↓←→</kbd> いどう</span>
+      <span><kbd>Z</kbd> <kbd>Enter</kbd> けってい・はなす</span>
+      <span><kbd>X</kbd> <kbd>Esc</kbd> キャンセル・メニュー</span>
+    </div>
+    <button id="sound" type="button" aria-pressed="true">サウンド ON</button>
+  </div>
+  <div class="pad" aria-hidden="true">
+    <div class="dpad">
+      <button class="u" data-k="up" type="button">▲</button>
+      <button class="l" data-k="left" type="button">◀</button>
+      <span class="c"></span>
+      <button class="r" data-k="right" type="button">▶</button>
+      <button class="d" data-k="down" type="button">▼</button>
+    </div>
+    <div class="ab">
+      <button class="b" data-k="b" type="button">B</button>
+      <button class="a" data-k="a" type="button">A</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+// ============================================================
+//  百花クエスト 〜推し被りの塔〜
+// ============================================================
+const W = 256, H = 224, S = 3, TS = 16;
+const cv = document.getElementById('screen');
+cv.width = W * S; cv.height = H * S;
+const ctx = cv.getContext('2d');
+const FONT = '"DotGothic16", "Hiragino Kaku Gothic ProN", "MS Gothic", monospace';
+function resetT() { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.imageSmoothingEnabled = false; }
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const chance = p => Math.random() < p;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// ------------------------------------------------------------
+//  Palette & sprites
+// ------------------------------------------------------------
+const PAL = {
+  k: '#120c18', w: '#f8f8f8', s: '#f8c8a0', S: '#d8986c', h: '#2a1c16',
+  p: '#9a4ad8', P: '#5a2490', l: '#d4aef8', b: '#3858c8', B: '#22307a',
+  g: '#a0a0ae', G: '#4a4a5a', r: '#d83838', R: '#8a1c1c', y: '#f8d838',
+  n: '#8a5a30', e: '#3a9a3a', o: '#f89838', c: '#78d8f8', m: '#f890b8',
+  H: '#f8f8f8', Y: '#d83838',
+};
+
+const TPL = {
+  hero_down: { rows: [
+    '....kkkkkkkk....', '...khhhhhhhhk...', '..khHHYHHYHHhk..', '..khhhhhhhhhhk..',
+    '..ksGGGssGGGsk..', '..ksGcGssGcGsk..', '..kssssSSssssk..', '...ksssrrsssk...',
+    '....kkSSSSkk....', '..kpppwwwwpppk..', '.kspppwwwwpppsk.', '.kspppwyywpppsk.',
+    '..kPPPPPPPPPPk..', '...kbbbbbbbbk...', '...kbbk..kbbk...', '...kkkk..kkkk...'],
+    alt: { 14: '....kbbbbbbk....', 15: '....kkkkkkkk....' } },
+  hero_up: { rows: [
+    '....kkkkkkkk....', '...khhhhhhhhk...', '..khHHHHHHHHhk..', '..khhhhhhhhhhk..',
+    '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...khhhhhhhhk...',
+    '....kkSSSSkk....', '..kpppnnnnpppk..', '.kspnnnnnnnnpsk.', '.kspnnnnnnnnpsk.',
+    '..kPPnnnnnnPPk..', '...kbbbbbbbbk...', '...kbbk..kbbk...', '...kkkk..kkkk...'],
+    alt: { 14: '....kbbbbbbk....', 15: '....kkkkkkkk....' } },
+  hero_right: { rows: [
+    '.....kkkkkk.....', '....khhhhhhk....', '...khhHHYHHHk...', '...khhhhhhhhk...',
+    '...khhhsGGGsk...', '...khhssGcGsk...', '...khssssssssk..', '....kssssrsk....',
+    '.....kSSSSk.....', '...knpppppwk....', '..knnppppswk....', '..knnpppppsk....',
+    '...knPPPPPPk....', '....kbbbbbbk....', '...kbbk..kbbk...', '...kkkk..kkkk...'],
+    alt: { 14: '....kbbbbbbk....', 15: '....kkkkkkkk....' } },
+  fat: { rows: [
+    '....kkkkkkkk....', '...khhhhhhhhk...', '..khhhhhhhhhhk..', '..khHHYHHYHHhk..',
+    '..ksGGGssGGGsk..', '..ksGcGssGcGsk..', '.kSsssrrrrsssSk.', '.kSSssssssssSSk.',
+    '.kpppwwwwwwpppk.', 'kspppwwwwwwpppsk', 'kspppwwwwwwpppsk', 'kspppwwyywwpppsk',
+    '.kPPPPPPPPPPPPk.', '..kbbbbbbbbbbk..', '..kbbbk..kbbbk..', '..kkkkk..kkkkk..'],
+    alt: { 14: '...kbbbbbbbbk...', 15: '...kkkkkkkkkk...' } },
+  girl_down: { rows: [
+    '...kpkkkkkkpk...', '..kplhhhhhhlpk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..',
+    '..khhsssssshhk..', '..khskwsswkshk..', '..khskksskkshk..', '..khsmssssmshk..',
+    '..khhssrrsshhk..', '..khkppwwppkhk..', '.kshpppwwppphsk.', '.kskppppppppksk.',
+    '..kwlwlwlwlwlk..', '.kppppppppppppk.', '...kssk..kssk...', '...kPPk..kPPk...'],
+    alt: { 14: '....kssssssk....', 15: '....kPPPPPPk....' } },
+  girl_up: { rows: [
+    '...kpkkkkkkpk...', '..kplhhhhhhlpk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..',
+    '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..',
+    '..khhhhhhhhhhk..', '..khhpppppphhk..', '.kshpppppppphsk.', '.kskppppppppksk.',
+    '..kwlwlwlwlwlk..', '.kppppppppppppk.', '...kssk..kssk...', '...kPPk..kPPk...'],
+    alt: { 14: '....kssssssk....', 15: '....kPPPPPPk....' } },
+  maou: { rows: [
+    '.r....kkkk....r.', '.rk..khhhhk..kr.', '..rkkhhhhhhkkr..', '...khhhhhhhhk...',
+    '..ksGrGssGrGsk..', '..ksGGGssGGGsk..', '..kssssssssssk..', '..ksswkkkkwssk..',
+    '.GGkSSSSSSSSkGG.', 'GrrkPPPwwPPPkrrG', 'GrrksPPwwPPskrrG', 'GrrksPPyyPPskrrG',
+    'GrrrkPPPPPPkrrrG', 'GGrrkBBBBBBkrrGG', 'GGGrkBBkkBBkrGGG', 'GGGGkkk..kkkGGGG'],
+    alt: { 15: 'GGGGkkkkkkkkGGGG' } },
+  chest: { rows: [
+    '................', '................', '................', '...kkkkkkkkkk...',
+    '..knnnnnnnnnnk..', '..knyyyyyyyynk..', '..knnnnnnnnnnk..', '..kkkkkyykkkkk..',
+    '..knnnnyynnnnk..', '..knnnnnnnnnnk..', '..knnnnnnnnnnk..', '..knyyyyyyyynk..',
+    '..kkkkkkkkkkkk..', '................', '................', '................'] },
+  chest_open: { rows: [
+    '................', '...kkkkkkkkkk...', '..knnnnnnnnnnk..', '..kkkkkkkkkkkk..',
+    '..kGGGGGGGGGGk..', '..kGkkkkkkkkGk..', '..kGkkkkkkkkGk..', '..kkkkkkkkkkkk..',
+    '..knnnnnnnnnnk..', '..knnnnnnnnnnk..', '..knnnnnnnnnnk..', '..knyyyyyyyynk..',
+    '..kkkkkkkkkkkk..', '................', '................', '................'] },
+};
+
+const sprCache = {};
+function buildSprite(rows, map) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d');
+  rows.forEach((row, y) => {
+    for (let x = 0; x < 16; x++) {
+      const ch = row[x];
+      if (!ch || ch === '.') continue;
+      const m = map && map[ch] !== undefined ? map[ch] : ch;
+      if (m === '.') continue;
+      g.fillStyle = PAL[m] || m;
+      g.fillRect(x, y, 1, 1);
+    }
+  });
+  return c;
+}
+function mirror(c) {
+  const m = document.createElement('canvas'); m.width = m.height = 16;
+  const g = m.getContext('2d'); g.translate(16, 0); g.scale(-1, 1); g.drawImage(c, 0, 0); return m;
+}
+function frames(tpl, map) {
+  const t = TPL[tpl];
+  const f1 = buildSprite(t.rows, map);
+  const rows2 = t.rows.slice();
+  if (t.alt) for (const k in t.alt) rows2[k] = t.alt[k];
+  return [f1, buildSprite(rows2, map)];
+}
+// a character set: {down, up, left, right} → [frame1, frame2]
+function charSet(kind, map) {
+  if (kind === 'hero') {
+    const d = frames('hero_down', map), u = frames('hero_up', map), r = frames('hero_right', map);
+    return { down: d, up: u, right: r, left: r.map(mirror) };
+  }
+  if (kind === 'girl') {
+    const d = frames('girl_down', map), u = frames('girl_up', map);
+    return { down: d, up: u, right: d, left: d };
+  }
+  const d = frames(kind, map);
+  return { down: d, up: d, right: d, left: d };
+}
+const NOBAND = { H: 'h', Y: 'h' };
+const SPR = {};
+function initSprites() {
+  SPR.hero = charSet('hero');
+  SPR.momoka = charSet('girl');
+  SPR.mom = charSet('girl', { h: 'n', p: '#6a8ac8', P: '#3a5a98', l: 'w', m: 's', r: 'S' });
+  SPR.girl = charSet('girl', { h: 'n', p: 'm', P: '#b85a88', l: 'w' });
+  SPR.clerk = charSet('hero', { ...NOBAND, p: 'e', P: '#1e5a28', c: 'w', G: 'h', h: 'n' });
+  SPR.cafe = charSet('hero', { ...NOBAND, p: 'G', P: 'k', G: 's', c: 's' });
+  SPR.staff = charSet('hero', { H: 'G', Y: 'y', p: 'G', P: 'k', w: 'y' });
+  SPR.otaku1 = charSet('hero', { p: 'm', P: '#b84a7a', Y: 'm' });
+  SPR.otaku2 = charSet('hero', { ...NOBAND, p: 'c', P: '#2a7aa8' });
+  SPR.otaku3 = charSet('fat', { p: 'o', P: '#a85a18' });
+  SPR.otaku4 = charSet('fat', { ...NOBAND, p: 'e', P: '#1e5a28', h: 'g' });
+  SPR.boss = charSet('hero', { ...NOBAND, h: 'g', p: 'G', P: 'k', w: 'w', c: 'w' });
+  SPR.gou = charSet('fat', { p: 'y', P: 'o', H: 'r', Y: 'y', w: 'r' });
+  SPR.kyohiru = charSet('maou');
+  SPR.chest = buildSprite(TPL.chest.rows);
+  SPR.chestOpen = buildSprite(TPL.chest_open.rows);
+  // battle portraits
+  SPR.e = {
+    gachikoi: frames('hero_down', { p: 'm', P: '#b84a7a', Y: 'm' })[0],
+    ninchi: frames('hero_down', { ...NOBAND, p: 'c', P: '#2a7aa8' })[0],
+    kosan: frames('fat', { ...NOBAND, p: 'n', P: '#5a3410', h: 'g' })[0],
+    mix: frames('hero_down', { p: 'o', P: '#a85a18', H: 'y', Y: 'r' })[0],
+    penra: frames('fat', { p: 'b', P: 'B', H: 'c', Y: 'b' })[0],
+    yakkai: frames('fat', { p: 'r', P: 'R', H: 'k', Y: 'r' })[0],
+    chizou: frames('fat', { s: 'g', S: 'G', p: 'G', P: 'k', w: 'g', b: 'G', h: 'G', H: 'g', Y: 'g', y: 'G', c: 'k', r: 'G' })[0],
+    saizen: frames('hero_down', { p: 'G', P: 'k', H: 'y', Y: 'k' })[0],
+    gou: frames('fat', { p: 'y', P: 'o', H: 'r', Y: 'y', w: 'r' })[0],
+    kyohiru: frames('maou')[0],
+  };
+}
+
+// ------------------------------------------------------------
+//  Tiles
+// ------------------------------------------------------------
+function mkTile(fn) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d');
+  const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  fn(p, g); return c;
+}
+function grass(p) {
+  p(0, 0, 16, 16, '#48b03c');
+  [[2, 3], [9, 1], [12, 8], [5, 11], [14, 13], [1, 14], [7, 6], [11, 4]].forEach(([x, y]) => p(x, y, 2, 1, '#2f8a2c'));
+}
+function wood(p) {
+  p(0, 0, 16, 16, '#c8904a');
+  p(0, 3, 16, 1, '#a06a30'); p(0, 7, 16, 1, '#a06a30'); p(0, 11, 16, 1, '#a06a30'); p(0, 15, 16, 1, '#a06a30');
+  p(5, 0, 1, 3, '#a06a30'); p(12, 4, 1, 3, '#a06a30'); p(3, 8, 1, 3, '#a06a30'); p(10, 12, 1, 3, '#a06a30');
+}
+function stone(p) {
+  p(0, 0, 16, 16, '#5c5a70');
+  p(0, 7, 16, 1, '#46445a'); p(0, 15, 16, 1, '#46445a'); p(7, 0, 1, 7, '#46445a'); p(15, 8, 1, 7, '#46445a');
+  p(2, 2, 1, 1, '#6c6a82'); p(10, 11, 1, 1, '#6c6a82');
+}
+function carpet(p) {
+  p(0, 0, 16, 16, '#6e34a8');
+  for (let i = 0; i < 16; i += 4) { p(i, i, 2, 2, '#8a50c8'); p((i + 8) % 16, i, 2, 2, '#8a50c8'); }
+}
+function bricks(p, base, line, top) {
+  p(0, 0, 16, 16, base);
+  [3, 7, 11, 15].forEach(y => p(0, y, 16, 1, line));
+  for (let r = 0; r < 4; r++) { const off = r % 2 ? 4 : 0; p((off + 0) % 16, r * 4, 1, 3, line); p((off + 8) % 16, r * 4, 1, 3, line); }
+  if (top) p(0, 0, 16, 1, top);
+}
+const TILES = {
+  '.': { d: grass },
+  ',': { d: p => { grass(p); [[3, 4, '#f8f070'], [10, 9, '#f890b8'], [6, 12, '#ffffff'], [13, 3, '#f890b8']].forEach(([x, y, c]) => { p(x, y, 2, 2, c); p(x, y + 2, 1, 1, '#2f8a2c'); }); } },
+  'T': { solid: 1, d: p => { grass(p); p(3, 1, 10, 10, '#0e3a16'); p(1, 3, 14, 6, '#0e3a16'); p(4, 2, 8, 8, '#2a7a30'); p(2, 4, 12, 4, '#2a7a30'); p(4, 3, 4, 3, '#4aa848'); p(6, 11, 4, 4, '#5a3418'); p(7, 11, 1, 4, '#8a5a30'); } },
+  '~': { solid: 1, anim: 1, d: (p, g, f) => { p(0, 0, 16, 16, '#2848c8'); const o = f ? 4 : 0; p((2 + o) % 16, 3, 5, 1, '#6888f8'); p((10 + o) % 16, 8, 4, 1, '#6888f8'); p((4 + o) % 16, 12, 5, 1, '#6888f8'); } },
+  '^': { solid: 1, d: p => { grass(p); for (let i = 0; i < 7; i++) { p(8 - i - 1, 2 + i * 2, (i + 1) * 2, 2, i < 2 ? '#f0f0f0' : '#9a6a3a'); p(8, 2 + i * 2, i + 1, 2, i < 2 ? '#c8c8d0' : '#6a4422'); } p(1, 15, 14, 1, '#6a4422'); } },
+  '=': { d: p => { p(0, 0, 16, 16, '#8a8a96'); p(0, 0, 16, 1, '#9e9eaa'); p(7, 0, 1, 16, '#767682'); p(0, 7, 7, 1, '#767682'); p(8, 11, 8, 1, '#767682'); } },
+  'B': { d: p => { p(0, 0, 16, 16, '#2848c8'); p(2, 0, 12, 16, '#b07838'); for (let y = 0; y < 16; y += 4) p(2, y, 12, 1, '#7a4a20'); p(1, 0, 1, 16, '#5a3418'); p(14, 0, 1, 16, '#5a3418'); } },
+  'A': { d: p => { grass(p); p(1, 6, 5, 9, '#c8c8d0'); p(6, 2, 5, 13, '#9a9ab0'); p(11, 7, 4, 8, '#d8a0c8'); [[2, 8], [2, 11], [7, 4], [7, 7], [7, 10], [12, 9], [12, 12]].forEach(([x, y]) => p(x, y, 2, 1, '#f8f070')); p(8, 4, 2, 1, '#f890b8'); p(0, 15, 16, 1, '#2f8a2c'); } },
+  'V': { d: p => { grass(p); p(2, 7, 12, 8, '#e8e8f0'); p(4, 4, 8, 3, '#e8e8f0'); p(6, 3, 4, 1, '#e8e8f0'); p(2, 13, 12, 2, '#9a9ab0'); p(7, 11, 2, 4, '#5a2490'); p(8, 0, 1, 4, '#4a4a5a'); p(9, 0, 3, 2, '#9a4ad8'); } },
+  'O': { d: p => { grass(p); p(5, 3, 6, 12, '#5a2490'); p(4, 5, 8, 1, '#9a4ad8'); p(4, 9, 8, 1, '#9a4ad8'); p(6, 0, 4, 3, '#d83838'); p(7, 12, 2, 3, '#120c18'); p(7, 6, 2, 2, '#f8d838'); } },
+  '#': { solid: 1, d: p => bricks(p, '#a04828', '#5a2410', '#c86840') },
+  'f': { d: wood },
+  'c': { d: carpet },
+  'k': { solid: 1, d: p => { p(0, 0, 16, 16, '#3a2a24'); p(0, 13, 16, 3, '#6a4a3a'); p(0, 13, 16, 1, '#c8a080'); p(2, 4, 1, 1, '#f8d838'); p(9, 8, 1, 1, '#f890b8'); p(13, 3, 1, 1, '#78d8f8'); } },
+  'C': { solid: 1, d: p => { wood(p); p(0, 2, 16, 12, '#8a5028'); p(0, 2, 16, 2, '#c87a40'); p(0, 13, 16, 1, '#4a2810'); } },
+  'h': { solid: 1, d: p => { p(0, 0, 16, 16, '#6a4a30'); p(0, 7, 16, 1, '#3a2410'); p(0, 15, 16, 1, '#3a2410'); [[1, 2, '#f890b8'], [5, 1, '#9a4ad8'], [9, 3, '#f8d838'], [12, 2, '#78d8f8'], [2, 10, '#9a4ad8'], [6, 9, '#f8f8f8'], [10, 10, '#f890b8']].forEach(([x, y, c]) => p(x, y, 3, 7 - (y % 7) - 1 > 3 ? 4 : 5, c)); } },
+  'v': { solid: 1, d: p => { wood(p); p(1, 8, 14, 7, '#8a5028'); p(3, 1, 10, 8, '#4a4a5a'); p(4, 2, 8, 6, '#9a4ad8'); p(6, 3, 3, 3, '#f8c8a0'); p(5, 2, 5, 1, '#2a1c16'); p(7, 9, 2, 1, '#4a4a5a'); } },
+  'b': { solid: 1, d: p => { wood(p); p(1, 1, 14, 14, '#5a3418'); p(2, 2, 12, 4, '#f8f8f8'); p(2, 6, 12, 8, '#3858c8'); p(2, 6, 12, 1, '#6888f8'); } },
+  'x': { d: stone },
+  'W': { solid: 1, d: p => bricks(p, '#3a2a52', '#1c142c', '#5a4878') },
+  'r': { solid: 1, d: p => { stone(p); p(1, 4, 2, 11, '#d8b040'); p(13, 4, 2, 11, '#d8b040'); p(3, 6, 10, 2, '#c82838'); p(3, 8, 10, 1, '#8a1c1c'); } },
+  'U': { d: p => { stone(p); for (let i = 0; i < 4; i++) { p(2, 2 + i * 3, 12, 2, i % 2 ? '#a8a6bc' : '#8a88a0'); } } },
+  'd': { d: p => { p(0, 0, 16, 16, '#120c18'); for (let i = 0; i < 4; i++) p(2 + i, 2 + i * 3, 12 - i * 2, 2, '#5c5a70'); } },
+  'q': { solid: 1, d: p => { wood(p); p(0, 4, 16, 8, '#6a3a18'); p(0, 4, 16, 2, '#9a5a28'); } },
+  'o': { solid: 1, d: p => { carpet(p); p(6, 9, 4, 6, '#e8e8f0'); p(3, 2, 10, 7, '#3a9a3a'); [[4, 3, '#f8f8f8'], [8, 2, '#f890b8'], [10, 5, '#f8f8f8'], [5, 6, '#f890b8']].forEach(([x, y, c]) => p(x, y, 3, 3, c)); } },
+  'a': { solid: 1, d: p => { carpet(p); p(1, 4, 14, 10, '#f0f0f8'); p(1, 4, 14, 2, '#f8d838'); p(7, 0, 2, 5, '#f8d838'); p(5, 1, 6, 1, '#f8d838'); } },
+  ' ': { solid: 1, d: p => p(0, 0, 16, 16, '#000000') },
+};
+const tileImg = {};
+function initTiles() {
+  for (const k in TILES) {
+    const t = TILES[k];
+    tileImg[k] = [mkTile((p, g) => t.d(p, g, 0)), t.anim ? mkTile((p, g) => t.d(p, g, 1)) : null];
+  }
+}
+
+// ------------------------------------------------------------
+//  Data: items, equipment, skills, enemies
+// ------------------------------------------------------------
+const ITEMS = {
+  drink: { name: 'エナドリ', kind: 'hp', v: 30, price: 8 },
+  drink2: { name: '高級エナドリ', kind: 'hp', v: 90, price: 30 },
+  photo: { name: '推しの生写真', kind: 'mp', v: 20, price: 40 },
+  pass: { name: '通行証', kind: 'key' },
+};
+const WEAPONS = [
+  { name: 'ふつうのペンラ', atk: 2 },
+  { name: '推しカラーペンラ', atk: 6, price: 50 },
+  { name: '公式ペンライト', atk: 11, price: 180 },
+  { name: '光るキンブレ', atk: 18, price: 450 },
+  { name: '伝説のサイリウム', atk: 28 },
+];
+const ARMORS = [
+  { name: 'Tシャツ', def: 1 },
+  { name: '推しTシャツ', def: 4, price: 40 },
+  { name: '推しハッピ', def: 9, price: 150 },
+  { name: '特攻服', def: 15, price: 400 },
+  { name: '伝説の推しタオル', def: 22 },
+];
+const SKILLS = [
+  { name: '推しコール', lv: 1, mp: 3, kind: 'heal', pow: [22, 30], text: '「百花ーーっ！」 推しの名を さけんだ！' },
+  { name: 'ヲタ芸', lv: 3, mp: 2, kind: 'atk', mult: 1.8, text: 'ロマンスを うった！' },
+  { name: 'サイリウム乱舞', lv: 6, mp: 5, kind: 'atk', mult: 2.6, text: 'サイリウムを ふりみだした！' },
+  { name: '全力コール', lv: 8, mp: 6, kind: 'heal', pow: [70, 90], text: '腹の底から 全力で コールした！' },
+  { name: '推しへの愛', lv: 11, mp: 10, kind: 'atk', mult: 4, text: '推しへの 愛が ばくはつした！' },
+];
+// moves: [weight, type, mult, text]
+const ENEMIES = {
+  gachikoi: { name: 'ガチ恋ヲタク', hp: 9, atk: 7, def: 2, agi: 3, exp: 3, gold: 4,
+    moves: [[3, 'atk'], [1, 'mult', 1.4, 'ガチ恋口上を となえた！']], drop: ['drink', 0.1] },
+  ninchi: { name: '認知厨', hp: 13, atk: 9, def: 4, agi: 6, exp: 5, gold: 6,
+    moves: [[3, 'atk'], [1, 'heal', 6, '「ぼくのこと おぼえてる？」と 自分を はげました！']], drop: ['drink', 0.1] },
+  kosan: { name: '古参ヲタク', hp: 20, atk: 13, def: 7, agi: 4, exp: 9, gold: 10,
+    moves: [[3, 'atk'], [1, 'mult', 1.5, '「おれは 研究生の ころから…」 古参マウントを とった！']], drop: ['drink', 0.12] },
+  mix: { name: 'MIXヲタク', hp: 26, atk: 16, def: 8, agi: 9, exp: 13, gold: 14,
+    moves: [[2, 'atk'], [2, 'mult', 1.4, '「タイガー！ ファイヤー！ サイバー！」 MIXを うった！']], drop: ['photo', 0.06] },
+  penra: { name: 'ペンラ8本ヲタ', hp: 30, atk: 13, def: 10, agi: 7, exp: 16, gold: 16,
+    moves: [[2, 'atk'], [2, 'multi', 0.6, 'ペンライトを 8本 ふりまわした！', 3]], drop: ['drink2', 0.06] },
+  yakkai: { name: '厄介ガチ恋', hp: 42, atk: 27, def: 14, agi: 12, exp: 24, gold: 22,
+    moves: [[3, 'atk'], [1, 'mult', 1.6, '「百花は おれの 嫁！」と さけんだ！']], drop: ['drink2', 0.08] },
+  chizou: { name: '地蔵ヲタク', hp: 36, atk: 22, def: 34, agi: 2, exp: 30, gold: 18,
+    moves: [[3, 'idle', 0, 'じっと うごかない…'], [2, 'atk']], drop: ['photo', 0.1] },
+  saizen: { name: '最前管理ヲタ', hp: 55, atk: 31, def: 18, agi: 14, exp: 36, gold: 30,
+    moves: [[3, 'atk'], [1, 'mult', 1.5, '最前を ゆずらない！ ヲタ太を おしのけた！']], drop: ['drink2', 0.1] },
+  gou: { name: 'TOのゴウ', hp: 110, atk: 20, def: 12, agi: 8, exp: 80, gold: 120, boss: 1,
+    moves: [[3, 'atk'], [2, 'mult', 1.5, 'TOの 号令！ 手下たちが いっせいに コールした！'], [1, 'multi', 0.7, 'ケチャを くりだした！', 2]] },
+  kyohiru: { name: '同担拒否魔王キョヒール', short: 'キョヒール', hp: 340, atk: 38, def: 20, agi: 15, exp: 300, gold: 0, boss: 1,
+    moves: [[3, 'atk'], [2, 'mult', 1.6, '同担拒否ビームを はなった！'], [2, 'mult', 1.4, 'ガチ恋口上・極を となえた！'], [1, 'rage', 0, 'はげしく いかっている！']] },
+};
+const EXP_TABLE = [0, 0, 8, 22, 45, 80, 130, 200, 290, 400, 540, 720, 950, 1250, 1600, 2000];
+const MAX_LV = 15;
+
+// ------------------------------------------------------------
+//  State
+// ------------------------------------------------------------
+let P, flags;
+function newGame() {
+  P = { name: 'ヲタ太', lv: 1, hp: 22, mhp: 22, mp: 5, mmp: 5, str: 6, vit: 3, agi: 5, exp: 0, gold: 30, w: 0, a: 0, items: {} };
+  flags = { chests: {} };
+}
+const atkOf = () => P.str + WEAPONS[P.w].atk;
+const defOf = () => P.vit + ARMORS[P.a].def;
+const addItem = (id, n = 1) => { P.items[id] = Math.min(9, (P.items[id] || 0) + n); };
+const useItemCount = id => { P.items[id]--; if (P.items[id] <= 0) delete P.items[id]; };
+const SAVE_KEY = 'momoka-quest.save.v1';
+function saveGame() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ P, flags, map: game.mapId, x: player.x, y: player.y, dir: player.dir })); return true; } catch (e) { return false; }
+}
+function loadSave() {
+  try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+}
+
+const game = { mode: 'boot', mapId: null, map: null, npcs: [], busy: false, fade: 0, flash: 0, shake: 0, frame: 0, toast: null, fx: [], lights: false, caption: null, steps: 0 };
+const player = { x: 0, y: 0, px: 0, py: 0, dir: 'down', mv: null, spr: 'hero' };
+
+// ------------------------------------------------------------
+//  Input
+// ------------------------------------------------------------
+const held = { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0 };
+const keyQ = [];
+let modal = null;
+const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right',
+  W: 'up', S: 'down', A: 'left', D: 'right', z: 'a', Z: 'a', Enter: 'a', ' ': 'a', x: 'b', X: 'b', Escape: 'b', Backspace: 'b' };
+window.addEventListener('keydown', e => {
+  const k = KEYMAP[e.key]; if (!k) return;
+  e.preventDefault(); audioWake();
+  if (e.repeat && (k === 'a' || k === 'b')) return;
+  held[k] = 1; keyQ.push(k);
+});
+window.addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k) held[k] = 0; });
+window.addEventListener('blur', () => { for (const k in held) held[k] = 0; });
+document.querySelectorAll('.pad button').forEach(b => {
+  const k = b.dataset.k;
+  const down = e => { e.preventDefault(); audioWake(); held[k] = 1; keyQ.push(k); b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (_) {} };
+  const up = e => { e.preventDefault(); held[k] = 0; b.classList.remove('on'); };
+  b.addEventListener('pointerdown', down);
+  b.addEventListener('pointerup', up);
+  b.addEventListener('pointercancel', up);
+  b.addEventListener('lostpointercapture', up);
+  b.addEventListener('contextmenu', e => e.preventDefault());
+});
+cv.addEventListener('pointerdown', () => { audioWake(); cv.focus(); });
+
+// ------------------------------------------------------------
+//  Sound (WebAudio chiptune)
+// ------------------------------------------------------------
+const SND = { ctx: null, master: null, on: true, bgm: null, bgmName: null };
+function audioWake() {
+  if (!SND.ctx) {
+    try {
+      SND.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      SND.master = SND.ctx.createGain(); SND.master.gain.value = SND.on ? 0.14 : 0;
+      SND.master.connect(SND.ctx.destination);
+      if (SND.pending) { const n = SND.pending; SND.pending = null; playBgm(n); }
+    } catch (e) { SND.ctx = null; }
+  }
+  if (SND.ctx && SND.ctx.state === 'suspended') SND.ctx.resume();
+}
+const NOTE_IDX = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function nf(n) {
+  const m = /^([A-G])(#?)(\d)$/.exec(n); if (!m) return 0;
+  const midi = NOTE_IDX[m[1]] + (m[2] ? 1 : 0) + (+m[3] + 1) * 12;
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+function tone(f, t0, d, type = 'square', v = 0.6, dest) {
+  const c = SND.ctx; if (!c || !f) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  g.gain.setValueAtTime(v, t0); g.gain.setValueAtTime(v, t0 + d * 0.6); g.gain.exponentialRampToValueAtTime(0.0008, t0 + d);
+  o.connect(g); g.connect(dest || SND.master); o.start(t0); o.stop(t0 + d + 0.03);
+}
+function noise(t0, d, v = 0.5) {
+  const c = SND.ctx; if (!c) return;
+  const len = Math.floor(c.sampleRate * d), buf = c.createBuffer(1, len, c.sampleRate), data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = c.createBufferSource(), g = c.createGain(); s.buffer = buf; g.gain.value = v; s.connect(g); g.connect(SND.master); s.start(t0);
+}
+function sfx(name) {
+  const c = SND.ctx; if (!c || !SND.on) return; const t = c.currentTime + 0.005;
+  switch (name) {
+    case 'cur': tone(1320, t, 0.035, 'square', 0.25); break;
+    case 'ok': tone(880, t, 0.05, 'square', 0.3); tone(1320, t + 0.05, 0.07, 'square', 0.3); break;
+    case 'ng': tone(220, t, 0.12, 'square', 0.3); break;
+    case 'tick': tone(1760, t, 0.012, 'square', 0.08); break;
+    case 'bump': tone(110, t, 0.06, 'square', 0.3); break;
+    case 'hit': noise(t, 0.12, 0.6); tone(330, t, 0.08, 'square', 0.3); break;
+    case 'crit': noise(t, 0.2, 0.8); tone(660, t, 0.06); tone(990, t + 0.06, 0.1); break;
+    case 'hurt': noise(t, 0.18, 0.7); tone(160, t, 0.16, 'square', 0.4); break;
+    case 'miss': tone(500, t, 0.05, 'triangle', 0.4); tone(400, t + 0.05, 0.05, 'triangle', 0.4); break;
+    case 'heal': [660, 880, 1100, 1320].forEach((f, i) => tone(f, t + i * 0.05, 0.08, 'triangle', 0.5)); break;
+    case 'skill': [523, 784, 1047, 784, 1047, 1568].forEach((f, i) => tone(f, t + i * 0.04, 0.06, 'square', 0.25)); break;
+    case 'enc': [196, 262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.035, 0.05, 'square', 0.3)); break;
+    case 'door': tone(392, t, 0.06, 'square', 0.3); tone(523, t + 0.07, 0.08, 'square', 0.3); break;
+    case 'run': [800, 600, 400, 300].forEach((f, i) => tone(f, t + i * 0.04, 0.05, 'triangle', 0.4)); break;
+  }
+}
+const SONGS = {
+  title: { bpm: 132, tr: [
+    ['square', 0.32, 'E5:2 G5:2 C6:3 B5:1 A5:2 G5:2 E5:4 F5:2 A5:2 G5:2 E5:2 D5:4 -:4'],
+    ['triangle', 0.55, 'C3:4 G2:4 A2:4 E3:4 F2:4 G2:4 C3:4 G2:4']] },
+  town: { bpm: 140, tr: [
+    ['square', 0.28, 'C5 E5 G5 E5 F5 A5 G5:2 E5 G5 C6 G5 A5:2 G5:2 F5 E5 D5 E5 F5 D5 G4:2 C5 E5 D5 B4 C5:4'],
+    ['triangle', 0.55, 'C3:2 G3:2 F3:2 C3:2 C3:2 E3:2 F3:2 C3:2 D3:2 A3:2 G3:2 B2:2 C3:2 G2:2 C3:4']] },
+  field: { bpm: 120, tr: [
+    ['square', 0.28, 'G4:2 B4 D5 G5:3 F#5 E5:2 D5:2 B4:4 C5:2 E5 G5 A5:3 G5 F#5:2 E5 F#5 G5:4'],
+    ['triangle', 0.55, 'G2:4 D3:4 E3:4 B2:4 C3:4 A2:4 D3:4 G2:4']] },
+  dungeon: { bpm: 100, tr: [
+    ['square', 0.24, 'A4:2 C5:2 E5:2 D5:2 C5:2 B4:2 A4:4 F4:2 A4:2 C5:2 B4:2 G#4:4 E4:4'],
+    ['triangle', 0.55, 'A2:4 A2:4 F2:4 F2:2 E2:2 D2:4 D2:4 E2:4 E2:4']] },
+  battle: { bpm: 170, tr: [
+    ['square', 0.26, 'E5 E5 G5 E5 A5 G5 E5 D5 E5 E5 G5 E5 B5:2 A5:2 C6 B5 A5 G5 A5 G5 E5 D5 E5:2 G5:2 E5:4'],
+    ['triangle', 0.6, 'A2 A3 A2 A3 A2 A3 A2 A3 F2 F3 F2 F3 G2 G3 G2 G3 A2 A3 A2 A3 F2 F3 F2 F3 G2 G3 G2 G3 E2 E3 E2 E3']] },
+  boss: { bpm: 180, tr: [
+    ['square', 0.26, 'A4 C5 E5 A5 G#5 E5 B4 G#4 A4 C5 E5 A5 B5:2 C6:2 D6 C6 B5 A5 G#5 A5 B5 G#5 E5:4 -:2 E5 G#5'],
+    ['triangle', 0.6, 'A2 A2 A3 A2 E2 E2 E3 E2 A2 A2 A3 A2 F2 F2 G2 G2 D2 D2 D3 D2 E2 E2 E3 E2 E2 E2 E3 E2 E2 E2 G#2 B2']] },
+  wedding: { bpm: 92, tr: [
+    ['square', 0.26, 'C5:2 E5:2 G5:4 F5:2 E5:2 D5:4 E5:2 F5:2 G5:2 A5:2 G5:6 -:2 A5:2 G5:2 F5:2 E5:2 D5:2 E5:2 F5:4 E5:2 D5:2 C5:2 D5:2 C5:8'],
+    ['triangle', 0.55, 'C3:8 G2:8 C3:4 F2:4 C3:8 F2:8 G2:8 F2:4 G2:4 C3:8']] },
+  win: { bpm: 170, once: 1, tr: [['square', 0.3, 'C5 E5 G5 C6:3 G5 C6:6'], ['triangle', 0.5, 'C3 C3 C3 C3:3 G2 C3:6']] },
+  lvup: { bpm: 170, once: 1, tr: [['square', 0.3, 'G5 G5 G5 C6:6 -:2'], ['triangle', 0.5, 'G3 G3 G3 C4:6 -:2']] },
+  get: { bpm: 150, once: 1, tr: [['square', 0.3, 'C5 D5 E5 G5:2 E5 G5:4'], ['triangle', 0.5, 'C3:4 G2:2 C3:4']] },
+  inn: { bpm: 110, once: 1, tr: [['square', 0.28, 'C5 E5 G5 E5 F5 A5 C6:4 B5 G5 C6:6'], ['triangle', 0.5, 'C3:4 F3:4 G3:2 C3:6']] },
+  lose: { bpm: 90, once: 1, tr: [['square', 0.28, 'E5:2 D#5:2 D5:2 C#5:6'], ['triangle', 0.5, 'A2:2 G#2:2 G2:2 F#2:6']] },
+};
+function parseTrack(str) {
+  return str.trim().split(/\s+/).map(tok => { const [n, l] = tok.split(':'); return [n === '-' ? 0 : nf(n), +(l || 1)]; });
+}
+for (const k in SONGS) SONGS[k].tr = SONGS[k].tr.map(([type, vol, s]) => ({ type, vol, notes: parseTrack(s) }));
+function stopBgm() {
+  if (SND.bgm) { clearInterval(SND.bgm.timer); try { SND.bgm.gain.gain.setValueAtTime(0, SND.ctx.currentTime); SND.bgm.gain.disconnect(); } catch (e) {} SND.bgm = null; }
+}
+function playBgm(name, force) {
+  if (!force && name === SND.bgmName && SND.bgm) return;
+  stopBgm(); SND.bgmName = name;
+  if (!name) return;
+  if (!SND.ctx) { SND.pending = name; return; }
+  const song = SONGS[name], c = SND.ctx, gain = c.createGain(); gain.connect(SND.master);
+  const step = 60 / song.bpm / 2;
+  const tracks = song.tr.map(t => ({ ...t, i: 0, next: c.currentTime + 0.06 }));
+  const b = { gain, timer: 0, name };
+  const tick = () => {
+    for (const t of tracks) {
+      while (t.next < c.currentTime + 0.2) {
+        if (t.i >= t.notes.length) { if (song.once) break; t.i = 0; }
+        const [f, l] = t.notes[t.i++];
+        if (f) tone(f, t.next, step * l * 0.92, t.type, t.vol, gain);
+        t.next += step * l;
+      }
+    }
+  };
+  tick(); b.timer = setInterval(tick, 40); SND.bgm = b;
+}
+// one-shot jingle; resolves when finished
+function jingle(name) {
+  const song = SONGS[name];
+  const total = song.tr[0].notes.reduce((a, n) => a + n[1], 0) * 60 / song.bpm / 2;
+  playBgm(name, true);
+  return framesWait(Math.ceil(total * 60) + 6);
+}
+const soundBtn = document.getElementById('sound');
+soundBtn.addEventListener('click', () => {
+  SND.on = !SND.on; audioWake();
+  if (SND.master) SND.master.gain.value = SND.on ? 0.14 : 0;
+  soundBtn.textContent = SND.on ? 'サウンド ON' : 'サウンド OFF';
+  soundBtn.setAttribute('aria-pressed', String(SND.on));
+  cv.focus();
+});
+
+// ------------------------------------------------------------
+//  Async helpers (wait, messages, menus)
+// ------------------------------------------------------------
+const waiters = [];
+const until = fn => new Promise(res => waiters.push({ fn, res }));
+function framesWait(n) { let c = 0; return until(() => ++c >= n); }
+
+const msg = { visible: false, lines: [], arrow: false, x: 8, y: 144, w: 240, h: 76 };
+const menus = [];
+const extraWins = [];
+function wrap(text, maxW) {
+  ctx.font = '12px ' + FONT;
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    let line = '';
+    for (const ch of para) {
+      if (ctx.measureText(line + ch).width > maxW && line && !'、。」』！？…ー）'.includes(ch)) { out.push(line); line = ch === ' ' ? '' : ch; }
+      else line += ch;
+    }
+    out.push(line);
+  }
+  return out;
+}
+function typeLine(L) {
+  return new Promise(res => {
+    let skip = false;
+    modal = k => { if (k === 'a') skip = true; };
+    waiters.push({ fn: () => {
+      if (skip) L.n = L.t.length;
+      else { L.n = Math.min(L.t.length, L.n + (held.a || held.b ? 2 : 0.8)); if (game.frame % 4 === 0) sfx('tick'); }
+      return L.n >= L.t.length;
+    }, res: () => { modal = null; res(); } });
+  });
+}
+function waitA() {
+  msg.arrow = true;
+  return new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; msg.arrow = false; res(); } }; });
+}
+function waitAuto(n) {
+  return new Promise(res => {
+    let done = false, c = 0;
+    const fin = () => { if (done) return; done = true; if (modal === h) modal = null; res(); };
+    const h = k => { if (k === 'a') fin(); };
+    modal = h;
+    waiters.push({ fn: () => done || ++c >= n, res: fin });
+  });
+}
+// say(text, {append, auto, noWait})
+async function say(text, o = {}) {
+  msg.visible = true;
+  if (!o.append) msg.lines = [];
+  const ls = wrap(text, msg.w - 24);
+  for (const t of ls) {
+    if (msg.lines.length >= 3) {
+      if (o.append) msg.lines.shift();
+      else { await waitA(); msg.lines = []; }
+    }
+    const L = { t, n: 0 }; msg.lines.push(L);
+    await typeLine(L);
+  }
+  if (o.auto) await waitAuto(o.auto);
+  else if (!o.noWait) await waitA();
+}
+const closeMsg = () => { msg.visible = false; msg.lines = []; };
+
+function openMenu(o) {
+  const m = { items: o.items, x: o.x, y: o.y, w: o.w, idx: o.idx || 0, cancel: o.cancel !== false, title: o.title || null, active: false, lh: o.lh || 16 };
+  m.h = o.h || (m.items.length * m.lh + 12 + (m.title ? 4 : 0));
+  menus.push(m); return m;
+}
+function chooseMenu(m) {
+  return new Promise(res => {
+    m.active = true;
+    modal = k => {
+      const n = m.items.length;
+      if (k === 'up') { m.idx = (m.idx - 1 + n) % n; sfx('cur'); }
+      else if (k === 'down') { m.idx = (m.idx + 1) % n; sfx('cur'); }
+      else if (k === 'a') {
+        const it = m.items[m.idx];
+        if (it && it.disabled) { sfx('ng'); return; }
+        modal = null; m.active = false; sfx('ok'); res(m.idx);
+      } else if (k === 'b' && m.cancel) { modal = null; m.active = false; sfx('cur'); res(-1); }
+    };
+  });
+}
+const closeMenu = m => { const i = menus.indexOf(m); if (i >= 0) menus.splice(i, 1); };
+async function pick(o) { const m = openMenu(o); const r = await chooseMenu(m); closeMenu(m); return r; }
+async function ask(text, items, o = {}) {
+  await say(text, { noWait: true });
+  const w = o.w || Math.max(64, Math.max(...items.map(s => textW(s))) + 30);
+  return pick({ items, x: o.x !== undefined ? o.x : W - 8 - w, y: o.y !== undefined ? o.y : 144 - items.length * 16 - 16, w, cancel: o.cancel });
+}
+const yesno = text => ask(text, ['はい', 'いいえ']).then(r => r === 0);
+function textW(s) { ctx.font = '12px ' + FONT; return ctx.measureText(typeof s === 'string' ? s : s.label).width; }
+
+async function runScript(fn) {
+  game.busy = true;
+  try { await fn(); } catch (e) { console.error(e); }
+  finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; }
+}
+async function fadeOut(n = 12) { for (let i = 1; i <= n; i++) { game.fade = i / n; await framesWait(1); } }
+async function fadeIn(n = 12) { for (let i = n - 1; i >= 0; i--) { game.fade = i / n; await framesWait(1); } }
+async function caption(lines, hold = 0) {
+  closeMsg();
+  game.caption = { lines: Array.isArray(lines) ? lines : [lines], a: 0 };
+  for (let i = 1; i <= 20; i++) { game.caption.a = i / 20; await framesWait(1); }
+  if (hold) await framesWait(hold); else { game.caption.arrow = true; await new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; res(); } }; }); game.caption.arrow = false; }
+  for (let i = 19; i >= 0; i--) { game.caption.a = i / 20; await framesWait(1); }
+  game.caption = null;
+}
+function toast(text) { game.toast = { text, t: 120 }; }
+function burst(x, y, kind = 'heart', n = 8) {
+  for (let i = 0; i < n; i++) game.fx.push({ x: x + rnd(-6, 6), y: y + rnd(-4, 4), vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.7, life: 60 + rnd(0, 40), kind, col: ['#f890b8', '#9a4ad8', '#f8d838', '#d4aef8'][i % 4] });
+}
+
+// ------------------------------------------------------------
+//  Maps
+// ------------------------------------------------------------
+const R = (...a) => { let s = ''; for (let i = 0; i < a.length; i += 2) s += a[i].repeat(a[i + 1]); return s; };
+const MAPS = {
+  town: { name: 'アキハバラ', bgm: 'town', fill: 'T', rows: [
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+    'T..........................T',
+    'T.#######.....############.T',
+    'T.#bfffv#.....#kkkkkkkkkk#.T',
+    'T.#fffff#.....#cccccccccc#.T',
+    'T.#fffff#.....#cccccccccc#.T',
+    'T.###f###.....#cccccccccc#.T',
+    'T....=........#cccccccccc#.T',
+    'T....=........#####cc#####.T',
+    'T....===============.......T',
+    'T..........=...............T',
+    'T,,,.......=..........,,,..T',
+    'T.#######..=...#########...T',
+    'T.#hhfhh#..=...#ffvfvfv#...T',
+    'T.#fCCCf#..=...#Cffffff#...T',
+    'T.#fffff#..=...#fffffff#...T',
+    'T.###f###..=...####f####...T',
+    'T....=.....=.......=.......T',
+    'T....===============.......T',
+    'T..........=...............T',
+    'TTTTTTTTTTT=TTTTTTTTTTTTTTTT'] },
+  field: { name: 'フィールド', bgm: 'field', fill: '^', bg: 'field', rows: [
+    R('^', 40),
+    R('^', 3, '.', 4, 'T', 4, '.', 7, '^', 6, '.', 4, '~', 11, '^', 1),
+    R('^', 2, '.', 4, 'T', 6, '.', 7, '^', 4, '.', 5, '~', 11, '^', 1),
+    R('^', 1, '.', 5, 'T', 5, '.', 10, '^', 1, '.', 5, '~', 4, '.', 2, 'O', 1, '.', 2, '~', 3, '^', 1),
+    R('^', 1, '.', 6, 'T', 2, '.', 18, '~', 3, '.', 6, '~', 3, '^', 1),
+    R('^', 1, '.', 27, '~', 4, '.', 1, '~', 6, '^', 1),
+    R('^', 1, '.', 2, ',', 3, '.', 23, '~', 3, 'B', 1, '~', 6, '^', 1),
+    R('^', 1, '.', 2, ',', 1, 'A', 1, ',', 1, '.', 4, 'T', 3, '.', 17, '~', 2, 'B', 1, '~', 6, '^', 1),
+    R('^', 1, '.', 2, ',', 3, '.', 3, 'T', 5, '.', 17, '~', 1, '.', 6, '~', 1, '^', 1),
+    R('^', 1, '.', 9, 'T', 3, '.', 24, '~', 2, '^', 1),
+    R('^', 1, '.', 22, 'T', 3, '.', 12, '~', 1, '^', 1),
+    R('^', 1, '~', 4, '.', 17, 'T', 5, '.', 12, '^', 1),
+    R('^', 1, '~', 6, '.', 5, '^', 3, '.', 9, 'T', 3, '.', 12, '^', 1),
+    R('^', 1, '~', 7, '.', 3, '^', 5, '.', 23, '^', 1),
+    R('^', 1, '~', 6, '.', 5, '^', 3, '.', 9, ',', 3, '.', 12, '^', 1),
+    R('^', 1, '~', 5, '.', 18, ',', 1, 'V', 1, ',', 1, '.', 12, '^', 1),
+    R('^', 1, '~', 4, '.', 19, ',', 3, '.', 12, '^', 1),
+    R('^', 1, '~', 2, '.', 36, '^', 1),
+    R('^', 40)] },
+  venue: { name: '握手会場', bgm: 'dungeon', fill: 'W', bg: 'venue', rows: [
+    'WWWWWWWWWWWWWWWWWWWW',
+    'WxxxxxWxxxxxxWxxxxxW',
+    'WxrrrxWxxxxxxWxrrrxW',
+    'WxxxxxWxxxxxxWxxxxxW',
+    'WWWxWWWWWWxWWWWWxWWW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxrrrrrrxxxxrrrrrrxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWxxxxWWWWWWWW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxWWWWWWWWWWWWWWWWxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWWxxWWWWWWWWW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWWxWWWWWWWWWW'] },
+  tower1: { name: '推し被りの塔 1F', bgm: 'dungeon', fill: 'W', bg: 'tower', rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WxxxxxxWxxxxxxUW',
+    'WxWWWWxWxWWWWWxW',
+    'WxWxxxxxxxxxxWxW',
+    'WxWxWWWWWWWWxWxW',
+    'WxxxWxxxxxxWxxxW',
+    'WWWxWxWWWWxWxWWW',
+    'WxxxxxWxxWxxxxxW',
+    'WxWWWWWxxWWWWWxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWWWWWxxWWWWWWW',
+    'WxxxxxxxxxxxxxxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWWWWWxWWWWWWWW'] },
+  tower2: { name: '推し被りの塔 最上階', bgm: 'dungeon', fill: 'W', bg: 'tower', rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WWWWWWxxxxWWWWWW',
+    'WWWWWWxccxWWWWWW',
+    'WWWWWWxccxWWWWWW',
+    'WxxxxxxccxxxxxxW',
+    'WxWWWWWccWWWWWxW',
+    'WxWxxxxccxxxxWxW',
+    'WxWxWWWWWWWWxWxW',
+    'WxxxWxxxxxxWxxxW',
+    'WxWWWxWWWWxWWWxW',
+    'WdxxxxxxxxxxxxxW',
+    'WWWWWWWWWWWWWWWW'] },
+  chapel: { name: 'チャペル', bgm: 'wedding', fill: ' ', rows: [
+    '###########',
+    '#fffocofff#',
+    '#ffffcffff#',
+    '#qqqfcfqqq#',
+    '#ffffcffff#',
+    '#qqqfcfqqq#',
+    '#ffffcffff#',
+    '#qqqfcfqqq#',
+    '#ffffcffff#',
+    '#####c#####'] },
+};
+for (const id in MAPS) {
+  const m = MAPS[id];
+  m.w = Math.max(...m.rows.map(r => r.length)); m.h = m.rows.length;
+  m.rows = m.rows.map(r => r.padEnd(m.w, m.fill));
+  m.npcs = m.npcs || []; m.chests = m.chests || [];
+}
+function tileAt(m, x, y) { if (x < 0 || y < 0 || x >= m.w || y >= m.h) return m.fill; return m.rows[y][x]; }
+
+// ------------------------------------------------------------
+//  Map logic: actors, movement, interaction
+// ------------------------------------------------------------
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+function setMap(id, x, y, dir) {
+  game.mapId = id; game.map = MAPS[id];
+  player.x = x; player.y = y; player.px = x * TS; player.py = y * TS; player.mv = null; if (dir) player.dir = dir;
+  game.npcs = game.map.npcs.map(d => ({ ...d, x: d.x, y: d.y, px: d.x * TS, py: d.y * TS, hx: d.x, hy: d.y, dir: d.dir || 'down', mv: null, wt: rnd(60, 200) }));
+  game.steps = 0;
+  if (game.map.bgm) playBgm(game.map.bgm);
+}
+const npcById = id => game.npcs.find(n => n.id === id);
+const npcVisible = n => !n.hidden && (!n.show || n.show());
+function blocked(x, y, self) {
+  const m = game.map;
+  if (x < 0 || y < 0 || x >= m.w || y >= m.h) return true;
+  const t = TILES[tileAt(m, x, y)]; if (!t || t.solid) return true;
+  for (const n of game.npcs) {
+    if (n === self || !npcVisible(n)) continue;
+    if ((n.x === x && n.y === y) || (n.mv && n.mv.tx === x && n.mv.ty === y)) return true;
+  }
+  for (const c of m.chests) if (c.x === x && c.y === y) return true;
+  if (self !== player && ((player.x === x && player.y === y) || (player.mv && player.mv.tx === x && player.mv.ty === y))) return true;
+  return false;
+}
+function startMove(a, dir, force) {
+  a.dir = dir;
+  const [dx, dy] = DIRS[dir]; const tx = a.x + dx, ty = a.y + dy;
+  if (!force && blocked(tx, ty, a)) return false;
+  a.mv = { tx, ty, sx: a.x, sy: a.y, t: 0 };
+  return true;
+}
+function stepActor(a) {
+  if (!a.mv) return false;
+  a.mv.t += a.speed || 2;
+  const k = Math.min(1, a.mv.t / TS);
+  a.px = (a.mv.sx + (a.mv.tx - a.mv.sx) * k) * TS;
+  a.py = (a.mv.sy + (a.mv.ty - a.mv.sy) * k) * TS;
+  if (k >= 1) { a.x = a.mv.tx; a.y = a.mv.ty; a.mv = null; return true; }
+  return false;
+}
+// scripted walk: path string like "UUL"
+async function walk(a, path, speed) {
+  const m = { U: 'up', D: 'down', L: 'left', R: 'right' };
+  closeMsg();
+  for (const ch of path) {
+    if (ch === '.') { await framesWait(10); continue; }
+    a.speed = speed || 1;
+    startMove(a, m[ch], true);
+    await until(() => !a.mv);
+    a.speed = 0;
+  }
+}
+function face(a, dir) { a.dir = dir; }
+
+function updateMap() {
+  // npc wander
+  if (!game.busy) for (const n of game.npcs) {
+    if (!n.wander || n.mv || !npcVisible(n)) continue;
+    if (--n.wt > 0) continue;
+    n.wt = rnd(60, 220);
+    const ds = Object.keys(DIRS), d = ds[rnd(0, 3)], [dx, dy] = DIRS[d];
+    if (Math.abs(n.x + dx - n.hx) > 2 || Math.abs(n.y + dy - n.hy) > 2) continue;
+    n.speed = 1; startMove(n, d);
+  }
+  for (const n of game.npcs) stepActor(n);
+  if (stepActor(player) && !game.busy) onStepDone();
+}
+function freeInput(keys) {
+  if (game.busy || game.mode !== 'map') return;
+  for (const k of keys) {
+    if (player.mv) break;
+    if (k === 'a') { interact(); return; }
+    if (k === 'b') { runScript(fieldMenu); return; }
+  }
+  if (!player.mv) {
+    const d = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : null;
+    if (d) {
+      const [dx, dy] = DIRS[d], tx = player.x + dx, ty = player.y + dy, m = game.map;
+      if ((tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) && m.onExit) { player.dir = d; runScript(m.onExit); return; }
+      player.speed = 2;
+      if (!startMove(player, d)) { if (game.frame % 14 === 0) sfx('bump'); }
+    }
+  }
+}
+function onStepDone() {
+  const m = game.map, x = player.x, y = player.y, t = tileAt(m, x, y);
+  if (m.onStep) { const s = m.onStep(x, y, t); if (s) { runScript(s); return; } }
+  if (m.enc) {
+    game.steps++;
+    if (game.steps > 4 && chance(m.encRate || 1 / 16)) {
+      const list = m.enc(x, y);
+      if (list && list.length) { game.steps = 0; runScript(() => battle(list[rnd(0, list.length - 1)])); }
+    }
+  }
+}
+function interact() {
+  const [dx, dy] = DIRS[player.dir];
+  let tx = player.x + dx, ty = player.y + dy;
+  const m = game.map;
+  if (tileAt(m, tx, ty) === 'C') { tx += dx; ty += dy; }
+  const n = game.npcs.find(n => npcVisible(n) && n.x === tx && n.y === ty);
+  if (n && n.talk) {
+    if (!n.fixed) n.dir = OPP[player.dir];
+    runScript(async () => { await n.talk(n); });
+    return;
+  }
+  const c = m.chests.find(c => c.x === player.x + dx && c.y === player.y + dy);
+  if (c) { runScript(() => openChest(c)); return; }
+}
+async function openChest(c) {
+  if (flags.chests[c.id]) { await say('からっぽだ。'); return; }
+  flags.chests[c.id] = 1; sfx('door');
+  if (c.gold) { P.gold += c.gold; await say(`たからばこを あけた！\n${c.gold}円を てにいれた！`); return; }
+  if (c.weapon !== undefined) {
+    await say(`たからばこを あけた！\n${WEAPONS[c.weapon].name}を てにいれた！`, { noWait: true }); await jingle('get'); playBgm(game.map.bgm);
+    if (WEAPONS[c.weapon].atk > WEAPONS[P.w].atk) { P.w = c.weapon; await say(`ヲタ太は ${WEAPONS[c.weapon].name}を そうびした！`); }
+    else await waitA();
+    return;
+  }
+  if (c.armor !== undefined) {
+    await say(`たからばこを あけた！\n${ARMORS[c.armor].name}を てにいれた！`, { noWait: true }); await jingle('get'); playBgm(game.map.bgm);
+    if (ARMORS[c.armor].def > ARMORS[P.a].def) { P.a = c.armor; await say(`ヲタ太は ${ARMORS[c.armor].name}を そうびした！`); }
+    else await waitA();
+    return;
+  }
+  addItem(c.item, c.n || 1);
+  await say(`たからばこを あけた！\n${ITEMS[c.item].name}を てにいれた！`);
+}
+
+// ------------------------------------------------------------
+//  Field menu, status, items, skills
+// ------------------------------------------------------------
+function statusWin(x = 8, y = 8) {
+  return () => {
+    const low = P.hp <= P.mhp / 4;
+    drawWin(x, y, 72, 72, low ? '#f8a030' : '#fff');
+    txt(P.name, x + 10, y + 7, low ? '#f8a030' : '#fff');
+    txt('Lv' + String(P.lv).padStart(3), x + 10, y + 23);
+    txt('HP' + String(P.hp).padStart(4), x + 10, y + 39);
+    txt('MP' + String(P.mp).padStart(4), x + 10, y + 55);
+  };
+}
+const goldWin = (x = 176, y = 8) => () => { drawWin(x, y, 72, 28); txt(String(P.gold).padStart(5) + '円', x + 10, y + 8); };
+async function fieldMenu() {
+  sfx('ok');
+  const sw = statusWin(); extraWins.push(sw);
+  const gw = goldWin(8, 84); extraWins.push(gw);
+  const m = openMenu({ items: ['つよさ', 'どうぐ', 'スキル', 'とじる'], x: 176, y: 8, w: 72 });
+  while (true) {
+    const r = await chooseMenu(m);
+    if (r === -1 || r === 3) break;
+    if (r === 0) await showStats();
+    if (r === 1) await itemMenu(false);
+    if (r === 2) await skillMenu(false);
+  }
+  closeMenu(m);
+}
+async function showStats() {
+  const nx = P.lv >= MAX_LV ? '-' : String(EXP_TABLE[P.lv + 1] - P.exp);
+  const rows = [['レベル', P.lv], ['ちから', P.str], ['みのまもり', P.vit], ['すばやさ', P.agi], ['こうげき力', atkOf()], ['しゅび力', defOf()],
+    ['HP', P.hp + '/' + P.mhp], ['MP', P.mp + '/' + P.mmp], ['けいけんち', P.exp], ['つぎのLvまで', nx]];
+  const win = () => {
+    drawWin(84, 8, 164, 208);
+    rows.forEach(([k, v], i) => { txt(k, 96, 16 + i * 15); txt(String(v), 236 - textW(String(v)), 16 + i * 15); });
+    txt('ぶき ' + WEAPONS[P.w].name, 96, 168, '#d4aef8');
+    txt('ぼうぐ ' + ARMORS[P.a].name, 96, 186, '#d4aef8');
+  };
+  const hidden = menus.splice(0);
+  extraWins.push(win);
+  await new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; res(); } }; });
+  extraWins.splice(extraWins.indexOf(win), 1);
+  menus.push(...hidden);
+}
+function itemList() { return Object.keys(P.items).filter(id => P.items[id] > 0); }
+// returns true if a turn was used (battle)
+async function itemMenu(inBattle) {
+  const ids = itemList();
+  if (!ids.length) { await say('どうぐを なにも もっていない。'); closeMsg(); return false; }
+  const items = ids.map(id => ({ label: ITEMS[id].name + (ITEMS[id].kind === 'key' ? '' : ' ×' + P.items[id]) }));
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156 });
+  if (r < 0) return false;
+  const id = ids[r], it = ITEMS[id];
+  if (it.kind === 'key') {
+    await say(id === 'pass' ? '推し被りの塔への 通行証だ。\nTOのゴウの サインが 入っている。' : it.name + 'だ。', inBattle ? { auto: 50 } : {});
+    if (!inBattle) closeMsg();
+    return false;
+  }
+  useItemCount(id);
+  if (it.kind === 'hp') {
+    const v = Math.min(P.mhp - P.hp, it.v); P.hp += v; sfx('heal');
+    await say(`ヲタ太は ${it.name}を つかった！\nHPが ${v} かいふくした！`, inBattle ? { append: true, auto: 45 } : {});
+  } else if (it.kind === 'mp') {
+    const v = Math.min(P.mmp - P.mp, it.v); P.mp += v; sfx('heal');
+    await say(`ヲタ太は ${it.name}を ながめた！\nMPが ${v} かいふくした！`, inBattle ? { append: true, auto: 45 } : {});
+  }
+  if (!inBattle) closeMsg();
+  return true;
+}
+function learned() { return SKILLS.filter(s => s.lv <= P.lv); }
+// field: heal only. battle: returns skill or null
+async function skillMenu(inBattle) {
+  const list = learned();
+  const items = list.map(s => ({ label: s.name, right: 'MP' + s.mp, disabled: (!inBattle && s.kind !== 'heal') }));
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156 });
+  if (r < 0) return null;
+  const s = list[r];
+  if (P.mp < s.mp) { await say('MPが たりない！', inBattle ? { auto: 40 } : {}); if (!inBattle) closeMsg(); return null; }
+  if (inBattle) return s;
+  P.mp -= s.mp;
+  const v = Math.min(P.mhp - P.hp, rnd(s.pow[0], s.pow[1]) + P.lv); P.hp += v; sfx('heal');
+  await say(`ヲタ太は ${s.name}を となえた！\n${s.text}\nHPが ${v} かいふくした！`); closeMsg();
+  return null;
+}
+
+// ------------------------------------------------------------
+//  Battle
+// ------------------------------------------------------------
+const battleS = { e: null, blink: 0, alpha: 1, bg: 'field' };
+function pickMove(e) {
+  const tot = e.moves.reduce((a, m) => a + m[0], 0); let r = Math.random() * tot;
+  for (const m of e.moves) { r -= m[0]; if (r < 0) return m; }
+  return e.moves[0];
+}
+function dmgTo(atk, def) { const b = atk - def / 2; return Math.max(0, Math.floor(b * (0.85 + Math.random() * 0.3))); }
+async function playerHurt(d) {
+  P.hp = Math.max(0, P.hp - d);
+  if (d > 0) { sfx('hurt'); game.shake = 14; game.flash = 3; await say(`ヲタ太は ${d}ポイントの\nダメージを うけた！`, { append: true, auto: 34 }); }
+  else { sfx('miss'); await say('ミス！ ヲタ太は ダメージを うけない！', { append: true, auto: 34 }); }
+}
+async function enemyHurt(e, d) {
+  e.hp = Math.max(0, e.hp - d);
+  if (d > 0) { battleS.blink = 16; await say(`${e.short || e.name}に ${d}ポイントの\nダメージを あたえた！`, { append: true, auto: 34 }); }
+  else { sfx('miss'); await say(`ミス！ ${e.short || e.name}に\nダメージを あたえられない！`, { append: true, auto: 34 }); }
+}
+async function playerAct(e, act) {
+  const nm = e.short || e.name;
+  if (act.type === 'attack') {
+    await say('ヲタ太の こうげき！', { append: true, auto: 22 });
+    if (chance(1 / 20)) { sfx('crit'); await say('かいしんの いちげき！！', { append: true, auto: 26 }); await enemyHurt(e, Math.floor(atkOf() * (1.8 + Math.random() * 0.4))); }
+    else if (chance(1 / 18)) { sfx('miss'); await say(`ミス！ ${nm}は ひらりと かわした！`, { append: true, auto: 34 }); }
+    else { sfx('hit'); await enemyHurt(e, Math.max(1, dmgTo(atkOf(), e.def))); }
+  } else if (act.type === 'skill') {
+    const s = act.skill; P.mp -= s.mp; sfx('skill');
+    await say(`ヲタ太は ${s.name}を となえた！`, { append: true, auto: 22 });
+    await say(s.text, { append: true, auto: 26 });
+    if (s.kind === 'heal') {
+      const v = Math.min(P.mhp - P.hp, rnd(s.pow[0], s.pow[1]) + P.lv); P.hp += v; sfx('heal');
+      await say(`HPが ${v} かいふくした！`, { append: true, auto: 34 });
+    } else { sfx('hit'); await enemyHurt(e, Math.max(1, Math.floor(dmgTo(atkOf(), e.def * 0.5) * s.mult))); }
+  } else if (act.type === 'item') {
+    // already handled while choosing
+  }
+}
+async function enemyAct(e) {
+  const nm = e.short || e.name;
+  const mv = pickMove(e);
+  const [, type, mult, text, hits] = mv;
+  const rage = e.rage ? 1.5 : 1;
+  if (type === 'atk') {
+    await say(`${nm}の こうげき！`, { append: true, auto: 22 });
+    await playerHurt(dmgTo(e.atk * rage, defOf())); e.rage = 0;
+  } else if (type === 'mult') {
+    await say(`${nm}は ${text}`, { append: true, auto: 30 });
+    await playerHurt(dmgTo(e.atk * mult * rage, defOf())); e.rage = 0;
+  } else if (type === 'multi') {
+    await say(`${nm}は ${text}`, { append: true, auto: 30 });
+    for (let i = 0; i < hits && P.hp > 0; i++) await playerHurt(dmgTo(e.atk * mult * rage, defOf()));
+    e.rage = 0;
+  } else if (type === 'heal') {
+    const v = Math.min(e.mhp - e.hp, mult); e.hp += v; sfx('heal');
+    await say(`${nm}は ${text}`, { append: true, auto: 30 });
+    await say(`${nm}の HPが ${v} かいふくした！`, { append: true, auto: 30 });
+  } else if (type === 'idle') {
+    await say(`${nm}は ${text}`, { append: true, auto: 34 });
+  } else if (type === 'rage') {
+    e.rage = 1;
+    await say(`${nm}は ${text}`, { append: true, auto: 34 });
+  }
+  if (e.id === 'kyohiru' && !e.healed && e.hp < e.mhp * 0.35 && P.hp > 0) {
+    e.healed = 1; const v = 90; e.hp = Math.min(e.mhp, e.hp + v); sfx('heal');
+    await say('キョヒールは 百花の 生写真を ながめて\nHPが 90 かいふくした！', { append: true, auto: 40 });
+  }
+}
+async function chooseCommand(e) {
+  const nameWin = () => { drawWin(92, 144, 156, 76); txt(e.short || e.name, 104, 154); };
+  extraWins.push(nameWin);
+  const m = openMenu({ items: ['たたかう', 'スキル', 'どうぐ', 'にげる'], x: 8, y: 144, w: 80, h: 76, cancel: false });
+  let act = null;
+  while (!act) {
+    const r = await chooseMenu(m);
+    if (r === 0) act = { type: 'attack' };
+    else if (r === 1) {
+      const s = await skillMenu(true);
+      if (s) act = { type: 'skill', skill: s };
+      closeMsg();
+    } else if (r === 2) {
+      closeMenu(m); extraWins.splice(extraWins.indexOf(nameWin), 1);
+      const used = await itemMenu(true);
+      if (used) return { type: 'item' };
+      closeMsg();
+      menus.push(m); extraWins.push(nameWin);
+    } else if (r === 3) act = { type: 'run' };
+  }
+  closeMenu(m); const i = extraWins.indexOf(nameWin); if (i >= 0) extraWins.splice(i, 1);
+  return act;
+}
+async function levelUps() {
+  while (P.lv < MAX_LV && P.exp >= EXP_TABLE[P.lv + 1]) {
+    P.lv++;
+    const g = { mhp: rnd(6, 8), mmp: rnd(2, 4), str: rnd(2, 3), vit: rnd(1, 3), agi: rnd(1, 3) };
+    P.mhp += g.mhp; P.mmp += g.mmp; P.str += g.str; P.vit += g.vit; P.agi += g.agi;
+    P.hp = Math.min(P.mhp, P.hp + g.mhp); P.mp = Math.min(P.mmp, P.mp + g.mmp);
+    await say('レベルが あがった！', { noWait: true }); await jingle('lvup');
+    await say(`ちからが ${g.str} あがった！\nみのまもりが ${g.vit} あがった！\nすばやさが ${g.agi} あがった！`);
+    await say(`さいだいHPが ${g.mhp} あがった！\nさいだいMPが ${g.mmp} あがった！`);
+    const s = SKILLS.find(s => s.lv === P.lv);
+    if (s) await say(`ヲタ太は 「${s.name}」を おぼえた！`);
+  }
+}
+// returns 'win' | 'run' | 'lose'
+async function battle(id, opt = {}) {
+  const base = ENEMIES[id];
+  const e = { ...base, id, mhp: base.hp, hp: base.hp };
+  const prevMode = game.mode;
+  sfx('enc');
+  for (let i = 0; i < 6; i++) { game.flash = 4; await framesWait(6); }
+  battleS.e = e; battleS.blink = 0; battleS.alpha = 1; battleS.bg = opt.bg || game.map.bg || 'field';
+  game.mode = 'battle';
+  playBgm(base.boss ? 'boss' : 'battle');
+  const sw = statusWin(); extraWins.push(sw);
+  await say(opt.intro || `${e.name}が あらわれた！`, { auto: 50 });
+  let turn = 0, result = null;
+  while (!result) {
+    turn++;
+    closeMsg();
+    const act = await chooseCommand(e);
+    msg.lines = []; msg.visible = true;
+    if (act.type === 'run') {
+      await say('ヲタ太は にげだした！', { append: true, auto: 24 });
+      if (base.boss) { await say('しかし にげられない！', { append: true, auto: 40 }); }
+      else if (chance(clamp(0.5 + (P.agi - e.agi) * 0.05, 0.25, 0.92))) { sfx('run'); await framesWait(20); result = 'run'; break; }
+      else await say('しかし まわりこまれて しまった！', { append: true, auto: 40 });
+      await enemyAct(e);
+    } else {
+      const pFirst = act.type === 'item' || P.agi * (0.6 + Math.random() * 0.6) >= e.agi * (0.6 + Math.random() * 0.6);
+      if (pFirst) { await playerAct(e, act); if (e.hp > 0) await enemyAct(e); }
+      else { await enemyAct(e); if (P.hp > 0) await playerAct(e, act); }
+    }
+    if (e.hp <= 0) result = 'win';
+    else if (P.hp <= 0) result = 'lose';
+    else if (opt.momoka && turn % 3 === 0) {
+      await say('百花「ヲタ太くん！ がんばってーー！」', { append: true, auto: 40 });
+      const v = Math.min(P.mhp - P.hp, rnd(26, 36)); P.hp += v; sfx('heal');
+      await say(`百花の 声援で HPが ${v} かいふくした！`, { append: true, auto: 40 });
+    }
+  }
+  if (result === 'win') {
+    for (let i = 20; i >= 0; i--) { battleS.alpha = i / 20; await framesWait(1); }
+    await say(`${e.short || e.name}を たおした！`, { append: true, noWait: true });
+    await jingle('win');
+    msg.lines = [];
+    if (e.exp) { P.exp += e.exp; await say(`${e.exp}ポイントの けいけんちを かくとく！`, { append: true, auto: 40 }); }
+    if (e.gold) { P.gold += e.gold; await say(`${e.gold}円を てにいれた！`, { append: true, auto: 40 }); }
+    if (e.drop && chance(e.drop[1]) && (P.items[e.drop[0]] || 0) < 9) { addItem(e.drop[0]); await say(`${e.short || e.name}は ${ITEMS[e.drop[0]].name}を おとしていった！`, { append: true, auto: 50 }); }
+    await waitA();
+    await levelUps();
+  } else if (result === 'lose') {
+    await say('ヲタ太は ちからつきた……', { append: true, noWait: true });
+    await jingle('lose');
+    await waitA();
+  }
+  closeMsg(); extraWins.splice(extraWins.indexOf(sw), 1);
+  if (result === 'lose') { await gameOver(); return 'lose'; }
+  await fadeOut(8);
+  game.mode = prevMode === 'battle' ? 'map' : prevMode;
+  battleS.e = null;
+  playBgm(game.map.bgm);
+  await fadeIn(8);
+  return result;
+}
+async function gameOver() {
+  await fadeOut(30);
+  battleS.e = null; game.mode = 'map';
+  P.gold = Math.floor(P.gold / 2); P.hp = P.mhp; P.mp = P.mmp;
+  setMap('town', 4, 4, 'down');
+  await fadeIn(30);
+  await say('母「まったく… 無茶 するんじゃないよ。\nごはん 食べて 元気 だしなさい。」');
+  await say('（お金が 半分に なってしまった…）');
+}
+
+// ------------------------------------------------------------
+//  Story scripts
+// ------------------------------------------------------------
+async function talkMom() {
+  if (!flags.show) await say('母「劇場は 町の 北東よ。\n百花ちゃんに よろしくね。」');
+  else if (!flags.gou) await say('母「百花ちゃんが さらわれたんだって？\n…いってらっしゃい。 つかれたら\nいつでも 帰ってきなさい。」');
+  else if (!flags.kyohiru) await say('母「推し被りの塔は 北東の 島に\nあるそうよ。 気をつけてね。」');
+  else { await say('母「りっぱに なったわね。」'); return; }
+  if (await yesno('母「すこし 休んでいく？」')) {
+    await fadeOut(16); P.hp = P.mhp; P.mp = P.mmp; await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
+    await say('HPと MPが ぜんかいした！');
+    if (await yesno('母「冒険の きろくを つけておく？」')) {
+      if (saveGame()) await say('きろくを つけた。'); else await say('この ブラウザでは きろくを つけられないみたい…');
+    }
+  }
+}
+async function talkCafe() {
+  await say('店員「ネットカフェ アキバへ ようこそ。\nフラットシートで ひと休み 10円です。」', { noWait: true });
+  extraWins.push(goldWin());
+  const ok = await pick({ items: ['はい', 'いいえ'], x: 184, y: 92, w: 64 }) === 0;
+  if (ok) {
+    if (P.gold < 10) { await say('店員「お金が たりない ようですね…」'); return; }
+    P.gold -= 10;
+    await fadeOut(16); P.hp = P.mhp; P.mp = P.mmp; await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
+    await say('店員「おはようございます。\nHPと MPが ぜんかいしましたよ。」');
+  }
+  if (await yesno('店員「冒険の きろくを のこしますか？」')) {
+    if (saveGame()) await say('きろくを のこした。'); else await say('この ブラウザでは きろくを のこせないみたい…');
+  }
+  await say('店員「またの ご利用を。」');
+}
+async function talkShop() {
+  const stock = [['i', 'drink'], ['i', 'drink2'], ['i', 'photo'], ['w', 1], ['w', 2], ['a', 1], ['a', 2]];
+  if (flags.gou) stock.push(['w', 3], ['a', 3]);
+  await say('店員「いらっしゃい！ 推しグッズの 店だよ。\nなにを かっていく？」', { noWait: true });
+  extraWins.push(goldWin());
+  const label = ([t, id]) => {
+    const it = t === 'i' ? ITEMS[id] : t === 'w' ? WEAPONS[id] : ARMORS[id];
+    return { label: it.name, price: it.price };
+  };
+  const items = stock.map(s => { const l = label(s); return { label: l.label, right: l.price + '円' }; });
+  let idx = 0;
+  while (true) {
+    const m = openMenu({ items, x: 24, y: 8, w: 148, idx });
+    const r = await chooseMenu(m); closeMenu(m);
+    if (r < 0) break;
+    idx = r;
+    const [t, id] = stock[r]; const l = label(stock[r]);
+    if (P.gold < l.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
+    if (t === 'i') {
+      if ((P.items[id] || 0) >= 9) { await say('店員「それ以上は もてないよ！」', { noWait: true }); await framesWait(50); continue; }
+      P.gold -= l.price; addItem(id); sfx('ok');
+      await say(`店員「まいど！ ${l.label}だね。」\n（${ITEMS[id].name} ×${P.items[id]}）`, { noWait: true }); await framesWait(40);
+    } else {
+      const cur = t === 'w' ? WEAPONS[P.w].atk : ARMORS[P.a].def;
+      const nv = t === 'w' ? WEAPONS[id].atk : ARMORS[id].def;
+      if (nv <= cur) { await say('店員「いまの そうびの ほうが\nつよいみたいだよ。」', { noWait: true }); await framesWait(60); continue; }
+      P.gold -= l.price; if (t === 'w') P.w = id; else P.a = id; sfx('ok');
+      await say(`店員「まいど！」\nヲタ太は ${l.label}を そうびした！`, { noWait: true }); await framesWait(60);
+    }
+  }
+  await say('店員「推し活 がんばってね！」');
+}
+async function talkStaff() {
+  if (!flags.show) await say('スタッフ「まもなく 開演です！\nステージ前へ どうぞ！」');
+  else if (!flags.gou) await say('スタッフ「握手会場は 町を出て 南東だよ。\n百花ちゃんを… たのむ！」');
+  else if (!flags.kyohiru) await say('スタッフ「推し被りの塔は 北東の 島だ。\n橋の まえに 手下の ヲタクが\n行列を つくってるらしい。」');
+  else await say('スタッフ「百花ちゃんを 救ってくれて\nありがとう！」');
+}
+async function showConcert() {
+  await say('劇場は 開演を 待つ ヲタクたちで\nいっぱいだ…！');
+  await walk(player, player.x === 19 ? 'UU' : 'LUU', 2);
+  face(player, 'up');
+  playBgm('title', true); game.lights = true;
+  await say('百花「みなさーん、こんにちは！\nAKB48の 伊藤百花です！」');
+  burst(19 * 16 + 8, 3 * 16, 'note', 10);
+  await say('ヲタクたち「百花ーーーっ！！」');
+  await say('♪ 〜 百花の 歌声が\n劇場いっぱいに ひびきわたる 〜 ♪');
+  burst(19 * 16 + 8, 3 * 16, 'heart', 10);
+  await say('ヲタ太は 紫の ペンライトを\n全力で ふった！');
+  await say('百花「あっ！ いつも 一番前で\n紫の ペンライトを ふってくれてる 人だ！\nありがとう！」');
+  await say('ヲタ太の むねが たかなった！');
+  await say('百花「このあと 握手会場で\n握手会が あります！\nみんな 来てね〜！」');
+  game.lights = false;
+  await fadeOut(16); flags.show = true; playBgm('town'); await fadeIn(16);
+  await say('握手会場は 町を 出て 南東に ある。\nヲタ太は 握手会場へ むかうことにした。');
+}
+async function venueEnter() {
+  if (!flags.show) {
+    await say('スタッフ「握手会は まだ はじまって いないよ。\n先に アキハバラの 劇場で\n公演を 見てきたら？」');
+    await fadeOut(8); setMap('field', 25, 16, 'down'); await fadeIn(8);
+    return;
+  }
+  if (flags.kidnap) return;
+  flags.kidnap = true;
+  const st = npcById('vstaff');
+  await say('スタッフ「た、たいへんだーっ！」');
+  await walk(st, 'L', 2); face(st, 'down');
+  await say('スタッフ「同担拒否魔王 キョヒールが\nあらわれて 百花ちゃんを\nさらっていった！」');
+  await say('スタッフ「『百花は おれだけの 推しだ！\n推し被りは ゆるさん！』とか いって…\n北東の 島にある 推し被りの塔へ！」');
+  await say('スタッフ「この会場も キョヒールの 手下に\n占拠されちまった。 奥にいる 手下の ボス\n『TOのゴウ』が 塔の 通行証を もってる！」');
+  await say('ヲタ太は 百花を 救うことを\nちかった！');
+}
+async function gouEvent() {
+  await say('ゴウ「おれは TOの ゴウ！\nキョヒールさまの 右腕よ！」');
+  await say('ゴウ「百花ちゃんの いちばんの ヲタクは\nおれたちだ！ 推し被りは ここで\nひきかえせーっ！」');
+  const r = await battle('gou');
+  if (r !== 'win') return;
+  flags.gou = true;
+  await say('ゴウ「ぐっ… なんて 熱い 推しへの 愛だ…」');
+  await say('ゴウ「おれも わかってたんだ。\n推しを 独り占め するなんて\nヲタクの 道に はずれてるって…」');
+  await say('ゴウ「これは 推し被りの塔への 通行証だ。\n百花ちゃんを… たのんだぞ！」', { noWait: true });
+  addItem('pass'); await jingle('get'); playBgm(game.map.bgm);
+  await say('ヲタ太は 通行証を てにいれた！');
+}
+async function bridgeTalk() {
+  if (!P.items.pass) { await say('ヲタク「この先は 推し被りの塔。\nキョヒールさまの 許可が ないと\nだれも 通さないぜ！」'); return; }
+  await say('ヲタク「そ、それは TOの ゴウさんの 通行証！\n…わかった。 通っていいぜ。」');
+  await fadeOut(10); flags.bridge = true; await fadeIn(10);
+  await say('行列が ゆずってくれた！');
+}
+async function kyohiruEvent() {
+  playBgm(null);
+  const m = npcById('momoka2');
+  await say('キョヒール「来たな、推し被り！」');
+  await say('百花「ヲタ太くん！？ 来てくれたの！？」');
+  burst(m.px + 8, m.py, 'heart', 6);
+  await say('キョヒール「百花は おれだけの 推しだ！\n握手も チェキも 全部 おれが\n独占するのだ！」');
+  await say('キョヒール「同担は 拒否する！！\n消えされ、推し被りーっ！！」');
+  const r = await battle('kyohiru', { momoka: true, intro: '同担拒否魔王キョヒールが\nたちはだかった！' });
+  if (r !== 'win') return;
+  flags.kyohiru = true;
+  playBgm('title', true);
+  await say('キョヒール「ば、ばかな… おれの\n同担拒否が やぶれるとは…」');
+  await say('百花「キョヒールさん。 応援してくれるのは\nすごく うれしいよ。」');
+  await say('百花「でもね、 ファンの みんなが\nなかよく してくれるのが\nわたしは いちばん うれしいの。」');
+  await say('キョヒール「…百花……。 おれは\nまちがっていた……。\n推し被りも… わるくない かもな。」');
+  await walk(player, 'R', 1); face(player, 'up');
+  await say('百花「ヲタ太くん、 たすけてくれて\nほんとうに ありがとう！」');
+  burst(m.px + 8, m.py, 'heart', 10);
+  await say('百花「……じつはね、 気づいてたよ。\nいつも 一番前で 紫の ペンライト\nふってくれてたの。」');
+  await say('ヲタ太は 百花と いっしょに\nアキハバラへ 帰った。');
+  await ending();
+}
+async function ending() {
+  await fadeOut(30);
+  // 1. special concert
+  flags.scene = 'concert';
+  setMap('town', 19, 5, 'up');
+  const mo = npcById('momoka'); mo.hidden = false;
+  playBgm('title', true); game.lights = true;
+  await fadeIn(30);
+  await say('百花「みんな、 しんぱい かけて\nごめんね！ ただいまーっ！」');
+  await say('ヲタクたち「おかえりーーっ！！」');
+  await say('百花「今日は たすけてくれた ヲタ太くんと\nみんなへの ありがとうを こめて\n歌います！」');
+  burst(19 * 16 + 8, 3 * 16, 'note', 12);
+  await say('キョヒール「百花ーっ！！\n…推し被りの みんなも\nいっしょに コールしようぜ！」');
+  await say('ゴウ「TOとして 号令を かける！\nせーのっ！」');
+  await say('ヲタクたち「百花ーーーーっ！！」');
+  burst(19 * 16 + 8, 3 * 16, 'heart', 14);
+  await say('劇場は ひとつに なった。');
+  game.lights = false;
+  await fadeOut(30);
+  await caption(['── それから 3年後 ──'], 90);
+  await caption(['百花は アイドルを 卒業した。'], 90);
+  // 2. epilogue: proposal
+  flags.scene = 'epilogue';
+  setMap('town', 19, 6, 'up');
+  const mo2 = npcById('momoka'); mo2.hidden = false; mo2.x = 19; mo2.y = 4; mo2.px = 19 * 16; mo2.py = 4 * 16;
+  playBgm(null);
+  await fadeIn(30);
+  await say('卒業公演が おわった あとの 劇場……');
+  await walk(player, 'U', 1);
+  await say('百花「ヲタ太くん、 来てくれて ありがとう。\n卒業公演も… やっぱり 一番前で\n紫の ペンライト ふってくれてたね。」');
+  await say('百花「わたし、 もう アイドルじゃ ないから…」');
+  await say('百花「これからは ファンとして じゃなくて…\nヲタ太くんの となりに いても\nいいかな？」');
+  while (true) {
+    const r = await ask('ヲタ太は……', ['百花ちゃん、結婚してください！', 'これからも 推しつづけます！'], { x: 24, y: 92, w: 224, cancel: false });
+    if (r === 0) break;
+    await say('百花「…もう！ そういう ことじゃ\nなくて！」');
+  }
+  await say('百花「…………。」');
+  playBgm('wedding', true);
+  burst(mo2.px + 8, mo2.py, 'heart', 16);
+  await say('百花「…はい！ よろこんで！」');
+  await fadeOut(40);
+  // 3. wedding
+  setMap('chapel', 4, 2, 'up');
+  const bride = npcById('bride');
+  await fadeIn(40);
+  await say('そして 結婚式の 日──');
+  await walk(bride, 'UUUUUU', 1);
+  await walk(bride, 'U', 1); face(bride, 'up');
+  await say('支配人「それでは 誓いの ことばを。」');
+  while (true) {
+    const r = await ask('支配人「ヲタ太。 あなたは 百花を\n一生 推しつづけることを\n誓いますか？」', ['誓います！', '誓いません'], { cancel: false });
+    if (r === 0) break;
+    await say('会場が ざわついた！\n百花「……ヲタ太くん？」');
+  }
+  await say('支配人「百花。 あなたは ヲタ太を\n夫とし、 ともに あゆむことを\n誓いますか？」');
+  await say('百花「はい。 誓います。」');
+  await say('ふたりは 指輪を 交換した。');
+  burst(5 * 16, 2 * 16, 'heart', 20);
+  await say('ゴウ「おめでとーーう！！」');
+  await say('キョヒール「推しの しあわせが\nおれの しあわせだ……！\nおめでとう！！」');
+  await say('母「ヲタ太… りっぱに なって……」');
+  burst(5 * 16, 2 * 16, 'heart', 20);
+  await say('紫の ペンライトが\nチャペルいっぱいに ゆれた。');
+  closeMsg();
+  await fadeOut(40);
+  await caption(['こうして ヲタ太と 百花は', 'いつまでも しあわせに', 'くらしました。']);
+  game.mode = 'end'; game.endT = 0;
+  await fadeIn(30);
+  await new Promise(res => { modal = k => { if ((k === 'a' || k === 'b') && game.endT > 120) { modal = null; res(); } }; });
+  await fadeOut(30);
+  flags.scene = null;
+  // let the surrounding runScript finish its cleanup before the title opens its menu
+  setTimeout(titleScreen, 0);
+}
+
+// --- map wiring ---
+const T = MAPS.town;
+T.npcs = [
+  { id: 'mom', x: 6, y: 5, spr: 'mom', talk: talkMom, show: () => !flags.scene },
+  { id: 'shop', x: 5, y: 13, spr: 'clerk', talk: talkShop },
+  { id: 'cafe', x: 16, y: 13, spr: 'cafe', talk: talkCafe },
+  { id: 'staff', x: 16, y: 7, spr: 'staff', talk: talkStaff, show: () => flags.scene !== 'epilogue' },
+  { id: 'momoka', x: 19, y: 3, spr: 'momoka', fixed: 1, show: () => !flags.show || !!flags.scene,
+    talk: async () => {
+      if (flags.scene === 'epilogue') { await say('百花「ずっと いっしょだよ。」'); return; }
+      await say('百花「♪〜」\n（百花が ステージで リハーサルを している）');
+    } },
+  { id: 'fan1', x: 17, y: 5, spr: 'otaku1', show: () => flags.scene !== 'epilogue', talk: async () => {
+    if (!flags.show) await say('ヲタク「百花ちゃんの 推しカラーは 紫！\n今日も 紫の ペンライトで\n応援するぞ！」');
+    else if (!flags.kyohiru) await say('ヲタク「百花ちゃんが さらわれた なんて…\nおれたちの 百花ちゃんを\nとりもどしてくれ！」');
+    else await say('ヲタク「推し被り 上等！\nみんなで 百花ちゃんを 応援しようぜ！」');
+  } },
+  { id: 'fan2', x: 23, y: 5, spr: 'otaku3', show: () => flags.scene !== 'epilogue', talk: async () => {
+    if (!flags.show) await say('ヲタク「おれは 百花ちゃんの\n笑顔に すくわれたんだ…」');
+    else await say('ヲタク「キョヒールの 手下は\n握手会の レーンに いるらしい。\n気をつけろよ。」');
+  } },
+  { id: 'fan3', x: 22, y: 7, spr: 'girl', show: () => flags.scene !== 'epilogue', talk: async () => {
+    await say('女の子「百花ちゃん かわいいよね〜！\nわたしも 百花ちゃんみたいに\nなりたいな！」');
+  } },
+  { id: 'gouT', x: 16, y: 6, spr: 'gou', show: () => flags.scene === 'concert', talk: async () => { await say('ゴウ「TOとして 号令は まかせろ！」'); } },
+  { id: 'kyoT', x: 23, y: 6, spr: 'kyohiru', show: () => flags.scene === 'concert', talk: async () => { await say('キョヒール「推し被りも… わるくないな。」'); } },
+  { id: 'w1', x: 8, y: 10, spr: 'otaku2', wander: 1, talk: async () => {
+    if (!flags.show) await say('ヲタク「劇場は 町の 北東の 建物だよ。\n今日の 公演、楽しみだな〜！」');
+    else if (!flags.gou) await say('ヲタク「町の 外には 推し被りの\nヲタクたちが うろついてるぞ。\nつかれたら 家で 休むと いい。」');
+    else await say('ヲタク「キンブレと 特攻服が\nグッズショップに 入荷したってさ！」');
+  } },
+  { id: 'w2', x: 22, y: 11, spr: 'otaku4', wander: 1, talk: async () => {
+    await say('ヲタク「Bボタン（Xキー）で メニュー。\n「スキル」の 推しコールで\nHPを かいふくできるぞ。」');
+  } },
+  { id: 'w3', x: 14, y: 18, spr: 'otaku1', wander: 1, talk: async () => {
+    await say('ヲタク「ショップの 推しカラーペンラは\nこうげき力が ぐっと あがるぞ。\n紫に ひかるんだ！」');
+  } },
+  { id: 'w4', x: 6, y: 15, spr: 'girl', wander: 1, talk: async () => {
+    await say('女の子「ネットカフェで 冒険の きろくを\nのこせるんだって。 お母さんに\nたのんでも いいみたい。」');
+  } },
+];
+T.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 4, 8, 'down'); toast('フィールド'); await fadeIn(8); };
+T.onStep = (x, y) => {
+  if (!flags.show && y === 7 && (x === 19 || x === 20)) return showConcert;
+  return null;
+};
+
+const F = MAPS.field;
+F.npcs = [
+  { id: 'line1', x: 32, y: 7, spr: 'otaku3', fixed: 1, show: () => !flags.bridge, talk: bridgeTalk },
+];
+F.enc = (x, y) => {
+  if (y <= 5 && x >= 30) return ['kosan', 'yakkai'];
+  if (x < 14) return ['gachikoi', 'gachikoi', 'ninchi'];
+  if (x < 27) return ['ninchi', 'kosan'];
+  return flags.gou ? ['kosan', 'yakkai'] : ['ninchi', 'kosan'];
+};
+F.onStep = (x, y, t) => {
+  if (t === 'A') return async () => { sfx('door'); await fadeOut(8); setMap('town', 11, 19, 'up'); toast('アキハバラ'); await fadeIn(8); };
+  if (t === 'V') return async () => { sfx('door'); await fadeOut(8); setMap('venue', 9, 14, 'up'); toast('握手会場'); await fadeIn(8); await venueEnter(); };
+  if (t === 'O') return async () => { sfx('door'); await fadeOut(8); setMap('tower1', 7, 12, 'up'); toast('推し被りの塔'); await fadeIn(8); };
+  return null;
+};
+
+const V = MAPS.venue;
+V.npcs = [
+  { id: 'vstaff', x: 9, y: 13, spr: 'staff', talk: async () => {
+    if (!flags.gou) await say('スタッフ「奥に いる TOのゴウが\n塔への 通行証を もってるはずだ。\nたのんだぞ！」');
+    else await say('スタッフ「通行証を 手に入れたか！\n推し被りの塔は 北東の 島だ！」');
+  } },
+  { id: 'gou', x: 10, y: 1, spr: 'gou', talk: async () => {
+    if (!flags.gou) await gouEvent();
+    else await say('ゴウ「百花ちゃんを たのむぞ！\nキョヒールさまは… いや キョヒールは\n塔の 最上階に いる！」');
+  } },
+];
+V.chests = [
+  { id: 'v1', x: 1, y: 1, item: 'drink2' },
+  { id: 'v2', x: 18, y: 1, gold: 120 },
+  { id: 'v3', x: 18, y: 14, item: 'photo' },
+];
+V.enc = () => ['kosan', 'mix', 'penra'];
+V.encRate = 1 / 13;
+V.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 25, 16, 'down'); await fadeIn(8); };
+V.onStep = (x, y) => (!flags.gou && x === 10 && y === 2) ? gouEvent : null;
+
+const T1 = MAPS.tower1;
+T1.chests = [
+  { id: 't1', x: 1, y: 1, weapon: 4 },
+  { id: 't2', x: 7, y: 5, item: 'drink2', n: 2 },
+];
+T1.enc = () => ['mix', 'yakkai', 'chizou'];
+T1.encRate = 1 / 13;
+T1.onExit = async () => { sfx('door'); await fadeOut(8); setMap('field', 33, 4, 'down'); await fadeIn(8); };
+T1.onStep = (x, y, t) => t === 'U' ? async () => { sfx('door'); await fadeOut(8); setMap('tower2', 2, 10, 'right'); toast('最上階'); await fadeIn(8); } : null;
+
+const T2 = MAPS.tower2;
+T2.npcs = [
+  { id: 'kyohiru', x: 7, y: 2, spr: 'kyohiru', fixed: 1, show: () => !flags.kyohiru, talk: kyohiruEvent },
+  { id: 'momoka2', x: 8, y: 1, spr: 'momoka', fixed: 1, talk: async () => { await say('百花「ヲタ太くん、 たすけて！」'); } },
+];
+T2.chests = [
+  { id: 't3', x: 7, y: 8, gold: 300 },
+  { id: 't4', x: 8, y: 8, armor: 4 },
+];
+T2.enc = () => ['yakkai', 'chizou', 'saizen'];
+T2.encRate = 1 / 13;
+T2.onStep = (x, y, t) => {
+  if (t === 'd') return async () => { sfx('door'); await fadeOut(8); setMap('tower1', 13, 1, 'left'); await fadeIn(8); };
+  if (!flags.kyohiru && y === 3 && (x === 7 || x === 8)) return async () => { face(player, 'up'); await kyohiruEvent(); };
+  return null;
+};
+
+const C = MAPS.chapel;
+C.npcs = [
+  { id: 'priest', x: 5, y: 1, spr: 'boss', fixed: 1 },
+  { id: 'bride', x: 5, y: 9, spr: 'momoka', fixed: 1, dir: 'up' },
+  { id: 'cmom', x: 2, y: 4, spr: 'mom', fixed: 1, dir: 'up' },
+  { id: 'cstaff', x: 8, y: 4, spr: 'staff', fixed: 1, dir: 'up' },
+  { id: 'cgou', x: 2, y: 6, spr: 'gou', fixed: 1, dir: 'up' },
+  { id: 'ckyo', x: 8, y: 6, spr: 'kyohiru', fixed: 1, dir: 'up' },
+  { id: 'cf1', x: 1, y: 8, spr: 'otaku1', fixed: 1, dir: 'up' },
+  { id: 'cf2', x: 9, y: 8, spr: 'otaku3', fixed: 1, dir: 'up' },
+  { id: 'cf3', x: 3, y: 8, spr: 'girl', fixed: 1, dir: 'up' },
+  { id: 'cf4', x: 7, y: 8, spr: 'otaku2', fixed: 1, dir: 'up' },
+];
+
+// ------------------------------------------------------------
+//  Title & intro
+// ------------------------------------------------------------
+const STARS = Array.from({ length: 60 }, () => [rnd(0, W - 1), rnd(0, 150), rnd(0, 3)]);
+async function titleScreen() {
+  game.mode = 'title'; game.busy = true; game.fx = [];
+  playBgm('title', true);
+  game.fade = 0;
+  const save = loadSave();
+  const items = [{ label: 'はじめから' }, { label: 'つづきから', disabled: !save }];
+  const r = await pick({ items, x: 88, y: 150, w: 80, cancel: false, idx: save ? 1 : 0 });
+  await fadeOut(20);
+  if (r === 1 && save) {
+    newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
+    game.mode = 'map';
+    setMap(save.map, save.x, save.y, save.dir);
+    toast(game.map.name);
+    await fadeIn(20);
+    game.busy = false;
+    return;
+  }
+  newGame();
+  playBgm(null);
+  game.mode = 'map';
+  setMap('town', 4, 4, 'down');
+  game.fade = 1;
+  await caption(['ここは 電気の街 アキハバラ。']);
+  await caption(['ひとりの ヲタクが いた。', 'その名は ヲタ太。']);
+  await caption(['ヲタ太の 推しは', 'アイドル『伊藤百花』。', '推しカラーは 紫。']);
+  await caption(['これは ヲタ太が 推しを 救い、', 'しあわせを つかむまでの', '物語である──']);
+  playBgm('town');
+  await fadeIn(30);
+  await runScript(async () => {
+    await say('母「ヲタ太！ いつまで 寝てるの！\n今日は 百花ちゃんの 公演でしょ！」');
+    face(player, 'right');
+    await say('母「劇場は 町の 北東よ。\nほら、 これ もっていきなさい。」', { noWait: true });
+    addItem('drink', 3); await jingle('get'); playBgm('town');
+    await say('エナドリを 3本 もらった！');
+    await say('（Bボタン / Xキーで メニュー。\nAボタン / Zキーで はなす・しらべる）');
+  });
+  toast('アキハバラ');
+}
+
+// ------------------------------------------------------------
+//  Rendering
+// ------------------------------------------------------------
+function drawWin(x, y, w, h, border = '#fff') {
+  ctx.fillStyle = '#000'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = border;
+  ctx.fillRect(x + 3, y + 1, w - 6, 2); ctx.fillRect(x + 3, y + h - 3, w - 6, 2);
+  ctx.fillRect(x + 1, y + 3, 2, h - 6); ctx.fillRect(x + w - 3, y + 3, 2, h - 6);
+  ctx.fillRect(x + 2, y + 2, 2, 2); ctx.fillRect(x + w - 4, y + 2, 2, 2); ctx.fillRect(x + 2, y + h - 4, 2, 2); ctx.fillRect(x + w - 4, y + h - 4, 2, 2);
+}
+function txt(s, x, y, col = '#fff', size = 12) {
+  ctx.font = size + 'px ' + FONT; ctx.textBaseline = 'top'; ctx.fillStyle = col; ctx.fillText(s, x, y);
+}
+function drawUI() {
+  for (const w of extraWins) w();
+  if (msg.visible) {
+    drawWin(msg.x, msg.y, msg.w, msg.h);
+    msg.lines.forEach((L, i) => txt(L.t.slice(0, Math.floor(L.n)), msg.x + 12, msg.y + 10 + i * 20));
+    if (msg.arrow && (game.frame >> 4) % 2 === 0) { ctx.fillStyle = '#fff'; const ax = msg.x + msg.w / 2 - 3, ay = msg.y + msg.h - 11; ctx.fillRect(ax, ay, 7, 1); ctx.fillRect(ax + 1, ay + 1, 5, 1); ctx.fillRect(ax + 2, ay + 2, 3, 1); ctx.fillRect(ax + 3, ay + 3, 1, 1); }
+  }
+  for (const m of menus) {
+    drawWin(m.x, m.y, m.w, m.h);
+    m.items.forEach((it, i) => {
+      const label = typeof it === 'string' ? it : it.label;
+      const col = it.disabled ? '#7a7488' : '#fff';
+      txt(label, m.x + 20, m.y + 8 + i * m.lh, col);
+      if (it.right) txt(it.right, m.x + m.w - 10 - textW(it.right), m.y + 8 + i * m.lh, col);
+      if (i === m.idx && (!m.active || (game.frame >> 4) % 2 === 0)) {
+        const cx = m.x + 9, cy = m.y + 10 + i * m.lh; ctx.fillStyle = '#fff';
+        for (let k = 0; k < 4; k++) ctx.fillRect(cx + k, cy + k, 1, 8 - k * 2);
+      }
+    });
+  }
+}
+function heartAt(x, y, col) {
+  const pat = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+  ctx.fillStyle = col;
+  pat.forEach((r, j) => { for (let i = 0; i < 7; i++) if (r[i] === '#') ctx.fillRect(x + i, y + j, 1, 1); });
+}
+function noteAt(x, y, col) { ctx.fillStyle = col; ctx.fillRect(x + 3, y, 1, 6); ctx.fillRect(x + 4, y, 2, 1); ctx.fillRect(x + 5, y + 1, 1, 1); ctx.fillRect(x, y + 5, 4, 2); }
+function camera() {
+  const m = game.map;
+  let cx = Math.round(player.px - (W / 2 - 8)), cy = Math.round(player.py - (H / 2 - 16));
+  if (m.w * TS <= W) cx = Math.round((m.w * TS - W) / 2);
+  if (m.h * TS <= H) cy = -12;
+  return [cx, cy];
+}
+function drawActor(a, sprName, cx, cy) {
+  const set = SPR[sprName]; if (!set) return;
+  const f = (game.frame >> 4) % 2;
+  ctx.drawImage(set[a.dir][f], Math.round(a.px) - cx, Math.round(a.py) - cy);
+}
+function drawMap() {
+  const m = game.map; const [cx, cy] = camera();
+  const tf = (game.frame >> 5) % 2;
+  const tx0 = Math.floor(cx / TS), ty0 = Math.floor(cy / TS);
+  for (let ty = ty0; ty <= ty0 + Math.ceil(H / TS); ty++) for (let tx = tx0; tx <= tx0 + Math.ceil(W / TS); tx++) {
+    const ch = tileAt(m, tx, ty); const im = tileImg[ch] || tileImg[' '];
+    ctx.drawImage(tf && im[1] ? im[1] : im[0], tx * TS - cx, ty * TS - cy);
+  }
+  for (const c of m.chests) ctx.drawImage(flags.chests[c.id] ? SPR.chestOpen : SPR.chest, c.x * TS - cx, c.y * TS - cy);
+  const actors = game.npcs.filter(npcVisible).map(n => [n, n.spr]);
+  actors.push([player, 'hero']);
+  actors.sort((a, b) => a[0].py - b[0].py);
+  for (const [a, s] of actors) drawActor(a, s, cx, cy);
+  // cage around captive momoka
+  if (game.mapId === 'tower2' && !flags.kyohiru) {
+    const mo = npcById('momoka2'); ctx.fillStyle = '#9a9aae';
+    for (let i = 0; i <= 16; i += 4) ctx.fillRect(mo.px - cx + i - (i === 16 ? 1 : 0), mo.py - cy - 2, 1, 18);
+    ctx.fillRect(mo.px - cx, mo.py - cy - 2, 16, 1); ctx.fillRect(mo.px - cx, mo.py - cy + 15, 16, 1);
+  }
+  if (game.lights) {
+    ctx.save(); ctx.globalAlpha = 0.18 + 0.06 * Math.sin(game.frame / 8);
+    const sx = 19 * TS - cx + 8, sy = 2 * TS - cy;
+    [['#f890b8', -40], ['#9a4ad8', 0], ['#78d8f8', 40]].forEach(([c, o], i) => {
+      ctx.fillStyle = c; ctx.beginPath(); const sw = Math.sin(game.frame / 20 + i) * 20;
+      ctx.moveTo(sx + o, sy - 20); ctx.lineTo(sx + sw - 18, sy + 80); ctx.lineTo(sx + sw + 18, sy + 80); ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
+  }
+  drawFx(cx, cy);
+}
+function drawFx(cx, cy) {
+  for (let i = game.fx.length - 1; i >= 0; i--) {
+    const f = game.fx[i]; f.x += f.vx; f.y += f.vy; f.life--;
+    if (f.life <= 0) { game.fx.splice(i, 1); continue; }
+    if (f.kind === 'heart') heartAt(Math.round(f.x - cx), Math.round(f.y - cy), f.col); else noteAt(Math.round(f.x - cx), Math.round(f.y - cy), f.col);
+  }
+}
+function drawBattleBg(x, y, w, h, kind) {
+  const band = (cols) => { const bh = Math.ceil(h / cols.length); cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(x, y + i * bh, w, Math.min(bh, h - i * bh)); }); };
+  if (kind === 'field') {
+    band(['#3c7ce0', '#4c8ce8', '#5c9cf0', '#78b4f8', '#98ccf8', '#48b03c', '#3aa034', '#2f8a2c']);
+    ctx.fillStyle = '#2a7a30'; for (let i = 0; i < w; i += 24) { ctx.fillRect(x + i, y + h * 0.58, 16, 6); ctx.fillRect(x + i + 4, y + h * 0.55, 8, 4); }
+  } else if (kind === 'venue') {
+    band(['#120a24', '#1a1030', '#22163c', '#2a1c48', '#322254', '#5c5a70', '#4c4a60', '#3c3a50']);
+    ctx.save(); ctx.globalAlpha = 0.22; [['#f890b8', 0.25], ['#9a4ad8', 0.5], ['#78d8f8', 0.75]].forEach(([c, k]) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x + w * k - 4, y); ctx.lineTo(x + w * k + 4, y); ctx.lineTo(x + w * k + 24, y + h * 0.75); ctx.lineTo(x + w * k - 24, y + h * 0.75); ctx.fill(); }); ctx.restore();
+  } else {
+    band(['#1c142c', '#24183a', '#2c1c46', '#3a2452', '#4a2a5a', '#3a2a52', '#2e2244', '#221a36']);
+    ctx.fillStyle = '#d83838'; for (let i = 0; i < 6; i++) ctx.fillRect(x + 12 + i * 32, y + 10 + (i % 2) * 8, 2, 2);
+  }
+}
+function drawBattle() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const e = battleS.e; if (!e) return;
+  drawBattleBg(88, 16, 160, 120, battleS.bg);
+  ctx.fillStyle = '#fff'; ctx.fillRect(88, 15, 160, 1); ctx.fillRect(88, 136, 160, 1); ctx.fillRect(87, 16, 1, 120); ctx.fillRect(248, 16, 1, 120);
+  const sc = e.boss ? 4 : 3, sz = 16 * sc;
+  const visible = battleS.blink <= 0 || (battleS.blink >> 1) % 2 === 0;
+  if (battleS.blink > 0) battleS.blink--;
+  if (visible && battleS.alpha > 0) {
+    ctx.save(); ctx.globalAlpha = battleS.alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(168 - sz / 2 + 6, 128, sz - 12, 4);
+    ctx.drawImage(SPR.e[e.id], 168 - sz / 2, 130 - sz, sz, sz);
+    ctx.restore();
+  }
+}
+function drawTitle() {
+  ctx.fillStyle = '#0a0614'; ctx.fillRect(0, 0, W, H);
+  for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#d4aef8' : '#fff'; ctx.fillRect(x, y, 1, 1); } }
+  // stage floor
+  ctx.fillStyle = '#2a1c48'; ctx.fillRect(0, 128, W, 96); ctx.fillStyle = '#5a2490'; ctx.fillRect(0, 128, W, 2);
+  ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#9a4ad8';
+  ctx.beginPath(); ctx.moveTo(120, 0); ctx.lineTo(136, 0); ctx.lineTo(176, 140); ctx.lineTo(80, 140); ctx.fill(); ctx.restore();
+  ctx.textAlign = 'center';
+  txt('MOMOKA QUEST', W / 2, 22, '#d4aef8', 10);
+  txt('百花クエスト', W / 2 + 2, 40, '#5a2490', 30);
+  txt('百花クエスト', W / 2, 38, '#fff', 30);
+  txt('〜 推し被りの塔 〜', W / 2, 76, '#f8d838', 12);
+  ctx.textAlign = 'left';
+  const f = (game.frame >> 4) % 2;
+  ctx.drawImage(SPR.hero.right[f], 92, 92, 32, 32);
+  ctx.drawImage(SPR.momoka.down[f], 132, 92, 32, 32);
+  heartAt(125, 88 + Math.round(Math.sin(game.frame / 15) * 2), '#f890b8');
+  txt('© ヲタ太とゆかいな仲間たち', 8, 206, '#7a6e94', 10);
+}
+function drawEnd() {
+  game.endT++;
+  ctx.fillStyle = '#0a0614'; ctx.fillRect(0, 0, W, H);
+  for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#f890b8' : '#fff'; ctx.fillRect(x, y + 20, 1, 1); } }
+  ctx.textAlign = 'center';
+  txt('THE END', W / 2, 40, '#fff', 30);
+  txt('百花クエスト 〜推し被りの塔〜', W / 2, 84, '#d4aef8', 12);
+  const f = (game.frame >> 4) % 2;
+  ctx.drawImage(SPR.hero.right[f], 92, 108, 32, 32);
+  ctx.drawImage(SPR.momoka.down[f], 132, 108, 32, 32);
+  heartAt(125, 100 + Math.round(Math.sin(game.frame / 15) * 2), '#f890b8');
+  txt(`ヲタ太 Lv${P.lv}`, W / 2, 150, '#fff', 12);
+  txt('推し活 おつかれさまでした！', W / 2, 168, '#fff', 12);
+  if (game.endT > 120 && (game.frame >> 5) % 2 === 0) txt('A / Z で タイトルへ', W / 2, 190, '#9d92b8', 10);
+  ctx.textAlign = 'left';
+}
+function draw() {
+  resetT();
+  let sx = 0, sy = 0;
+  if (game.shake > 0) { game.shake--; sx = rnd(-2, 2); sy = rnd(-1, 1); }
+  ctx.save(); ctx.translate(sx, sy);
+  if (game.mode === 'title') drawTitle();
+  else if (game.mode === 'battle') drawBattle();
+  else if (game.mode === 'end') drawEnd();
+  else if (game.map) drawMap();
+  else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+  ctx.restore();
+  if (game.toast && game.mode === 'map') {
+    game.toast.t--; const tw = textW(game.toast.text) + 24;
+    if (game.toast.t > 0) drawWin(Math.round((W - tw) / 2), 8, tw, 28), txt(game.toast.text, Math.round((W - tw) / 2) + 12, 16);
+    else game.toast = null;
+  }
+  if (game.fade > 0) { ctx.fillStyle = `rgba(0,0,0,${game.fade})`; ctx.fillRect(0, 0, W, H); }
+  if (game.caption) {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalAlpha = game.caption.a; ctx.textAlign = 'center';
+    const ls = game.caption.lines, y0 = H / 2 - ls.length * 11;
+    ls.forEach((l, i) => txt(l, W / 2, y0 + i * 22, '#fff', 12));
+    ctx.restore();
+    if (game.caption.arrow && (game.frame >> 4) % 2 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(W / 2 - 3, H - 30, 7, 1); ctx.fillRect(W / 2 - 2, H - 29, 5, 1); ctx.fillRect(W / 2 - 1, H - 28, 3, 1); ctx.fillRect(W / 2, H - 27, 1, 1); }
+  }
+  if (game.flash > 0) { game.flash--; ctx.fillStyle = game.mode === 'battle' ? 'rgba(216,56,56,0.35)' : 'rgba(255,255,255,0.85)'; ctx.fillRect(0, 0, W, H); }
+  drawUI();
+}
+
+// ------------------------------------------------------------
+//  Main loop
+// ------------------------------------------------------------
+function update() {
+  game.frame++;
+  const keys = keyQ.splice(0);
+  const free = [];
+  for (const k of keys) { if (modal) modal(k); else free.push(k); }
+  if (game.mode === 'map' && game.map) { updateMap(); freeInput(free); }
+  for (let i = waiters.length - 1; i >= 0; i--) {
+    const w = waiters[i];
+    if (w.fn()) { waiters.splice(i, 1); w.res(); }
+  }
+}
+let last = 0, acc = 0;
+function loop(t) {
+  if (!last) last = t;
+  acc += Math.min(100, t - last); last = t;
+  let n = 0;
+  while (acc >= 1000 / 60 && n < 4) { update(); acc -= 1000 / 60; n++; }
+  if (n) draw();
+  requestAnimationFrame(loop);
+}
+async function boot() {
+  initSprites(); initTiles();
+  try { await Promise.race([document.fonts.load('12px "DotGothic16"'), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+  newGame();
+  requestAnimationFrame(loop);
+  cv.focus();
+  titleScreen();
+}
+window.__mq = { game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
+boot();
+</script>
+<!--/BODY-->
+</body>
+</html>
