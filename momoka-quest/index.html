@@ -94,6 +94,14 @@ button {
 button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
 .name-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--dim); }
 .name-field[hidden] { display: none; }
+.code-panel textarea {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 13px; line-height: 1.4;
+  color: var(--ink); background: #000; border: 2px solid var(--shell-edge); border-radius: 6px;
+  padding: 6px 10px; resize: none; word-break: break-all; min-width: 0;
+  -webkit-user-select: text; user-select: text;
+}
+.code-panel .name-row { justify-content: flex-end; }
+.code-panel button[hidden] { display: none; }
 .name-row { display: flex; gap: 8px; }
 .name-row input {
   flex: 1; min-width: 0;
@@ -153,6 +161,15 @@ button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
     <div class="name-row">
       <input id="hero-name" type="text" maxlength="6" autocomplete="off" enterkeyhint="done" placeholder="ヲタ太">
       <button id="name-ok" type="button">けってい</button>
+    </div>
+  </div>
+  <div class="name-field code-panel" id="code-panel" hidden>
+    <label id="code-label" for="code-text">ふっかつのじゅもん</label>
+    <textarea id="code-text" rows="3" spellcheck="false" autocomplete="off"></textarea>
+    <div class="name-row">
+      <button id="code-copy" type="button">コピー</button>
+      <button id="code-ok" type="button">けってい</button>
+      <button id="code-close" type="button">とじる</button>
     </div>
   </div>
   <div class="bar">
@@ -489,19 +506,133 @@ const defOf = () => P.vit + ARMORS[P.a].def;
 const addItem = (id, n = 1) => { P.items[id] = Math.min(9, (P.items[id] || 0) + n); };
 const useItemCount = id => { P.items[id]--; if (P.items[id] <= 0) delete P.items[id]; };
 const SAVE_KEY = 'momoka-quest.save.v1';
-function saveGame() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ P, flags, map: game.mapId, x: player.x, y: player.y, dir: player.dir })); return true; } catch (e) { return false; }
+// Saves go to up to two places: the player's private slot in the artifact's db (signed-in players
+// who may write it), and this browser's localStorage. Either can be missing, so the game also
+// offers a copyable "ふっかつのじゅもん" that restores progress anywhere.
+const STORE = { local: false, cloud: null, cloudState: 'pending', cloudData: null, cloudJson: '', cloudAt: 0, writing: false, onChange: null };
+function probeLocal() {
+  try { const k = SAVE_KEY + '.probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; } catch (e) { return false; }
+}
+async function initCloud() {
+  const done = state => { STORE.cloudState = state; if (STORE.onChange) STORE.onChange(); };
+  try {
+    if (!window.claude || !window.claude.use) return done('off');
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    const uid = user ? await user.id() : null;
+    if (!db || !uid) return done('off');
+    if (user.can && (await user.can('data.write')) === false) return done('off');
+    STORE.cloud = db.doc('data/users/' + uid + '/save');
+    const snap = await STORE.cloud.get();
+    STORE.cloudData = snap.exists ? snap.data() : null;
+    if (STORE.cloudData) { const { savedAt, ...rest } = STORE.cloudData; STORE.cloudJson = JSON.stringify(rest); }
+    done('on');
+  } catch (e) { done('off'); }
+}
+const saveState = () => ({ P, flags, map: game.mapId, x: player.x, y: player.y, dir: player.dir });
+// returns false only when the game could be kept nowhere
+function saveGame(force) {
+  const json = JSON.stringify(saveState()), now = Date.now();
+  let ok = false;
+  if (STORE.local) {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...JSON.parse(json), savedAt: now })); ok = true; } catch (e) { STORE.local = false; }
+  }
+  if (STORE.cloudState === 'on') {
+    ok = true;
+    // the cloud copy is written on a change, at most every 20 s while walking, right away when forced
+    if (json !== STORE.cloudJson && !STORE.writing && (force || now - STORE.cloudAt > 20000)) {
+      STORE.writing = true; STORE.cloudAt = now;
+      STORE.cloud.set({ ...JSON.parse(json), savedAt: now })
+        .then(() => { STORE.cloudJson = json; STORE.cloudData = { ...JSON.parse(json), savedAt: now }; },
+          e => { if (e && ['invalid_argument', 'revoked', 'not_granted', 'capability_disabled', 'capability_removed', 'quota_exceeded'].includes(e.code)) STORE.cloudState = 'off'; })
+        .finally(() => { STORE.writing = false; });
+    }
+  }
+  return ok;
 }
 let lastAuto = 0;
 // quiet save while walking around the map; never mid-event or during the ending
-function autosave() {
+function autosave(force) {
   if (game.mode !== 'map' || game.busy || player.mv || flags.scene || !game.map) return;
-  saveGame(); lastAuto = game.frame;
+  saveGame(force); lastAuto = game.frame;
 }
-window.addEventListener('pagehide', () => autosave());
-document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(); });
+window.addEventListener('pagehide', () => autosave(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(true); });
+// the newest of the local and cloud copies
 function loadSave() {
-  try { const s = localStorage.getItem(SAVE_KEY); return s ? JSON.parse(s) : null; } catch (e) { return null; }
+  let local = null;
+  if (STORE.local) try { const t = localStorage.getItem(SAVE_KEY); local = t ? JSON.parse(t) : null; } catch (e) {}
+  const cloud = STORE.cloudState === 'on' ? STORE.cloudData : null;
+  if (local && cloud) return (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
+  return local || cloud;
+}
+function saveMode() {
+  if (STORE.cloudState === 'on') return 'アカウントに 自動セーブ';
+  if (STORE.cloudState === 'pending') return 'セーブ先を かくにん中…';
+  if (STORE.local) return 'このブラウザに 自動セーブ';
+  return '自動セーブ不可 → じゅもんを つかってね';
+}
+
+// --- ふっかつのじゅもん: the whole save packed into one copyable code
+const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru'];
+const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4'];
+const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass'];
+const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
+const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 1296; return h.toString(36).padStart(2, '0'); };
+function makeCode() {
+  const a = [1, P.name, P.lv, P.hp, P.mhp, P.mp, P.mmp, P.str, P.vit, P.agi, P.exp, P.gold, P.w, P.a,
+    CODE_ITEMS.map(k => Math.min(9, P.items[k] || 0)).join(''), bitsOf(CODE_FLAGS.map(k => flags[k])),
+    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y];
+  const b = btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return b + codeSum(b);
+}
+// returns a save object, or null when the code is wrong
+function parseCode(text) {
+  try {
+    const t = String(text).replace(/[\s「」]/g, '');
+    const body = t.slice(0, -2);
+    if (t.length < 10 || codeSum(body) !== t.slice(-2)) return null;
+    const a = JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/')))));
+    if (!Array.isArray(a) || a[0] !== 1 || a.length !== 20) return null;
+    const n = a.slice(2, 14);
+    if (typeof a[1] !== 'string' || !n.every(v => Number.isInteger(v) && v >= 0 && v < 1e6)) return null;
+    const [lv, hp, mhp, mp, mmp, str, vit, agi, exp, gold, w, ar] = n;
+    if (lv < 1 || lv > MAX_LV || !WEAPONS[w] || !ARMORS[ar] || !CODE_MAPS[a[17]]) return null;
+    const items = {};
+    String(a[14]).split('').forEach((d, i) => { if (+d > 0 && CODE_ITEMS[i]) items[CODE_ITEMS[i]] = +d; });
+    const fl = { chests: {} };
+    CODE_FLAGS.forEach((k, i) => { if (a[15] & (1 << i)) fl[k] = true; });
+    CODE_CHESTS.forEach((k, i) => { if (a[16] & (1 << i)) fl.chests[k] = 1; });
+    const map = CODE_MAPS[a[17]], m = MAPS[map];
+    const x = clamp(a[18] | 0, 0, m.w - 1), y = clamp(a[19] | 0, 0, m.h - 1);
+    return { P: { name: Array.from(a[1]).slice(0, NAME_MAX).join('') || 'ヲタ太', lv, hp: Math.min(hp, mhp), mhp, mp: Math.min(mp, mmp), mmp, str, vit, agi, exp, gold, w, a: ar, items }, flags: fl, map, x, y, dir: 'down' };
+  } catch (e) { return null; }
+}
+const codePanel = document.getElementById('code-panel');
+const codeText = document.getElementById('code-text');
+const codeLabel = document.getElementById('code-label');
+const codeCopy = document.getElementById('code-copy'), codeOk = document.getElementById('code-ok'), codeClose = document.getElementById('code-close');
+// mode 'show' displays a code to copy; 'input' takes one. Resolves with the entered text or null.
+function openCodePanel(mode, text) {
+  codePanel.hidden = false;
+  codeText.value = text || ''; codeText.readOnly = mode === 'show';
+  codeLabel.textContent = mode === 'show' ? 'ふっかつのじゅもん：コピーして メモしておこう' : 'ふっかつのじゅもんを ここに はりつけてね';
+  codeCopy.hidden = mode !== 'show'; codeOk.hidden = mode === 'show';
+  codeCopy.textContent = 'コピー';
+  return new Promise(res => {
+    const done = v => {
+      codePanel.hidden = true; modal = null;
+      codeCopy.onclick = codeOk.onclick = codeClose.onclick = null;
+      cv.focus(); res(v);
+    };
+    codeOk.onclick = () => done(codeText.value);
+    codeClose.onclick = () => done(null);
+    codeCopy.onclick = () => {
+      const fallback = () => { codeText.focus(); codeText.select(); codeCopy.textContent = '選択したよ'; };
+      try { navigator.clipboard.writeText(codeText.value).then(() => { codeCopy.textContent = 'コピーしました'; }, fallback); } catch (e) { fallback(); }
+    };
+    modal = k => { if (k === 'b' || (k === 'a' && mode === 'show')) done(null); };
+  });
 }
 
 const game = { mode: 'boot', mapId: null, map: null, npcs: [], busy: false, fade: 0, flash: 0, shake: 0, frame: 0, toast: null, fx: [], lights: false, caption: null, steps: 0 };
@@ -516,7 +647,7 @@ let modal = null;
 const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right',
   W: 'up', S: 'down', A: 'left', D: 'right', z: 'a', Z: 'a', Enter: 'a', ' ': 'a', x: 'b', X: 'b', Escape: 'b', Backspace: 'b' };
 window.addEventListener('keydown', e => {
-  if (e.target && e.target.tagName === 'INPUT') return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
   const k = KEYMAP[e.key]; if (!k) return;
   e.preventDefault(); audioWake();
   if (e.repeat && (k === 'a' || k === 'b')) return;
@@ -870,7 +1001,7 @@ function textW(s) { ctx.font = '12px ' + FONT; return ctx.measureText(typeof s =
 async function runScript(fn) {
   game.busy = true;
   try { await fn(); } catch (e) { console.error(e); }
-  finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; autosave(); }
+  finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; autosave(true); }
 }
 async function fadeOut(n = 12) { for (let i = 1; i <= n; i++) { game.fade = i / n; await framesWait(1); } }
 async function fadeIn(n = 12) { for (let i = n - 1; i >= 0; i--) { game.fade = i / n; await framesWait(1); } }
@@ -1144,14 +1275,22 @@ function statusWin(x = 8, y = 8) {
   };
 }
 const goldWin = (x = 176, y = 8) => () => { drawWin(x, y, 72, 28); txt(String(P.gold).padStart(5) + '円', x + 10, y + 8); };
+async function recordMenu() {
+  const saved = saveGame(true);
+  await say(saved ? '冒険を きろくしたよ。\nふっかつのじゅもんも メモしておけば\nどこでも つづきから あそべるよ。'
+    : 'この画面では セーブが できないよ。\nふっかつのじゅもんを メモしておけば\nつづきから あそべるよ。', { noWait: true });
+  await openCodePanel('show', makeCode());
+  closeMsg();
+}
 async function fieldMenu() {
   sfx('ok');
   const sw = statusWin(); extraWins.push(sw);
   const gw = goldWin(8, 84); extraWins.push(gw);
-  const m = openMenu({ items: ['つよさ', 'どうぐ', 'スキル', 'とじる'], x: 176, y: 8, w: 72 });
+  const m = openMenu({ items: ['つよさ', 'どうぐ', 'スキル', 'きろく', 'とじる'], x: 176, y: 8, w: 72 });
   while (true) {
     const r = await chooseMenu(m);
-    if (r === -1 || r === 3) break;
+    if (r === -1 || r === 4) break;
+    if (r === 3) await recordMenu();
     if (r === 0) await showStats();
     if (r === 1) await itemMenu(false);
     if (r === 2) await skillMenu(false);
@@ -1403,7 +1542,7 @@ async function talkMom() {
     await fadeOut(16); P.hp = P.mhp; P.mp = P.mmp; await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
     await say('HPと MPが ぜんかいした！');
     if (await yesno('母「冒険の きろくを つけておく？」')) {
-      if (saveGame()) await say('きろくを つけた。'); else await say('この ブラウザでは きろくを つけられないみたい…');
+      if (saveGame(true)) await say('きろくを つけた。'); else await say('この画面では きろくが のこせないよ。\n「きろく」で ふっかつのじゅもんを\nメモしてね。');
     }
   }
 }
@@ -1418,7 +1557,7 @@ async function talkCafe() {
     await say('店員「おはようございます。\nHPと MPが ぜんかいしましたよ。」');
   }
   if (await yesno('店員「冒険の きろくを のこしますか？」')) {
-    if (saveGame()) await say('きろくを のこした。'); else await say('この ブラウザでは きろくを のこせないみたい…');
+    if (saveGame(true)) await say('きろくを のこした。'); else await say('この画面では きろくが のこせないよ。\n「きろく」で ふっかつのじゅもんを\nメモしてね。');
   }
   await say('店員「またの ご利用を。」');
 }
@@ -1835,19 +1974,25 @@ async function titleScreen() {
   game.mode = 'title'; game.busy = true; game.fx = [];
   playBgm('title', true);
   game.fade = 0;
-  const save = loadSave();
-  const items = [{ label: 'はじめから' }, { label: 'つづきから', disabled: !save }];
-  const r = await pick({ items, x: 88, y: 150, w: 80, cancel: false, idx: save ? 1 : 0 });
-  await fadeOut(20);
-  if (r === 1 && save) {
-    newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
-    game.mode = 'map';
-    setMap(save.map, save.x, save.y, save.dir);
-    toast(game.map.name);
-    await fadeIn(20);
-    game.busy = false;
-    return;
+  const items = [{ label: 'はじめから' }, { label: 'つづきから', disabled: !loadSave() }, { label: 'じゅもんで さいかい' }];
+  const m = openMenu({ items, x: 56, y: 140, w: 144, cancel: false, idx: loadSave() ? 1 : 0 });
+  // the account save arrives a moment after the title appears
+  STORE.onChange = () => { const had = !items[1].disabled; items[1].disabled = !loadSave(); if (!had && !items[1].disabled && m.idx === 0) m.idx = 1; };
+  const r = await chooseMenu(m); closeMenu(m);
+  STORE.onChange = null;
+  if (r === 2) {
+    const text = await openCodePanel('input');
+    const save = text && parseCode(text);
+    if (!save) {
+      await say(text ? 'じゅもんが ちがいます。\nもういちど たしかめてね。' : 'タイトルに もどります。');
+      closeMsg();
+      return titleScreen();
+    }
+    return resume(save);
   }
+  await fadeOut(20);
+  const save = loadSave();
+  if (r === 1 && save) return resume(save);
   newGame();
   game.fade = 0;
   while (true) {
@@ -1876,6 +2021,26 @@ async function titleScreen() {
     await say('（Bボタン / Xキーで メニュー。\nAボタン / Zキーで はなす・しらべる）');
   });
   toast('アキハバラ');
+  await warnNoSave();
+}
+async function resume(save) {
+  if (game.fade < 1) await fadeOut(20);
+  newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
+  game.mode = 'map';
+  setMap(save.map, save.x, save.y, save.dir);
+  toast(game.map.name);
+  await fadeIn(20);
+  game.busy = false;
+  saveGame(true);
+  await warnNoSave();
+}
+// tell the player once when nothing can be kept, so progress isn't silently lost
+async function warnNoSave() {
+  if (STORE.local || STORE.cloudState !== 'off' || STORE.warned) return;
+  STORE.warned = true;
+  await runScript(async () => {
+    await say('※ この画面では セーブが できません。\nやめる前に メニューの「きろく」で\nふっかつのじゅもんを メモしてね。');
+  });
 }
 
 // ------------------------------------------------------------
@@ -2017,7 +2182,10 @@ function drawTitle() {
   ctx.drawImage(SPR.hero.right[f], 92, 92, 32, 32);
   ctx.drawImage(SPR.momoka.down[f], 132, 92, 32, 32);
   heartAt(125, 88 + Math.round(Math.sin(game.frame / 15) * 2), '#f890b8');
-  txt('© ヲタ太とゆかいな仲間たち', 8, 206, '#7a6e94', 10);
+  // which save is in use, so a missing save is never a surprise
+  ctx.textAlign = 'center';
+  txt('セーブ：' + saveMode(), W / 2, 208, STORE.local || STORE.cloudState !== 'off' ? '#9d92b8' : '#f8a030', 10);
+  ctx.textAlign = 'left';
 }
 function drawEnd() {
   game.endT++;
@@ -2090,6 +2258,8 @@ function loop(t) {
 }
 async function boot() {
   initSprites(); initTiles();
+  STORE.local = probeLocal();
+  initCloud();
   try { await Promise.race([document.fonts.load('12px "DotGothic16"'), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
   newGame();
   requestAnimationFrame(loop);
