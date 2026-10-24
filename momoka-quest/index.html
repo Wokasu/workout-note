@@ -334,6 +334,8 @@ function initSprites() {
   SPR.momoka = charSet('girl');
   SPR.mom = charSet('girl', { h: 'n', p: '#6a8ac8', P: '#3a5a98', l: 'w', m: 's', r: 'S' });
   SPR.girl = charSet('girl', { h: 'n', p: 'm', P: '#b85a88', l: 'w' });
+  SPR.maid = charSet('girl', { h: 'k', p: 'k', P: 'w', l: 'w' });
+  SPR.tourist = charSet('hero', { ...NOBAND, p: 'y', P: '#3858c8', h: 'y' });
   SPR.clerk = charSet('hero', { ...NOBAND, p: 'e', P: '#1e5a28', c: 'w', G: 'h', h: 'n' });
   SPR.cafe = charSet('hero', { ...NOBAND, p: 'G', P: 'k', G: 's', c: 's' });
   SPR.staff = charSet('hero', { H: 'G', Y: 'y', p: 'G', P: 'k', w: 'y' });
@@ -484,6 +486,11 @@ const TILES = {
   'q': { solid: 1, d: p => { wood(p); p(0, 4, 16, 8, '#6a3a18'); p(0, 4, 16, 2, '#9a5a28'); } },
   'o': { solid: 1, d: p => { carpet(p); p(6, 9, 4, 6, '#e8e8f0'); p(3, 2, 10, 7, '#3a9a3a'); [[4, 3, '#f8f8f8'], [8, 2, '#f890b8'], [10, 5, '#f8f8f8'], [5, 6, '#f890b8']].forEach(([x, y, c]) => p(x, y, 3, 3, c)); } },
   'a': { solid: 1, d: p => { carpet(p); p(1, 4, 14, 10, '#f0f0f8'); p(1, 4, 14, 2, '#f8d838'); p(7, 0, 2, 5, '#f8d838'); p(5, 1, 6, 1, '#f8d838'); } },
+  // アキハバラ landmarks
+  'S': { solid: 1, anim: 1, d: (p, g, f) => { p(0, 0, 16, 16, '#2a1c16'); p(0, 3, 16, 10, '#c82838'); p(0, 4, 16, 8, '#f8f0e0'); for (let x = f ? 1 : 3; x < 16; x += 4) { p(x, 1, 2, 1, '#f8d838'); p(x, 14, 2, 1, '#f8d838'); } p(3, 6, 2, 4, '#c82838'); p(7, 6, 2, 4, '#d47aa0'); p(11, 6, 2, 4, '#c82838'); } },
+  'M': { solid: 1, d: p => { p(0, 0, 16, 16, '#f7b0cc'); for (let x = 0; x < 16; x += 4) { p(x, 0, 2, 2, '#ffffff'); p(x + 2, 14, 2, 2, '#ffffff'); } p(0, 2, 16, 1, '#ffffff'); p(0, 13, 16, 1, '#ffffff'); p(5, 5, 2, 2, '#d83868'); p(9, 5, 2, 2, '#d83868'); p(5, 7, 6, 2, '#d83868'); p(6, 9, 4, 1, '#d83868'); p(7, 10, 2, 1, '#d83868'); } },
+  'P': { solid: 1, d: p => { p(0, 0, 16, 16, '#3a2a24'); p(0, 2, 16, 12, '#f8d838'); p(0, 2, 16, 1, '#fff6a0'); p(0, 13, 16, 1, '#a88a20'); p(2, 5, 3, 6, '#d83838'); p(6, 5, 3, 6, '#3858c8'); p(10, 5, 4, 2, '#d83838'); p(10, 9, 4, 2, '#d83838'); } },
+  'g': { solid: 1, d: p => { p(0, 0, 16, 16, '#9a9aa8'); [[1, '#d83838'], [9, '#3858c8']].forEach(([x, c]) => { p(x, 1, 6, 14, c); p(x + 1, 2, 4, 5, '#d8f0ff'); p(x + 2, 3, 1, 1, '#f8d838'); p(x + 3, 5, 1, 1, '#f890b8'); p(x + 1, 9, 4, 2, '#f8f8f8'); p(x + 2, 12, 2, 2, '#2a1c16'); }); } },
   ' ': { solid: 1, d: p => p(0, 0, 16, 16, '#000000') },
 };
 const tileImg = {};
@@ -491,8 +498,108 @@ function initTiles() {
   for (const k in TILES) {
     const t = TILES[k];
     tileImg[k] = [mkTile((p, g) => t.d(p, g, 0)), t.anim ? mkTile((p, g) => t.d(p, g, 1)) : null];
+  }  for (const th in THEMES) {
+    themeImg[th] = {}; themeDeco[th] = {};
+    for (const k in THEMES[th].tiles) { const f = THEMES[th].tiles[k]; themeImg[th][k] = [mkTile((p, g) => f(p, g, 0)), THEMES[th].anim && THEMES[th].anim[k] ? mkTile((p, g) => f(p, g, 1)) : null]; }
+    for (const k in THEMES[th].deco || {}) themeDeco[th][k] = THEMES[th].deco[k].map(f => [mkTile((p, g) => f(p, g, 0)), mkTile((p, g) => f(p, g, 1))]);
   }
 }
+// per-dungeon looks: replacement floor/wall tiles plus occasional decorated variants
+function checker(p, a, b, n = 8) { for (let y = 0; y < 16; y += n) for (let x = 0; x < 16; x += n) p(x, y, n, n, ((x + y) / n) % 2 ? b : a); }
+const THEMES = {
+  // 握手会場: bright event hall, white partitions with a pink stripe
+  venue: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#b4a898'); p(0, 0, 16, 1, '#c8bcac'); p(0, 0, 1, 16, '#c8bcac'); p(0, 15, 16, 1, '#9a8e80'); p(15, 0, 1, 16, '#9a8e80'); p(4, 5, 1, 1, '#a09482'); p(11, 10, 1, 1, '#a09482'); },
+      W: p => { p(0, 0, 16, 16, '#e4e4ee'); p(0, 0, 16, 1, '#ffffff'); p(0, 15, 16, 1, '#9898a8'); p(7, 0, 1, 16, '#c0c0d0'); p(0, 9, 16, 2, '#f7b0cc'); },
+    },
+    deco: {
+      W: [p => { THEMES.venue.tiles.W(p); p(3, 1, 10, 13, '#3a2a52'); p(4, 2, 8, 8, '#f7b0cc'); p(6, 3, 4, 4, '#f8d8c0'); p(6, 3, 4, 1, '#2a1c16'); p(5, 11, 6, 1, '#f8f8f8'); },
+        p => { THEMES.venue.tiles.W(p); p(2, 2, 12, 6, '#f8f8f8'); p(2, 2, 12, 1, '#d47aa0'); p(4, 4, 8, 1, '#3a2a52'); p(4, 6, 5, 1, '#3a2a52'); }],
+    },
+  },
+  // 推し被りの塔: cold marble checker floor, black walls with gold trim
+  tower: {
+    tiles: {
+      x: p => { checker(p, '#d4d2dc', '#8e8ca2'); p(1, 1, 2, 1, '#f0eef6'); p(9, 9, 2, 1, '#a4a2b6'); },
+      W: p => { p(0, 0, 16, 16, '#1a1824'); p(0, 0, 16, 1, '#c8a040'); p(0, 15, 16, 1, '#6a5420'); p(0, 7, 16, 1, '#0e0c16'); p(3, 0, 1, 7, '#0e0c16'); p(11, 8, 1, 7, '#0e0c16'); p(5, 3, 1, 1, '#2c2a38'); },
+    },
+    deco: {
+      W: [p => { THEMES.tower.tiles.W(p); p(4, 1, 8, 12, '#7a1c3a'); p(4, 1, 8, 1, '#c8a040'); p(5, 12, 2, 2, '#7a1c3a'); p(9, 12, 2, 2, '#7a1c3a'); p(6, 4, 4, 4, '#c8a040'); p(7, 5, 2, 2, '#7a1c3a'); },
+        (p, g, f) => { THEMES.tower.tiles.W(p); p(7, 4, 2, 8, '#5a4a30'); p(6, 3, 4, 1, '#c8a040'); p(7, 1, 2, 2, f ? '#f8d838' : '#f89838'); p(7, 0, 2, 1, f ? '#f89838' : '#f8d838'); }],
+    },
+  },
+  // 配信スタジオ: dark floor with cables, sound-proof foam walls, ON AIR lamps
+  studio: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#5a5e6e'); p(0, 0, 16, 1, '#6a6e7e'); p(0, 15, 16, 1, '#4a4e5c'); p(2, 4, 5, 1, '#24242c'); p(6, 5, 1, 4, '#24242c'); p(7, 9, 7, 1, '#24242c'); },
+      W: p => { p(0, 0, 16, 16, '#1e1e26'); for (let y = 0; y < 16; y += 4) for (let x = 0; x < 16; x += 4) { const o = (y / 4) % 2 ? 2 : 0; p((x + o) % 16, y, 2, 2, '#30303c'); p((x + o + 2) % 16, y + 2, 2, 2, '#121218'); } p(0, 15, 16, 1, '#0a0a0e'); },
+    },
+    deco: {
+      W: [(p, g, f) => { THEMES.studio.tiles.W(p); p(2, 4, 12, 7, '#1a0a0e'); p(3, 5, 10, 5, f ? '#f83848' : '#8a1c24'); [[4, 6], [6, 6], [8, 6], [10, 6]].forEach(([x, y]) => p(x, y, 1, 3, '#ffffff')); },
+        p => { THEMES.studio.tiles.W(p); p(3, 2, 10, 8, '#121218'); p(4, 3, 8, 6, '#3858c8'); p(5, 4, 3, 2, '#78d8f8'); p(7, 10, 2, 3, '#121218'); p(5, 13, 6, 1, '#121218'); }],
+    },
+  },
+  // 地方公演ホール: red carpet, wood panelled walls with brass lamps
+  hall: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#8a2434'); [[2, 2], [10, 2], [6, 6], [14, 6], [2, 10], [10, 10], [6, 14], [14, 14]].forEach(([x, y]) => p(x, y, 1, 1, '#b04050')); p(0, 15, 16, 1, '#701c2a'); },
+      W: p => { p(0, 0, 16, 16, '#6a3a1c'); [1, 5, 9, 13].forEach(x => p(x, 0, 1, 16, '#4a2410')); p(0, 0, 16, 1, '#9a6030'); p(0, 12, 16, 1, '#c8a040'); p(0, 13, 16, 3, '#3a1c0c'); },
+    },
+    deco: {
+      W: [(p, g, f) => { THEMES.hall.tiles.W(p); p(7, 6, 2, 5, '#c8a040'); p(5, 4, 6, 2, '#c8a040'); p(6, 1, 4, 3, f ? '#fff0a0' : '#f8d838'); p(4, 0, 8, 1, 'rgba(255,240,160,0.5)'); },
+        p => { THEMES.hall.tiles.W(p); p(2, 1, 12, 10, '#c8a040'); p(3, 2, 10, 8, '#2a1c16'); p(4, 3, 8, 6, '#f7b0cc'); p(6, 4, 4, 3, '#f8d8c0'); p(6, 4, 4, 1, '#2a1c16'); }],
+    },
+  },
+  // 生誕祭の準備会場: pastel pink floor, white walls with garlands and balloons
+  seitan: {
+    tiles: {
+      f: p => { checker(p, '#fbe6ee', '#f4c4d4'); p(0, 15, 16, 1, '#e8b0c4'); },
+      '#': p => { p(0, 0, 16, 16, '#d8bce0'); p(0, 15, 16, 1, '#a888b4'); p(0, 0, 16, 1, '#ffffff'); for (let x = 0; x < 16; x += 4) { p(x, 3, 2, 1, '#f7b0cc'); p(x + 1, 4, 2, 1, '#f7b0cc'); p(x + 2, 3, 2, 1, '#f7b0cc'); } p(0, 2, 16, 1, '#d47aa0'); p(0, 13, 16, 2, '#c4a4cc'); },
+    },
+    deco: {
+      '#': [(p, g, f) => { THEMES.seitan.tiles['#'](p); const o = f ? 1 : 0; p(2, 6 - o, 5, 6, '#f7b0cc'); p(3, 5 - o, 3, 1, '#f7b0cc'); p(3, 7 - o, 1, 2, '#ffffff'); p(9, 7 + o, 5, 6, '#fde2ee'); p(10, 6 + o, 3, 1, '#fde2ee'); p(10, 8 + o, 1, 2, '#ffffff'); p(4, 12 - o, 1, 3, '#9a9ab0'); p(11, 13 + o, 1, 2, '#9a9ab0'); },
+        p => { THEMES.seitan.tiles['#'](p); p(1, 6, 14, 7, '#ffffff'); p(1, 6, 14, 1, '#f7b0cc'); p(1, 12, 14, 1, '#f7b0cc'); p(3, 8, 2, 3, '#d47aa0'); p(6, 8, 1, 3, '#d47aa0'); p(8, 8, 2, 1, '#d47aa0'); p(8, 10, 2, 1, '#d47aa0'); p(11, 8, 2, 3, '#d47aa0'); }],
+    },
+  },
+  // アキハバラ: paved sidewalks, roads, and sign-covered buildings instead of forest
+  akiba: {
+    rate: { T: 1 },
+    tiles: {
+      '.': p => { p(0, 0, 16, 16, '#b8b0a4'); p(0, 7, 16, 1, '#9a9288'); p(0, 15, 16, 1, '#9a9288'); p(7, 0, 1, 7, '#9a9288'); p(15, 8, 1, 7, '#9a9288'); p(1, 1, 6, 1, '#c8c0b4'); p(8, 9, 7, 1, '#c8c0b4'); },
+      ',': p => { p(0, 0, 16, 16, '#8a8a92'); p(1, 1, 14, 14, '#5a3a20'); [[3, 3, '#f7b0cc'], [9, 4, '#ffffff'], [5, 9, '#ffffff'], [11, 10, '#f7b0cc']].forEach(([x, y, c]) => { p(x - 1, y + 1, 4, 2, '#3a8a3a'); p(x, y, 2, 2, c); }); },
+      '=': p => { p(0, 0, 16, 16, '#4a4a52'); p(0, 0, 16, 1, '#5a5a62'); p(3, 6, 4, 1, '#56565e'); p(10, 12, 3, 1, '#3e3e46'); },
+      T: p => { p(0, 0, 16, 16, '#7a7884'); p(0, 15, 16, 1, '#4a4852'); [[2, 2], [9, 2], [2, 9], [9, 9]].forEach(([x, y]) => { p(x, y, 5, 4, '#3a4a6a'); p(x, y, 5, 1, '#8aa0c8'); }); },
+    },
+    deco: {
+      T: [p => THEMES.akiba.tiles.T(p),
+        (p, g, f) => { p(0, 0, 16, 16, '#5a5866'); p(0, 15, 16, 1, '#3a3842'); p(5, 0, 6, 16, '#c82838'); for (let y = 2; y < 15; y += 4) p(7, y, 2, 2, f ? '#ffffff' : '#f8d838'); p(1, 3, 3, 3, '#3a4a6a'); p(12, 9, 3, 3, '#3a4a6a'); },
+        p => { p(0, 0, 16, 16, '#2a5aa8'); p(0, 3, 16, 5, '#f8d838'); p(2, 4, 3, 3, '#2a5aa8'); p(6, 4, 1, 3, '#2a5aa8'); p(8, 4, 3, 1, '#2a5aa8'); p(8, 6, 3, 1, '#2a5aa8'); p(12, 4, 2, 3, '#d83838'); p(1, 10, 6, 4, '#a8d8f8'); p(9, 10, 6, 4, '#a8d8f8'); p(0, 15, 16, 1, '#1a3a78'); },
+        p => { p(0, 0, 16, 16, '#f0c8dc'); p(2, 1, 12, 12, '#ffffff'); p(3, 2, 10, 10, '#f7b0cc'); p(5, 3, 6, 6, '#f8d8c0'); p(4, 2, 8, 3, '#5a3418'); p(4, 5, 1, 5, '#5a3418'); p(11, 5, 1, 5, '#5a3418'); p(6, 6, 1, 1, '#3a2a52'); p(9, 6, 1, 1, '#3a2a52'); p(7, 8, 2, 1, '#d83868'); p(0, 15, 16, 1, '#b888a0'); },
+        (p, g, f) => { p(0, 0, 16, 16, '#24222c'); p(1, 2, 14, 4, '#14121a'); const c = f ? '#58f878' : '#28a848'; p(2, 3, 2, 2, c); p(5, 3, 2, 2, '#f8d838'); p(8, 3, 2, 2, c); p(11, 3, 2, 2, '#f890b8'); p(2, 9, 5, 5, '#3a4a6a'); p(9, 9, 5, 5, '#3a4a6a'); p(0, 15, 16, 1, '#0e0c12'); },
+        p => { p(0, 0, 16, 16, '#d8c8a8'); p(0, 15, 16, 1, '#a89878'); p(1, 1, 14, 5, '#3a2a52'); p(2, 2, 4, 3, '#f890b8'); p(7, 2, 3, 3, '#78d8f8'); p(11, 2, 3, 3, '#f8d838'); p(2, 9, 5, 4, '#3a4a6a'); p(9, 9, 5, 4, '#3a4a6a'); }],
+    },
+  },
+  // 闇チケット市場: wet asphalt, bare concrete, neon signs and ticket stalls
+  market: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#26242c'); p(3, 4, 5, 2, '#34344a'); p(10, 11, 4, 1, '#34344a'); p(1, 12, 1, 1, '#3a3842'); p(12, 2, 1, 1, '#3a3842'); p(7, 9, 2, 1, '#1a1820'); },
+      W: p => { p(0, 0, 16, 16, '#4a4a52'); p(0, 0, 16, 1, '#5e5e68'); p(0, 15, 16, 1, '#2c2c34'); p(4, 2, 1, 3, '#34343c'); p(5, 5, 1, 2, '#34343c'); p(11, 9, 2, 1, '#34343c'); p(12, 10, 1, 3, '#34343c'); p(2, 11, 1, 1, '#5e5e68'); },
+      h: p => { p(0, 0, 16, 16, '#26242c'); p(0, 0, 16, 4, '#c82838'); [0, 4, 8, 12].forEach(x => p(x + 2, 0, 2, 4, '#f8f8f8')); p(1, 5, 14, 10, '#6a4a30'); p(1, 5, 14, 1, '#8a6a48'); [[2, 7], [6, 8], [10, 7], [4, 11], [9, 11]].forEach(([x, y]) => { p(x, y, 4, 2, '#f8f0c8'); p(x, y, 1, 2, '#d83838'); }); },
+      d: p => { p(0, 0, 16, 16, '#0a080e'); for (let i = 0; i < 4; i++) p(2 + i, 2 + i * 3, 12 - i * 2, 2, '#3a3842'); },
+      U: p => { THEMES.market.tiles.x(p); for (let i = 0; i < 4; i++) p(2, 2 + i * 3, 12, 2, i % 2 ? '#6a6a76' : '#56566a'); },
+    },
+    deco: {
+      W: [(p, g, f) => { THEMES.market.tiles.W(p); p(1, 3, 14, 9, '#14121a'); const c = f ? '#f890b8' : '#a04870'; p(2, 4, 12, 1, c); p(2, 10, 12, 1, c); p(2, 4, 1, 7, c); p(13, 4, 1, 7, c); p(5, 6, 1, 3, c); p(7, 6, 1, 3, c); p(5, 6, 3, 1, c); p(9, 6, 2, 1, c); p(10, 6, 1, 3, c); },
+        (p, g, f) => { THEMES.market.tiles.W(p); p(2, 2, 12, 11, '#14121a'); const c = f ? '#78d8f8' : '#3a7898'; p(4, 4, 8, 1, c); p(7, 4, 2, 7, c); p(5, 6, 6, 1, c); p(5, 8, 6, 1, c); p(4, 4, 1, 2, c); p(11, 4, 1, 2, c); },
+        p => { THEMES.market.tiles.W(p); p(3, 3, 6, 8, '#e8e0c8'); p(4, 4, 4, 1, '#d83838'); p(4, 6, 4, 1, '#4a4a5a'); p(4, 8, 3, 1, '#4a4a5a'); p(9, 6, 5, 7, '#f8f0a0'); p(10, 7, 3, 1, '#4a4a5a'); }],
+      x: [p => { THEMES.market.tiles.x(p); p(4, 6, 5, 3, '#e8e0c8'); p(4, 6, 1, 3, '#d83838'); p(10, 10, 4, 2, '#c8c0a8'); }],
+    },
+    anim: {},
+  },
+};
+const themeImg = {}, themeDeco = {};
+
 
 // ------------------------------------------------------------
 //  Data: items, equipment, skills, enemies
@@ -1234,7 +1341,7 @@ function burst(x, y, kind = 'heart', n = 8) {
 // ------------------------------------------------------------
 const R = (...a) => { let s = ''; for (let i = 0; i < a.length; i += 2) s += a[i].repeat(a[i + 1]); return s; };
 const MAPS = {
-  town: { name: 'アキハバラ', bgm: 'town', fill: 'T', rows: [
+  town: { name: 'アキハバラ', bgm: 'town', fill: 'T', theme: 'akiba', rows: [
     'TTTTTTTTTTTTTTTTTTTTTTTTTTTT',
     'T..........................T',
     'T.#######.....############.T',
@@ -1243,11 +1350,11 @@ const MAPS = {
     'T.#fffff#.....#cccccccccc#.T',
     'T.###f###.....#cccccccccc#.T',
     'T....=........#cccccccccc#.T',
-    'T....=........#####cc#####.T',
+    'T....=........##SS#cc#SS##.T',
     'T....===============.......T',
-    'T..........=...............T',
+    'T..........=............gggT',
     'T,,,.......=..........,,,..T',
-    'T.#######..=...#########...T',
+    'T.#PPPPP#..=...##MMMMM##...T',
     'T.#hhfhh#..=...#ffvfvfv#...T',
     'T.#fCCCf#..=...#Cffffff#...T',
     'T.#fffff#..=...#fffffff#...T',
@@ -1276,7 +1383,7 @@ const MAPS = {
     R('^', 1, '~', 4, 'H', 1, '.', 18, ',', 3, '.', 12, '^', 1),
     R('^', 1, '~', 2, '.', 36, '^', 1),
     R('^', 40)] },
-  venue: { name: '握手会場', bgm: 'dungeon', fill: 'W', bg: 'venue', rows: [
+  venue: { name: '握手会場', bgm: 'dungeon', fill: 'W', bg: 'venue', theme: 'venue', rows: [
     'WWWWWWWWWWWWWWWWWWWW',
     'WxxxxxWxxxxxxWxxxxxW',
     'WxrrrxWxxxxxxWxrrrxW',
@@ -1293,7 +1400,7 @@ const MAPS = {
     'WxxxxxxxxxxxxxxxxxxW',
     'WxxxxxxxxxxxxxxxxxxW',
     'WWWWWWWWWxWWWWWWWWWW'] },
-  tower1: { name: '推し被りの塔 1F', bgm: 'dungeon', fill: 'W', bg: 'tower', encScale: 1.4, rows: [
+  tower1: { name: '推し被りの塔 1F', bgm: 'dungeon', fill: 'W', bg: 'tower', theme: 'tower', encScale: 1.4, rows: [
     'WWWWWWWWWWWWWWWW',
     'WxxxxxxWxxxxxxUW',
     'WxWWWWxWxWWWWWxW',
@@ -1308,7 +1415,7 @@ const MAPS = {
     'WxxxxxxxxxxxxxxW',
     'WxxxxxxxxxxxxxxW',
     'WWWWWWWxWWWWWWWW'] },
-  market1: { name: '闇チケット市場 B1', bgm: 'dungeon', fill: 'W', bg: 'tower', encScale: 1.4, rows: [
+  market1: { name: '闇チケット市場 B1', bgm: 'dungeon', fill: 'W', bg: 'market', theme: 'market', encScale: 1.4, rows: [
     'WWWWWWWWWWWWWWWWWWWW',
     'WxxxxxxxxxxxxxxxxxdW',
     'WxhhhhhxhhhhhhxhhWxW',
@@ -1325,7 +1432,7 @@ const MAPS = {
     'WxxxxxxxxxxxxxxxxxxW',
     'WUxxxxxxxxxxxxxxxxxW',
     'WWWWWWWWWWWWWWWWWWWW'] },
-  market2: { name: '闇チケット市場 最深部', bgm: 'dungeon', fill: 'W', bg: 'tower', encScale: 1.4, rows: [
+  market2: { name: '闇チケット市場 最深部', bgm: 'dungeon', fill: 'W', bg: 'market', theme: 'market', encScale: 1.4, rows: [
     'WWWWWWWWWWWWWWWW',
     'WhhhhhWxxWhhhhhW',
     'WxxxxxWxxWxxxxxW',
@@ -1338,7 +1445,7 @@ const MAPS = {
     'WxxxxxxccxxxxxxW',
     'WUxxxxxxxxxxxxxW',
     'WWWWWWWWWWWWWWWW'] },
-  towerB: { name: '推し被りの塔 2F', bgm: 'dungeon', fill: 'W', bg: 'tower', encScale: 1.4, rows: [
+  towerB: { name: '推し被りの塔 2F', bgm: 'dungeon', fill: 'W', bg: 'tower', theme: 'tower', encScale: 1.4, rows: [
     'WWWWWWWWWWWWWWWW',
     'WxxxxxxUxxxxxxxW',
     'WxxxxxxxxxxxxxxW',
@@ -1353,7 +1460,7 @@ const MAPS = {
     'WxxxxxxxxxxxxxxW',
     'WWWWWWWdWWWWWWWW',
     'WWWWWWWWWWWWWWWW'] },
-  towerC: { name: '推し被りの塔 3F', bgm: 'dungeon', fill: 'W', bg: 'tower', encScale: 1.4, rows: [
+  towerC: { name: '推し被りの塔 3F', bgm: 'dungeon', fill: 'W', bg: 'tower', theme: 'tower', encScale: 1.4, rows: [
     'WWWWWWWWWWWWWWWW',
     'WWWWWWWUWWWWWWWW',
     'WWWWWWxcxWWWWWWW',
@@ -1367,7 +1474,7 @@ const MAPS = {
     'WxxxxxxxxxxxxxxW',
     'WWWWWWWdWWWWWWWW',
     'WWWWWWWWWWWWWWWW'] },
-  tower2: { name: '推し被りの塔 最上階', bgm: 'dungeon', fill: 'W', bg: 'tower', encScale: 1.4, rows: [
+  tower2: { name: '推し被りの塔 最上階', bgm: 'dungeon', fill: 'W', bg: 'tower', theme: 'tower', encScale: 1.4, rows: [
     'WWWWWWWWWWWWWWWW',
     'WWWWWWxxxxWWWWWW',
     'WWWWWWxccxWWWWWW',
@@ -1398,7 +1505,7 @@ const MAPS = {
     'T......................T',
     '~~~~~~~~~BB~~~~~~~~~~~~~',
     '~~~~~~~~~BB~~~~~~~~~~~~~'] },
-  seitanhall: { name: '生誕祭の準備会場', bgm: 'dungeon', fill: '#', bg: 'venue', rows: [
+  seitanhall: { name: '生誕祭の準備会場', bgm: 'dungeon', fill: '#', bg: 'seitan', theme: 'seitan', rows: [
     '####################',
     '#oohfff##ff##fffhoo#',
     '#ffffff##cc##ffffff#',
@@ -1413,7 +1520,7 @@ const MAPS = {
     '#foooo' + 'ffffffff' + 'oooof#',
     '#ffffffffffffffffff#',
     '#########f##########'] },
-  studio: { name: '配信スタジオ', bgm: 'dungeon', fill: 'W', bg: 'tower', rows: [
+  studio: { name: '配信スタジオ', bgm: 'dungeon', fill: 'W', bg: 'studio', theme: 'studio', rows: [
     'WWWWWWWWWWWWWWWWWWWW',
     'WvvvxxxWWxxWWxxxvvvW',
     'WxxxxxxWWccWWxxxxxxW',
@@ -1428,7 +1535,7 @@ const MAPS = {
     'WxvvvvxxxxxxxxvvvvxW',
     'WxxxxxxxxxxxxxxxxxxW',
     'WWWWWWWWWxWWWWWWWWWW'] },
-  hall: { name: '地方公演ホール', bgm: 'dungeon', fill: 'W', bg: 'venue', rows: [
+  hall: { name: '地方公演ホール', bgm: 'dungeon', fill: 'W', bg: 'hall', theme: 'hall', rows: [
     'WWWWWWWWWWWWWWWWWWWW',
     'WkkkkkkkkkkkkkkkkkkW',
     'WccccccccccccccccccW',
@@ -1476,7 +1583,7 @@ function setMap(id, x, y, dir) {
   if (game.map.bgm) playBgm(game.map.bgm);
 }
 const npcById = id => game.npcs.find(n => n.id === id);
-const npcVisible = n => !n.hidden && (!n.show || n.show());
+const npcVisible = n => game.flashback ? !!n.fb : !n.hidden && (!n.show || n.show());
 function blocked(x, y, self) {
   const m = game.map;
   if (x < 0 || y < 0 || x >= m.w || y >= m.h) return true;
@@ -2218,6 +2325,11 @@ async function zentsuEvent() {
   const r = await battle('zentsu', { intro: '遠征王ゼンツウが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.zentsu = true;
+  await flashback({ title: 'ゼンツウの 記憶', who: 'zentsu', at: [19, 6], cast: STAGE(), body: async () => {
+    await say('ゼンツウが はじめて 遠征した 日。');
+    await say('百花「遠くから 来てくれたの？\nすっごく うれしい！」');
+    await say('ゼンツウ（この 笑顔の ためなら、\nどこへでも 行ける。）');
+  } });
   await say('ゼンツウ「…まいった。 遠征で\n鍛えた 足腰も、 推しへの 熱には\nかなわねえか。」');
   await say('ゼンツウ「おれはな、 全通の ために\n仕事も 辞めたんだ。 全国 どこへでも\n夜行バスで 通った。」');
   await say('ゼンツウ「でも 港町の 公演の 日、\n百花ちゃんは MCで 言ったんだ。\n『地元の みんなに 会えて うれしい』」');
@@ -2233,6 +2345,11 @@ async function buzzriEvent() {
   const r = await battle('buzzri', { intro: 'ツイ廃王バズリが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.buzzri = true;
+  await flashback({ title: 'バズリの 記憶', who: 'buzzri', at: [19, 7], cast: STAGE(), body: async () => {
+    await say('バズリが はじめて 公演を 見た 日。');
+    await say('百花「今日の こと、 たくさんの\n人に 伝えてくれたら うれしいな！」');
+    await say('バズリ（よし…… 百花ちゃんの 良さ、\nおれが 広めてみせる。）');
+  } });
   await say('バズリ「……最初は ただ 百花ちゃんの\n良さを 広めたかったんだ。」');
   await say('バズリ「布教垢を 作って、 公演の\n感想を 書いて…… 初めて バズった夜、\nうれしくて 眠れなかった。」');
   await say('バズリ「気づいたら 推しより、\nいいねの 数ばかり 見てた。\nデマでも バズれば よかったんだ……」');
@@ -2289,6 +2406,11 @@ async function shikiriEvent() {
   const r = await battle('shikiri', { intro: '生誕委員長シキリが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.shikiri = true;
+  await flashback({ title: 'シキリの 記憶', who: 'shikiri', at: [19, 6], cast: STAGE(), body: async () => {
+    await say('シキリが はじめて 生誕祭に\n参加した 日。');
+    await say('百花「こんなに お祝いして もらえる\nなんて…… みんな、 ありがとう！」');
+    await say('シキリ（来年は おれが、 もっと\nすごい 生誕祭に してみせる。）');
+  } });
   await say('シキリ「……おれは、 仕切ることでしか\n推しと 関われなかった。」');
   await say('シキリ「毎年 生誕委員長を やってきた。\n段取りも 集金も 完璧に。\nでも 百花ちゃんは……」');
   await say('シキリ「委員長が 誰かも 知らない。\nだから キョヒールに 『一番 近くに\nいさせてやる』と 言われて……」');
@@ -2333,6 +2455,11 @@ async function hashiraEvent() {
   const r = await battle('hashira', { intro: '最前管理団長ハシラが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.hashira = true;
+  await flashback({ title: 'ハシラの 記憶', who: 'hashira', at: [19, 4], cast: STAGE(), body: async () => {
+    await say('ハシラが はじめて 最前に 立った 日。');
+    await say('百花「わあ、 近い！\nいつも 応援 ありがとう！」');
+    await say('ハシラ（この 笑顔を、 いちばん\n近くで 守りたい。）');
+  } });
   await say('ハシラ「……列を 守るのに 必死で、\n推しの 顔を 見る ひまも\nなかったのかも しれん。」');
   await say('ハシラ「行け。 最上階で キョヒールが\n待っている。」');
   const h = npcById('hashira'); await walk(h, 'L', 1); face(h, 'down');
@@ -2394,6 +2521,11 @@ async function gouEvent() {
   const r = await battle('gou');
   if (r !== 'win') return;
   flags.gou = true;
+  await flashback({ title: 'ゴウの 記憶', who: 'gou', at: [19, 4], cast: STAGE(), body: async () => {
+    await say('ゴウが はじめて 握手した 日。');
+    await say('百花「来てくれて ありがとう！\nまた 来てね！」');
+    await say('ゴウ（……また 来よう。 何度でも。\nいつか 名前を 呼んでもらえる\nその日まで。）');
+  } });
   await say('ゴウ「ぐっ… なんて 熱い 推しへの 愛だ…」');
   await say('ゴウ「おれも わかってたんだ。\n推しを 独り占め するなんて\nヲタクの 道に はずれてるって…」');
   await say('ゴウ「…おれな、 TOなのに 一度も\n百花ちゃんに 名前を\n呼ばれたことが ないんだ。」');
@@ -2420,6 +2552,12 @@ async function kyohiruEvent() {
   const r = await battle('kyohiru', { momoka: true, intro: '同担拒否魔王キョヒールが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.kyohiru = true;
+  await flashback({ title: 'キョヒールの 記憶', who: 'kyohiru', at: [19, 5], cast: STAGE(), body: async () => {
+    await say('キョヒールが はじめて 百花を\n見つけた 日。');
+    await say('研究生の 百花は、 客席に\n手を ふった。');
+    await say('百花「わたしを 見つけてくれて、\nありがとう！」');
+    await say('キョヒール（見つけたのは おれだ。\nこの子は おれが 守る……。）');
+  } });
   playBgm('title', true);
   await say('キョヒール「ば、ばかな… おれの\n同担拒否が やぶれるとは…」');
   await say('百花「キョヒールさん。 応援してくれるのは\nすごく うれしいよ。」');
@@ -2523,6 +2661,12 @@ async function dafuruEvent() {
   await say('……おそろいの、 もう 片方だった。');
   await say('ダフール「……お前は……\nおれの 息子だ。」');
   await say('ヲタ太「…………え？」');
+  await flashback({ title: 'ダフールの 記憶', who: 'dafuru', at: [19, 5], cast: [['fbMom', 20, 5, 'mom', 'up']], body: async () => {
+    await say('若き日の ダフールは、\n劇場の 二列目に いた。');
+    await say('となりの 女性が、 おなじ 色の\nペンライトを ふっていた。');
+    await say('母「あなたも あの子 推しなの？」');
+    await say('ダフール「ああ。 ……推しが 同じって、\nなんか いいな。」');
+  } });
   await say('ダフール「母さんとは 劇場で 出会った。\n毎週 ふたりで 推しを 追いかけて……\n幸せだった。」');
   await say('ダフール「でも 推し活に のめりこんで\n借金を 作った。 迷惑を かけまいと、\n黙って 家を 出たんだ。」');
   await say('ダフール「借金を 返すうちに\n金に 憑かれ 『推しは 金で\n買える』と 思い始めた。」');
@@ -2571,6 +2715,17 @@ async function ending() {
   await say('百花「ヲタ太くん、 ありがとう。\n卒業公演も… やっぱり 一番前で\n薄ピンクの ペンライト ふってたね。」');
   await say('百花「それにね、 配信で いつも\n『おつかれさま』って くれてたの、\nヲタ太くん だよね？」');
   await say('百花「ぜんぶ 読めなくて ごめんね。\nでも ちゃんと 届いてたよ。」');
+  await say('百花「……ねえ。 3年前の こと、\nおぼえてる？」');
+  await flashback({ title: '百花の 記憶', who: 'momoka', at: [16, 3], cast: [['fbHero', 20, 7, 'hero', 'up'], ['fbFan1', 18, 5, 'otaku1', 'up'], ['fbFan2', 21, 5, 'otaku3', 'up']], body: async () => {
+    await say('百花（研究生で、 ずっと 端っこ。\n今日で 辞めようって 思ってた。）');
+    burst(20 * 16 + 8, 7 * 16, 'heart', 6);
+    await say('百花（そしたら 最後列で ひとりだけ、\nわたしの 色の ペンライトを\nふってる 人が いた。）');
+    await say('百花（あの 薄ピンクの 光が\nあったから、 わたしは\nアイドルを 続けられたんだ。）');
+  } });
+  { const m3 = npcById('momoka'); m3.x = 19; m3.y = 4; m3.px = 19 * 16; m3.py = 4 * 16; }
+  await say('百花「あの日の 薄ピンクの 光、\nヲタ太くん だったんだよね。」');
+  await say('ヲタ太「……おれは 百花ちゃんの\n最初の ファンじゃ ないかも\nしれない。」');
+  await say('ヲタ太「でも、 最後の ファンには\nなりたいって、 ずっと 思ってた。」');
   if (flags.honne) { await say('百花「迷ってた わたしに、\nヲタ太くんは 言ってくれたよね。」'); await say(`百花「『${HONNE[flags.honne - 1]}』って。」`); }
   await say('百花「わたし、 もう アイドルじゃ ないから…」');
   await say('百花「これからは ファンじゃなくて…\nヲタ太くんの となりに いても\nいいかな？」');
@@ -2679,6 +2834,21 @@ T.npcs = [
   } },
   { id: 'w3', x: 14, y: 18, spr: 'otaku1', wander: 1, talk: async () => {
     await say('ヲタク「推しカラーペンラは\nこうげき力が ぐっと あがるぞ。\n薄ピンクに ひかるんだ！」');
+  } },
+  { id: 'maid', x: 19, y: 11, spr: 'maid', fixed: 1, talk: async () => {
+    if (flags.scene === 'concert' || flags.scene === 'epilogue') await say('メイド「ご結婚 おめでとう♪\n今日は 全メニュー\n薄ピンクで ご用意しました！」');
+    else if (flags.meeting) await say('メイド「最近、 チケットを 高く\n売りつける 人たちが 裏路地の\nマンホールに 出入りしてて……」');
+    else if (flags.shikiri) await say('メイド「生誕祭コラボ、 薄ピンクの\nオムライス はじめました♪\n百花ちゃん 早く 帰ってきてほしいな」');
+    else if (flags.kidnap) await say('メイド「百花ちゃんが いなくなって\nお店の ヲタクさんたち\nみんな 元気が ないんです……」');
+    else await say('メイド「おかえりなさいませ、\nご主人様♪ 劇場は\nすぐ 上ですよ！」');
+  } },
+  { id: 'gacha', x: 26, y: 11, spr: 'otaku2', fixed: 1, dir: 'up', talk: async () => {
+    if (flags.allies || flags.scene) await say('ヲタク「百花ちゃんの 缶バッジ、\n推し被りの 人と 交換して\nやっと そろったんだ！」');
+    else await say('ヲタク「百花ちゃんの 缶バッジ、\nもう 30回 回してるのに\n出ない……」');
+  } },
+  { id: 'tourist', x: 4, y: 19, spr: 'tourist', wander: 1, talk: async () => {
+    if (flags.scene === 'concert' || flags.scene === 'epilogue') await say('観光客「マチ ゼンブ ピンク！\nオメデトウ ゴザイマス！」');
+    else await say('観光客「アキハバラ、 サイコー！\nモモカ、 カワイイ！\nペンライト、 ドコデ カエル？」');
   } },
   { id: 'w4', x: 6, y: 15, spr: 'girl', wander: 1, talk: async () => {
     await say('女の子「冒険は 自動で きろくされるの。\nやめても タイトルの『つづきから』で\n再開 できるんだって！」');
@@ -3064,6 +3234,23 @@ async function newGamePlus(save) {
   await caption([`強くてニューゲーム（${cycle + 1}周目）`, '敵も 強くなっているぞ！'], 120);
   await prologue();
 }
+// sepia memory scene in the theater: who: sprite shown as the one remembering, cast: extra actors, body: the scene itself
+async function flashback({ title, who = 'hero', at = [19, 7], cast = [], body }) {
+  const back = { id: game.mapId, x: player.x, y: player.y, dir: player.dir }, bgm = game.map.bgm;
+  await fadeOut(20);
+  game.flashback = true; game.heroSpr = who; cv.style.filter = 'sepia(0.85) brightness(0.95)';
+  setMap('town', at[0], at[1], 'up');
+  cast.forEach(([id, x, y, spr, dir]) => game.npcs.push({ id, x, y, px: x * TS, py: y * TS, hx: x, hy: y, spr, fixed: 1, fb: 1, dir: dir || 'down', mv: null, wt: 999 }));
+  playBgm('title', true); game.lights = true;
+  await fadeIn(20);
+  await say(`── ${title} ──`);
+  await body();
+  await fadeOut(20);
+  game.flashback = false; game.heroSpr = null; game.lights = false; cv.style.filter = '';
+  setMap(back.id, back.x, back.y, back.dir); playBgm(bgm);
+  await fadeIn(20);
+}
+const STAGE = (x = 19) => [['fbMomoka', x, 3, 'momoka']];
 async function prologue() {
   playBgm(null);
   game.mode = 'map';
@@ -3073,6 +3260,14 @@ async function prologue() {
   await caption(['ひとりの ヲタクが いた。', 'その名は ヲタ太。']);
   await caption(['ヲタ太の 推しは', 'アイドル『伊藤百花』。', '推しカラーは 薄ピンク×薄ピンク。']);
   await caption(['これは ヲタ太が 推しを 救い、', 'しあわせを つかむまでの', '物語である──']);
+  await flashback({ title: '3年前', at: [20, 7], cast: [...STAGE(16), ['fbFan1', 18, 5, 'otaku1', 'up'], ['fbFan2', 21, 5, 'otaku3', 'up']], body: async () => {
+    await say('その日、 ヲタ太は はじめて\n劇場に 来た。');
+    await say('研究生の 百花は、 ステージの\nいちばん 端で 踊っていた。');
+    await say('ヲタ太は 最後列で、 買ったばかりの\n薄ピンクの ペンライトを\nそっと ふった。');
+    burst(16 * 16 + 8, 3 * 16, 'heart', 6);
+    await say('……一瞬、 目が 合った 気がした。');
+    await say('その日から ヲタ太の 推しは\n伊藤百花に なった。');
+  } });
   playBgm('town');
   await fadeIn(30);
   await runScript(async () => {
@@ -3168,20 +3363,60 @@ function drawActor(a, sprName, cx, cy) {
   const f = (game.frame >> 4) % 2;
   ctx.drawImage(set[a.dir][f], Math.round(a.px) - cx, Math.round(a.py) - cy);
 }
+// アキハバラ changes with the story: concert posters, missing-person flyers, birthday posters, scalper bills, then all pink
+const POSTER_SPOTS = [[3, 6], [7, 6], [15, 8], [24, 8], [2, 16], [8, 16], [16, 16], [22, 16], [2, 12], [8, 12]];
+function townStage() {
+  if (game.flashback) return 'live';
+  if (flags.scene === 'concert' || flags.scene === 'epilogue') return 'pink';
+  if (flags.meeting) return 'scalp';
+  if (flags.shikiri) return 'seitan';
+  if (flags.kidnap) return 'missing';
+  return 'live';
+}
+function drawPoster(stage, x, y, i) {
+  const r = (a, b, w, h2, c) => { ctx.fillStyle = c; ctx.fillRect(x + a, y + b, w, h2); };
+  if (stage === 'live') { r(3, 2, 10, 12, '#3a2a52'); r(4, 3, 8, 6, '#f7b0cc'); r(6, 4, 4, 3, '#f8d8c0'); r(6, 4, 4, 1, '#5a3418'); r(4, 10, 8, 1, '#f8d838'); r(4, 12, 6, 1, '#ffffff'); }
+  else if (stage === 'missing') { r(3, 1, 10, 13, '#f8f8f0'); r(4, 2, 8, 2, '#d83838'); r(5, 5, 6, 5, '#c8c8c8'); r(6, 6, 4, 3, '#f8d8c0'); r(6, 6, 4, 1, '#5a3418'); r(4, 11, 8, 1, '#3a3a3a'); r(4, 13, 5, 1, '#3a3a3a'); }
+  else if (stage === 'seitan') { r(3, 1, 10, 13, '#fde2ee'); r(3, 1, 10, 1, '#d47aa0'); r(5, 3, 6, 5, '#f7b0cc'); r(6, 4, 4, 3, '#f8d8c0'); r(4, 9, 8, 2, '#d47aa0'); r(7, 11, 2, 2, '#f8d838'); }
+  else if (stage === 'scalp') {
+    if (i % 2) { r(2, 2, 12, 11, '#f8f0a0'); r(3, 3, 10, 2, '#d83838'); r(3, 7, 7, 1, '#2a2a2a'); r(3, 9, 9, 1, '#2a2a2a'); r(11, 10, 2, 2, '#d83838'); }
+    else { r(3, 2, 10, 12, '#fde2ee'); r(5, 4, 6, 5, '#f7b0cc'); r(2, 7, 12, 2, '#2a2a2a'); r(3, 7, 3, 2, '#d83838'); }
+  }
+}
+function drawTownMood(cx, cy) {
+  const st = townStage();
+  if (st !== 'pink') { POSTER_SPOTS.forEach(([tx, ty], i) => drawPoster(st, tx * TS - cx, ty * TS - cy, i)); return; }
+  ctx.fillStyle = 'rgba(247,176,204,0.22)'; ctx.fillRect(0, 0, W, H);
+  // pennant strings across the main street
+  for (const row of [1, 9, 17]) {
+    const y = row * TS - cy - 4;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(TS - cx, y, 26 * TS, 1);
+    for (let x = TS; x < 27 * TS; x += 8) { ctx.fillStyle = (x >> 3) % 2 ? '#f7b0cc' : '#ffffff'; ctx.beginPath(); ctx.moveTo(x - cx, y + 1); ctx.lineTo(x - cx + 6, y + 1); ctx.lineTo(x - cx + 3, y + 6); ctx.fill(); }
+  }
+}
 function drawMap() {
   const m = game.map; const [cx, cy] = camera();
   const tf = (game.frame >> 5) % 2;
   const tx0 = Math.floor(cx / TS), ty0 = Math.floor(cy / TS);
   for (let ty = ty0; ty <= ty0 + Math.ceil(H / TS); ty++) for (let tx = tx0; tx <= tx0 + Math.ceil(W / TS); tx++) {
-    const ch = tileAt(m, tx, ty); const im = tileImg[ch] || tileImg[' '];
-    ctx.drawImage(tf && im[1] ? im[1] : im[0], tx * TS - cx, ty * TS - cy);
+    const ch = tileAt(m, tx, ty); let im = (m.theme && themeImg[m.theme][ch]) || tileImg[ch] || tileImg[' '];
+    const deco = m.theme && themeDeco[m.theme][ch];
+    if (deco && tx >= -1 && ty >= -1 && tx <= m.w && ty <= m.h) {
+      // decorate roughly one tile in seven; wall decorations only where the wall faces a walkable tile
+      const hsh = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
+      const rate = (THEMES[m.theme].rate || {})[ch] || 7;
+      const below = tileAt(m, tx, ty + 1), face = rate === 1 || !TILES[ch].solid || (TILES[below] && !TILES[below].solid);
+      if (face && hsh % rate === 0) im = deco[(hsh >>> 3) % deco.length];
+    }
+    ctx.drawImage((tf && im[1]) ? im[1] : im[0], tx * TS - cx, ty * TS - cy);
   }
   for (const c of m.chests) ctx.drawImage(flags.chests[c.id] ? SPR.chestOpen : SPR.chest, c.x * TS - cx, c.y * TS - cy);
   const actors = game.npcs.filter(npcVisible).map(n => [n, n.spr]);
-  actors.push([player, 'hero']);
+  actors.push([player, game.heroSpr || 'hero']);
   actors.sort((a, b) => a[0].py - b[0].py);
   for (const [a, s] of actors) drawActor(a, s, cx, cy);
   // cage around captive momoka
+  if (game.mapId === 'town') drawTownMood(cx, cy);
   if (game.mapId === 'tower2' && !flags.kyohiru) {
     const mo = npcById('momoka2'); ctx.fillStyle = '#9a9aae';
     for (let i = 0; i <= 16; i += 4) ctx.fillRect(mo.px - cx + i - (i === 16 ? 1 : 0), mo.py - cy - 2, 1, 18);
@@ -3213,6 +3448,25 @@ function drawBattleBg(x, y, w, h, kind) {
   } else if (kind === 'venue') {
     band(['#120a24', '#1a1030', '#22163c', '#2a1c48', '#322254', '#5c5a70', '#4c4a60', '#3c3a50']);
     ctx.save(); ctx.globalAlpha = 0.22; [['#f890b8', 0.25], ['#9a4ad8', 0.5], ['#78d8f8', 0.75]].forEach(([c, k]) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x + w * k - 4, y); ctx.lineTo(x + w * k + 4, y); ctx.lineTo(x + w * k + 24, y + h * 0.75); ctx.lineTo(x + w * k - 24, y + h * 0.75); ctx.fill(); }); ctx.restore();
+  } else if (kind === 'studio') {
+    band(['#0e0e14', '#14141c', '#1a1a24', '#20202c', '#262634', '#2e2e38', '#262630', '#1e1e28']);
+    [[16, 14], [64, 22], [112, 14]].forEach(([dx, dy]) => { ctx.fillStyle = '#121218'; ctx.fillRect(x + dx, y + dy, 32, 22); ctx.fillStyle = (game.frame >> 4) % 2 ? '#3858c8' : '#4868d8'; ctx.fillRect(x + dx + 2, y + dy + 2, 28, 18); });
+    ctx.fillStyle = (game.frame >> 5) % 2 ? '#f83848' : '#8a1c24'; ctx.fillRect(x + w - 30, y + 4, 24, 7);
+  } else if (kind === 'hall') {
+    band(['#2a0810', '#3a0c16', '#4a101c', '#5a1422', '#6a1828', '#8a2434', '#7a2030', '#6a1c2a']);
+    ctx.fillStyle = '#9a1c2c'; for (let i = 0; i < w; i += 12) ctx.fillRect(x + i, y, 6, h * 0.6);
+    ctx.fillStyle = '#c8a040'; ctx.fillRect(x, y, w, 3);
+  } else if (kind === 'seitan') {
+    band(['#fde2ee', '#fbd6e4', '#f8cadb', '#f6bed2', '#f4b2ca', '#f4c4d4', '#fbe6ee', '#f4c4d4']);
+    [[20, 20, '#f890b8'], [60, 12, '#ffffff'], [104, 24, '#d47aa0'], [140, 14, '#f890b8']].forEach(([dx, dy, c]) => { ctx.fillStyle = c; ctx.fillRect(x + dx, y + dy, 10, 12); ctx.fillStyle = '#9a9ab0'; ctx.fillRect(x + dx + 5, y + dy + 12, 1, 14); });
+  } else if (kind === 'market') {
+    band(['#08060c', '#0c0a12', '#100e18', '#14121c', '#1a1822', '#26242c', '#201e26', '#18161e']);
+    const on = (game.frame >> 4) % 2;
+    ctx.fillStyle = on ? '#f890b8' : '#a04870'; ctx.fillRect(x + 14, y + 12, 40, 2); ctx.fillRect(x + 14, y + 26, 40, 2);
+    ctx.fillStyle = on ? '#3a7898' : '#78d8f8'; ctx.fillRect(x + 104, y + 18, 40, 2); ctx.fillRect(x + 104, y + 32, 40, 2);
+  } else if (kind === 'tower') {
+    band(['#0e0c16', '#14121c', '#1a1824', '#22202c', '#2a2834', '#d4d2dc', '#34323e', '#d4d2dc']);
+    ctx.fillStyle = '#c8a040'; ctx.fillRect(x, y + h * 0.62, w, 2); for (let i = 8; i < w; i += 36) { ctx.fillStyle = '#7a1c3a'; ctx.fillRect(x + i, y + 6, 14, 34); ctx.fillStyle = '#c8a040'; ctx.fillRect(x + i, y + 6, 14, 2); }
   } else {
     band(['#1c142c', '#24183a', '#2c1c46', '#3a2452', '#4a2a5a', '#3a2a52', '#2e2244', '#221a36']);
     ctx.fillStyle = '#d83838'; for (let i = 0; i < 6; i++) ctx.fillRect(x + 12 + i * 32, y + 10 + (i % 2) * 8, 2, 2);
