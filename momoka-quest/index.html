@@ -1759,8 +1759,13 @@ async function taunt(e, s) {
     await say('ヲタ太の 心が 折れた！\nつぎの ターン うごけない！', { append: true, auto: 44 });
     return;
   }
+  // the first taunt of a battle always hits the enemy's pride; after that mix in the common lines
   const own = [].concat(TAUNT_FOR[e.id] || []);
-  const line = own.length && chance(0.5) ? own[rnd(0, own.length - 1)] : TAUNTS[rnd(0, TAUNTS.length - 1)];
+  const pool = own.length && (!battleS.taunted || chance(0.6)) ? own : TAUNTS;
+  let fresh = pool.filter(l => l !== battleS.lastTaunt);
+  if (!fresh.length) fresh = TAUNTS.filter(l => l !== battleS.lastTaunt);
+  const line = fresh[rnd(0, fresh.length - 1)];
+  battleS.taunted = true; battleS.lastTaunt = line;
   await say('ヲタ太は 煽った！', { append: true, auto: 22 });
   await say(`「${line}」`, { append: true, auto: 50 });
   await say(`${nm}の 心に ぐさっと 刺さった！`, { append: true, auto: 26 });
@@ -1960,7 +1965,7 @@ async function battle(id, opt = {}) {
   const prevMode = game.mode;
   sfx('enc');
   for (let i = 0; i < 6; i++) { game.flash = 4; await framesWait(6); }
-  battleS.e = e; battleS.atkUp = 0; battleS.cancel = false; battleS.heroPending = false; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.burn = 0; battleS.lastAct = null; battleS.bg = opt.bg || game.map.bg || 'field';
+  battleS.e = e; battleS.atkUp = 0; battleS.cancel = false; battleS.heroPending = false; battleS.blink = 0; battleS.alpha = 1; battleS.pdown = 0; battleS.burn = 0; battleS.lastAct = null; battleS.taunted = false; battleS.lastTaunt = null; battleS.bg = opt.bg || game.map.bg || 'field';
   game.mode = 'battle';
   playBgm(base.boss ? 'boss' : 'battle');
   const sw = statusWin(); extraWins.push(sw);
