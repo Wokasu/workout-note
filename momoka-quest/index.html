@@ -525,45 +525,45 @@ const SKILLS = [
 // moves: [weight, type, mult, text]
 const ENEMIES = {
   // moves: [weight, type, mult, text, hits]; flags: last (always acts last), cling (survives once at 1 HP)
-  zaitaku: { name: '在宅ヲタク', hp: 8, atk: 5, def: 2, agi: 12, exp: 8, gold: 3,
+  zaitaku: { name: '在宅ヲタク', hp: 26, atk: 6, def: 2, agi: 12, exp: 12, gold: 5,
     moves: [[3, 'atk'], [1, 'flee', 0, '「やっぱ 配信で 見るわ」と 帰っていった！']], drop: ['drink', 0.1] },
-  dd: { name: 'DD', hp: 18, atk: 11, def: 5, agi: 7, exp: 9, gold: 9,
+  dd: { name: 'DD', hp: 55, atk: 12, def: 5, agi: 7, exp: 15, gold: 14,
     moves: [[3, 'atk'], [1, 'morph', 0, '推し変した！ 「今日から この子 推すわ」']], drop: ['drink', 0.1] },
-  kagijime: { name: '鍵閉め厨', hp: 22, atk: 14, def: 8, agi: 1, exp: 12, gold: 11, last: 1, cling: 1,
+  kagijime: { name: '鍵閉め厨', hp: 60, atk: 13, def: 8, agi: 1, exp: 19, gold: 17, last: 1, cling: 1,
     moves: [[3, 'atk'], [1, 'mult', 1.4, '「最後は おれだ！」と 列に 割り込んできた！']], drop: ['drink', 0.12] },
-  seitan: { name: '生誕委員', hp: 24, atk: 12, def: 7, agi: 8, exp: 12, gold: 5,
+  seitan: { name: '生誕委員', hp: 70, atk: 15, def: 7, agi: 8, exp: 19, gold: 8,
     moves: [[2, 'atk'], [2, 'steal', 0, '「生誕の 集金です！」']], drop: ['photo', 0.06] },
-  sesshoku: { name: '接触厨', hp: 28, atk: 14, def: 9, agi: 6, exp: 14, gold: 14,
+  sesshoku: { name: '接触厨', hp: 85, atk: 16, def: 9, agi: 6, exp: 22, gold: 21,
     moves: [[3, 'atk'], [1, 'guard', 0, '剥がしに 抵抗！ 守りが あがった！']], drop: ['drink2', 0.06] },
-  ensei: { name: '遠征ヲタク', hp: 60, atk: 22, def: 12, agi: 6, exp: 30, gold: 26,
+  ensei: { name: '遠征ヲタク', hp: 140, atk: 25, def: 12, agi: 6, exp: 48, gold: 39,
     moves: [[3, 'atk'], [1, 'heal', 18, '遠征自慢を はじめた！ 自分に 酔っている！']], drop: ['drink2', 0.1] },
-  comp: { name: '生写真コンプ勢', hp: 30, atk: 18, def: 16, agi: 18, exp: 40, gold: 40,
+  comp: { name: '生写真コンプ勢', hp: 100, atk: 22, def: 16, agi: 18, exp: 64, gold: 60,
     moves: [[3, 'atk'], [1, 'flee', 0, '「ダブり 交換に 行かなきゃ」と 去っていった！']], drop: ['photo', 0.6] },
-  tsuihai: { name: 'ツイ廃', hp: 20, atk: 10, def: 5, agi: 10, exp: 11, gold: 10,
+  tsuihai: { name: 'ツイ廃', hp: 55, atk: 11, def: 5, agi: 10, exp: 17, gold: 15,
     moves: [[3, 'atk'], [1, 'expose', 0, '晒しポスト！\nヲタ太の 写真が 拡散された！']], drop: ['drink', 0.1] },
-  onnawota: { name: '女ヲタヲタ', hp: 26, atk: 15, def: 8, agi: 9, exp: 14, gold: 12,
+  onnawota: { name: '女ヲタヲタ', hp: 75, atk: 17, def: 8, agi: 9, exp: 22, gold: 18,
     moves: [[3, 'atk'], [1, 'flee', 0, '「女ヲタ 見つけた！」と\n追いかけて いなくなった！']], drop: ['photo', 0.06] },
-  lift: { name: 'リフトヲタ', hp: 58, atk: 30, def: 16, agi: 12, exp: 38, gold: 32,
+  lift: { name: 'リフトヲタ', hp: 160, atk: 27, def: 16, agi: 12, exp: 60, gold: 48,
     moves: [[3, 'atk'], [1, 'lift', 1.9, 'リフト！ 高く 上がって のしかかってきた！']], drop: ['drink2', 0.1] },
-  gachikoi: { name: 'ガチ恋ヲタク', hp: 9, atk: 7, def: 2, agi: 3, exp: 3, gold: 4,
+  gachikoi: { name: 'ガチ恋ヲタク', hp: 30, atk: 6, def: 3, agi: 3, exp: 5, gold: 6,
     moves: [[3, 'atk'], [1, 'mult', 1.4, 'ガチ恋口上を となえた！']], drop: ['drink', 0.1] },
-  ninchi: { name: '認知厨', hp: 13, atk: 9, def: 4, agi: 6, exp: 5, gold: 6,
+  ninchi: { name: '認知厨', hp: 32, atk: 8, def: 4, agi: 6, exp: 8, gold: 9,
     moves: [[3, 'atk'], [1, 'heal', 6, '「ぼくのこと おぼえてる？」と 自分を はげました！']], drop: ['drink', 0.1] },
-  kosan: { name: '古参ヲタク', hp: 20, atk: 13, def: 7, agi: 4, exp: 9, gold: 10,
+  kosan: { name: '古参ヲタク', hp: 58, atk: 11, def: 7, agi: 4, exp: 15, gold: 15,
     moves: [[3, 'atk'], [1, 'mult', 1.5, '「おれは 研究生の ころから…」 古参マウントを とった！']], drop: ['drink', 0.12] },
-  mix: { name: 'MIXヲタク', hp: 26, atk: 16, def: 8, agi: 9, exp: 13, gold: 14,
+  mix: { name: 'MIXヲタク', hp: 80, atk: 15, def: 8, agi: 9, exp: 21, gold: 21,
     moves: [[2, 'atk'], [2, 'mult', 1.4, '「タイガー！ ファイヤー！ サイバー！」 MIXを うった！']], drop: ['photo', 0.06] },
-  penra: { name: 'ペンラ8本ヲタ', hp: 30, atk: 13, def: 10, agi: 7, exp: 16, gold: 16,
-    moves: [[2, 'atk'], [2, 'multi', 0.6, 'ペンライトを 8本 ふりまわした！', 3]], drop: ['drink2', 0.06] },
-  yakkai: { name: '繋がりヲタク', hp: 42, atk: 27, def: 14, agi: 12, exp: 24, gold: 22,
+  penra: { name: 'ペンラ8本ヲタ', hp: 80, atk: 16, def: 10, agi: 7, exp: 25, gold: 24,
+    moves: [[2, 'atk'], [2, 'multi', 0.8, 'ペンライトを 8本 ふりまわした！', 3]], drop: ['drink2', 0.06] },
+  yakkai: { name: '繋がりヲタク', hp: 120, atk: 23, def: 14, agi: 12, exp: 38, gold: 33,
     moves: [[3, 'atk'], [1, 'mult', 1.6, '「百花は おれの 嫁！」と さけんだ！']], drop: ['drink2', 0.08] },
-  chizou: { name: '地蔵ヲタク', hp: 36, atk: 22, def: 34, agi: 2, exp: 30, gold: 18,
+  chizou: { name: '地蔵ヲタク', hp: 80, atk: 24, def: 34, agi: 2, exp: 45, gold: 27,
     moves: [[3, 'idle', 0, 'じっと うごかない…'], [2, 'atk']], drop: ['photo', 0.1] },
-  saizen: { name: '最前管理ヲタ', hp: 55, atk: 31, def: 18, agi: 14, exp: 36, gold: 30,
+  saizen: { name: '最前管理ヲタ', hp: 170, atk: 28, def: 18, agi: 14, exp: 58, gold: 45,
     moves: [[3, 'atk'], [1, 'mult', 1.5, '最前を ゆずらない！ ヲタ太を おしのけた！']], drop: ['drink2', 0.1] },
-  gou: { name: 'TOのゴウ', hp: 110, atk: 20, def: 12, agi: 8, exp: 80, gold: 120, boss: 1,
+  gou: { name: 'TOのゴウ', hp: 200, atk: 19, def: 12, agi: 8, exp: 120, gold: 160, boss: 1,
     moves: [[3, 'atk'], [2, 'mult', 1.5, 'TOの 号令！ 手下たちが いっせいに コールした！'], [1, 'multi', 0.7, 'ケチャを くりだした！', 2]] },
-  kyohiru: { name: '同担拒否魔王キョヒール', short: 'キョヒール', hp: 340, atk: 38, def: 20, agi: 15, exp: 300, gold: 0, boss: 1,
+  kyohiru: { name: '同担拒否魔王キョヒール', short: 'キョヒール', hp: 440, atk: 38, def: 20, agi: 15, exp: 400, gold: 0, boss: 1,
     moves: [[3, 'atk'], [2, 'mult', 1.6, '同担拒否ビームを はなった！'], [2, 'mult', 1.4, 'ガチ恋口上・極を となえた！'], [1, 'rage', 0, 'はげしく いかっている！']] },
 };
 const EXP_TABLE = [0, 0, 8, 22, 45, 80, 130, 200, 290, 400, 540, 720, 950, 1250, 1600, 2000];
@@ -606,8 +606,8 @@ async function initCloud() {
 }
 const saveState = () => ({ P, flags, map: game.mapId, x: player.x, y: player.y, dir: player.dir });
 // returns false only when the game could be kept nowhere
-function saveGame(force) {
-  const json = JSON.stringify(saveState()), now = Date.now();
+function saveGame(force, state) {
+  const json = JSON.stringify(state || saveState()), now = Date.now();
   let ok = false;
   if (STORE.local) {
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...JSON.parse(json), savedAt: now })); ok = true; } catch (e) { STORE.local = false; }
@@ -652,7 +652,7 @@ function saveMode() {
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
 const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared'];
 const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4'];
 const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
@@ -660,7 +660,7 @@ const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeA
 function makeCode() {
   const a = [1, P.name, P.lv, P.hp, P.mhp, P.mp, P.mmp, P.str, P.vit, P.agi, P.exp, P.gold, P.w, P.a,
     CODE_ITEMS.map(k => Math.min(9, P.items[k] || 0)).join(''), bitsOf(CODE_FLAGS.map(k => flags[k])),
-    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y];
+    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y, flags.cycle || 0];
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   return b + codeSum(b);
 }
@@ -671,7 +671,7 @@ function parseCode(text) {
     const body = t.slice(0, -2);
     if (t.length < 10 || codeSum(body) !== t.slice(-2)) return null;
     const a = JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/')))));
-    if (!Array.isArray(a) || a[0] !== 1 || a.length !== 20) return null;
+    if (!Array.isArray(a) || a[0] !== 1 || (a.length !== 20 && a.length !== 21)) return null;
     const n = a.slice(2, 14);
     if (typeof a[1] !== 'string' || !n.every(v => Number.isInteger(v) && v >= 0 && v < 1e6)) return null;
     const [lv, hp, mhp, mp, mmp, str, vit, agi, exp, gold, w, ar] = n;
@@ -681,6 +681,7 @@ function parseCode(text) {
     const fl = { chests: {} };
     CODE_FLAGS.forEach((k, i) => { if (a[15] & (1 << i)) fl[k] = true; });
     CODE_CHESTS.forEach((k, i) => { if (a[16] & (1 << i)) fl.chests[k] = 1; });
+    if (Number.isInteger(a[20]) && a[20] > 0 && a[20] < 100) fl.cycle = a[20];
     const map = CODE_MAPS[a[17]], m = MAPS[map];
     const x = clamp(a[18] | 0, 0, m.w - 1), y = clamp(a[19] | 0, 0, m.h - 1);
     return { P: { name: Array.from(a[1]).slice(0, NAME_MAX).join('') || 'ヲタ太', lv, hp: Math.min(hp, mhp), mhp, mp: Math.min(mp, mmp), mmp, str, vit, agi, exp, gold, w, a: ar, items }, flags: fl, map, x, y, dir: 'down' };
@@ -1597,8 +1598,8 @@ async function enemyAct(e) {
     await say(`${nm}は ${text}`, { append: true, auto: 34 });
   }
   if (e.id === 'kyohiru' && !e.healed && e.hp < e.mhp * 0.35 && P.hp > 0) {
-    e.healed = 1; const v = 90; e.hp = Math.min(e.mhp, e.hp + v); sfx('heal');
-    await say('キョヒールは 百花の 生写真を ながめて\nHPが 90 かいふくした！', { append: true, auto: 40 });
+    e.healed = 1; const v = 120; e.hp = Math.min(e.mhp, e.hp + v); sfx('heal');
+    await say('キョヒールは 百花の 生写真を ながめて\nHPが 120 かいふくした！', { append: true, auto: 40 });
   }
 }
 async function chooseCommand(e) {
@@ -1646,7 +1647,9 @@ async function levelUps() {
 // returns 'win' | 'run' | 'lose'
 async function battle(id, opt = {}) {
   const base = ENEMIES[id];
-  const e = { ...base, id, mhp: base.hp, hp: base.hp };
+  // 強くてニューゲーム: each extra playthrough makes enemies 50% tougher (and more rewarding)
+  const k = 1 + 0.5 * (flags.cycle || 0), up = v => Math.round(v * k);
+  const e = { ...base, id, hp: up(base.hp), mhp: up(base.hp), atk: up(base.atk), def: up(base.def), exp: up(base.exp), gold: up(base.gold) };
   P.stun = 0;
   const prevMode = game.mode;
   sfx('enc');
@@ -1657,6 +1660,13 @@ async function battle(id, opt = {}) {
   const sw = statusWin(); extraWins.push(sw);
   await say(opt.intro || `${e.name}が あらわれた！`, { auto: 50 });
   let turn = 0, result = null;
+  // surprise attack: the enemy gets a free action before the first command
+  if (!base.boss && chance(0.1)) {
+    await say(`しかし ${e.short || e.name}は\nいきなり おそいかかってきた！`, { append: true, auto: 40 });
+    await enemyAct(e);
+    if (P.hp <= 0) result = 'lose';
+    else if (e.fled) result = 'fled';
+  }
   while (!result) {
     turn++;
     closeMsg();
@@ -1671,7 +1681,8 @@ async function battle(id, opt = {}) {
       else await say('しかし まわりこまれて しまった！', { append: true, auto: 40 });
       await enemyAct(e);
     } else {
-      const pFirst = act.type === 'item' || act.type === 'stunned' || e.last || P.agi * (0.6 + Math.random() * 0.6) >= e.agi * (0.6 + Math.random() * 0.6);
+      // the enemy moves first at least about a third of the time, more often when it is quicker
+      const pFirst = act.type === 'item' || act.type === 'stunned' || e.last || chance(clamp(0.62 + (P.agi - e.agi) * 0.02, 0.35, 0.8));
       if (pFirst) { await playerAct(e, act); if (e.hp > 0) await enemyAct(e); }
       else { await enemyAct(e); if (P.hp > 0 && !e.fled) await playerAct(e, act); }
     }
@@ -1792,11 +1803,12 @@ async function talkShop() {
   await say('店員「推し活 がんばってね！」');
 }
 async function motoTO() {
-  if (flags.skGundan) { await say('元TO「軍団には 話を つけてある。\n困ったら いつでも 呼べ。\n百花ちゃんを たのんだぞ。」'); return; }
+  if (flags.motoDone || (flags.skGundan && !flags.cycle)) { await say('元TO「軍団には 話を つけてある。\n困ったら いつでも 呼べ。\n百花ちゃんを たのんだぞ。」'); return; }
   if (!flags.motoHeard) {
     await say('元TO「……おれは 元TOの テツ。\nいまは 出禁の 身だ。」');
-    await say('元TO「マナーの 悪い 若いのに\n現場で 説教したら、 おれの 方が\n出禁に なっちまってな。」');
-    await say('元TO「正しいことを したつもりだった。\nでも 現場を 一番 さわがせたのは\nおれ だったんだ。」');
+    await say('元TO「推しに 握手で 説教したら、\n出禁に なっちまってな。」');
+    await say('元TO「MCが 長いとか、 SNSの 使い方とか…\n良かれと 思って 言ってたんだ。」');
+    await say('元TO「でも 推しを 一番 困らせてたのは\nおれ だったんだ。」');
     flags.motoHeard = true;
   }
   await say('元TO「百花ちゃんが さらわれたって\n聞いても、 おれは 会場にも\n入れねえ……」');
@@ -1805,7 +1817,8 @@ async function motoTO() {
   await say('元TO「……できること、 か。」');
   await say('元TO「おれは もう 現場に 行けない。\nだが おれの 軍団は まだ 動ける。」');
   await say('元TO「困ったら 呼べ。\nおれの 軍団を 貸してやる！」', { noWait: true });
-  flags.skGundan = true; await jingle('lvup'); playBgm(game.map.bgm);
+  if (flags.skGundan) { flags.motoDone = true; await say('（軍団との 絆が さらに 深まった！）'); return; }
+  flags.skGundan = true; flags.motoDone = true; await jingle('lvup'); playBgm(game.map.bgm);
   await say('ヲタ太は 「軍団呼び」を おぼえた！\n（仲間が 駆けつけて 連続こうげき）');
 }
 async function talkStaff() {
@@ -1850,8 +1863,8 @@ async function venueEnter() {
   await say('ヲタ太は ポケットの\n握手券の 束を 見つめた。');
   await say('今日の ために 積んだ 握手券 50枚。\n握手会は 中止……\n50枚 ぜんぶ 死券に なった。');
   await say('（……いや。 使えなかった お金も\n想いも、 ぜんぶ ぶつけてやる！）', { noWait: true });
-  flags.skMatome = true; await jingle('lvup'); playBgm(game.map.bgm);
-  await say('ヲタ太は 「まとめ出し」を おぼえた！\n（所持金を ぜんぶ 使って こうげき）');
+  if (flags.skMatome) await say('（まとめ出しの 決意を あらたにした！）');
+  else { flags.skMatome = true; await jingle('lvup'); playBgm(game.map.bgm); await say('ヲタ太は 「まとめ出し」を おぼえた！\n（所持金を ぜんぶ 使って こうげき）'); }
   await say('ヲタ太は 百花を 救うことを\nちかった！');
 }
 async function gouEvent() {
@@ -1968,8 +1981,19 @@ async function ending() {
   await fadeOut(40);
   await caption(['こうして ヲタ太と 百花は', 'いつまでも しあわせに', 'くらしました。']);
   game.mode = 'end'; game.endT = 0;
+  // clear data: keep strength, gear, money, items and episode skills for 強くてニューゲーム
+  flags.cleared = true;
+  const clearState = { P: { ...P, hp: P.mhp, mp: P.mmp }, flags: { chests: {}, cleared: true, cycle: flags.cycle || 0, skMatome: !!flags.skMatome, skGundan: !!flags.skGundan }, map: 'chapel', x: 5, y: 5, dir: 'up' };
+  const kept = saveGame(true, clearState);
   await fadeIn(30);
   await new Promise(res => { modal = k => { if ((k === 'a' || k === 'b') && game.endT > 120) { modal = null; res(); } }; });
+  if (kept) await say('クリアデータを きろくしました。\nタイトルの「強くてニューゲーム」で\nつよさを 引き継いで あそべます。');
+  else {
+    await say('この画面では クリアデータを\nのこせません。 この じゅもんで\n強くてニューゲームが できます。', { noWait: true });
+    game.mapId = 'chapel'; player.x = 5; player.y = 5;
+    await openCodePanel('show', makeCode());
+  }
+  closeMsg();
   await fadeOut(30);
   flags.scene = null;
   // let the surrounding runScript finish its cleanup before the title opens its menu
@@ -2195,10 +2219,12 @@ async function titleScreen() {
   game.mode = 'title'; game.busy = true; game.fx = [];
   playBgm('title', true);
   game.fade = 0;
-  const items = [{ label: 'はじめから' }, { label: 'つづきから', disabled: !loadSave() }, { label: 'じゅもんで さいかい' }];
+  // after clearing, the second item becomes 強くてニューゲーム
+  const label2 = sv => sv && sv.flags && sv.flags.cleared ? `強くてニューゲーム` : 'つづきから';
+  const items = [{ label: 'はじめから' }, { label: label2(loadSave()), disabled: !loadSave() }, { label: 'じゅもんで さいかい' }];
   const m = openMenu({ items, x: 56, y: 140, w: 144, cancel: false, idx: loadSave() ? 1 : 0 });
   // the account save arrives a moment after the title appears
-  STORE.onChange = () => { const had = !items[1].disabled; items[1].disabled = !loadSave(); if (!had && !items[1].disabled && m.idx === 0) m.idx = 1; };
+  STORE.onChange = () => { const had = !items[1].disabled, sv = loadSave(); items[1].disabled = !sv; items[1].label = label2(sv); if (!had && !items[1].disabled && m.idx === 0) m.idx = 1; };
   const r = await chooseMenu(m); closeMenu(m);
   STORE.onChange = null;
   if (r === 2) {
@@ -2223,6 +2249,18 @@ async function titleScreen() {
   }
   closeMsg();
   await fadeOut(20);
+  await prologue();
+}
+async function newGamePlus(save) {
+  if (game.fade < 1) await fadeOut(20);
+  newGame();
+  Object.assign(P, save.P); P.hp = P.mhp; P.mp = P.mmp;
+  const cycle = (save.flags.cycle || 0) + 1;
+  Object.assign(flags, { cycle, skMatome: !!save.flags.skMatome, skGundan: !!save.flags.skGundan });
+  await caption([`強くてニューゲーム（${cycle + 1}周目）`, '敵も 強くなっているぞ！'], 120);
+  await prologue();
+}
+async function prologue() {
   playBgm(null);
   game.mode = 'map';
   setMap('town', 4, 4, 'down');
@@ -2248,6 +2286,7 @@ async function titleScreen() {
   await warnNoSave();
 }
 async function resume(save) {
+  if (save.flags && save.flags.cleared) return newGamePlus(save);
   if (game.fade < 1) await fadeOut(20);
   newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
   if (flags.kidnap) flags.skMatome = true;
@@ -2423,7 +2462,7 @@ function drawEnd() {
   ctx.drawImage(SPR.hero.right[f], 92, 108, 32, 32);
   ctx.drawImage(SPR.momoka.down[f], 132, 108, 32, 32);
   heartAt(125, 100 + Math.round(Math.sin(game.frame / 15) * 2), '#f890b8');
-  txt(`${P.name} Lv${P.lv}`, W / 2, 150, '#fff', 12);
+  txt(`${P.name} Lv${P.lv}` + (flags.cycle ? `（${flags.cycle + 1}周目）` : ''), W / 2, 150, '#fff', 12);
   txt('推し活 おつかれさまでした！', W / 2, 168, '#fff', 12);
   if (game.endT > 120 && (game.frame >> 5) % 2 === 0) txt('A / Z で タイトルへ', W / 2, 190, '#9d92b8', 10);
   ctx.textAlign = 'left';
