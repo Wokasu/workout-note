@@ -1340,6 +1340,7 @@ function textW(s) { ctx.font = '12px ' + FONT; return ctx.measureText(typeof s =
 
 const errBox = document.getElementById('err');
 let errShown = 0;
+window.addEventListener('unhandledrejection', ev => reportError(ev.reason));
 function reportError(e) {
   console.error(e);
   if (errShown++ > 3) return;
@@ -3329,10 +3330,25 @@ async function prologue() {
   toast('アキハバラ');
   await warnNoSave();
 }
+// never leave the player on a black screen: if loading the save fails, restart at home with the same stats
 async function resume(save) {
+  try { await resumeRaw(save); }
+  catch (e) {
+    reportError(e);
+    try {
+      if (save && save.P) { newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags || {}); flags.chests = flags.chests || {}; }
+      flags.scene = null; game.flashback = false; game.heroSpr = null; cv.style.filter = '';
+      game.mode = 'map'; setMap('town', 4, 4, 'down');
+    } catch (e2) { reportError(e2); newGame(); game.mode = 'map'; setMap('town', 4, 4, 'down'); }
+    game.fade = 0; game.busy = false;
+  }
+}
+async function resumeRaw(save) {
   if (save.flags && save.flags.cleared) return newGamePlus(save);
   if (game.fade < 1) await fadeOut(20);
   newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
+  if (!MAPS[save.map]) { save.map = 'town'; save.x = 4; save.y = 4; }
+  game.flashback = false; game.heroSpr = null; cv.style.filter = '';
   if (flags.kidnap) flags.skMatome = true;
   repairProofs(); ensureOwned();
   game.mode = 'map';
