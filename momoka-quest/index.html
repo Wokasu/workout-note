@@ -619,6 +619,40 @@ function itemInfo(id) {
   if (it.kind === 'key') return '【だいじなもの】つかっても なくならない\n' + it.desc;
   return `【どうぐ】1回 つかうと なくなる\n${it.kind === 'hp' ? 'HP' : 'MP'}を ${it.v} かいふくする。\nいどう中も せんとう中も つかえる。`;
 }
+// collected equipment: every piece ever obtained stays in P.ownW / P.ownA
+function ensureOwned() {
+  const w = new Set(P.ownW || []), a = new Set(P.ownA || []);
+  w.add(0); w.add(P.w); a.add(0); a.add(P.a);
+  for (const id in MAPS) for (const c of MAPS[id].chests || []) if (flags.chests && flags.chests[c.id]) { if (c.weapon !== undefined) w.add(c.weapon); if (c.armor !== undefined) a.add(c.armor); }
+  if (flags.momEp) w.add(WEAPONS.findIndex(x => x.name === '母のペンライト'));
+  P.ownW = [...w].filter(i => WEAPONS[i]).sort((x, y) => x - y); P.ownA = [...a].filter(i => ARMORS[i]).sort((x, y) => x - y);
+}
+// adds a piece to the collection and equips it only when it is stronger; returns true if equipped
+function gainGear(t, id) {
+  ensureOwned();
+  const own = t === 'w' ? P.ownW : P.ownA; if (!own.includes(id)) { own.push(id); own.sort((x, y) => x - y); }
+  if (t === 'w' ? WEAPONS[id].atk > WEAPONS[P.w].atk : ARMORS[id].def > ARMORS[P.a].def) { if (t === 'w') P.w = id; else P.a = id; return true; }
+  return false;
+}
+async function equipMenu() {
+  ensureOwned();
+  const cat = openMenu({ items: ['ぶき', 'ぼうぐ', 'もどる'], x: 176, y: 40, w: 72 });
+  while (true) {
+    const c = await chooseMenu(cat);
+    if (c === -1 || c === 2) break;
+    while (true) {
+      const t = c === 0 ? 'w' : 'a', ids = t === 'w' ? P.ownW : P.ownA;
+      const items = ids.map(id => { const g = t === 'w' ? WEAPONS[id] : ARMORS[id]; return { label: ((t === 'w' ? P.w : P.a) === id ? 'E ' : '  ') + g.name, right: '+' + (t === 'w' ? g.atk : g.def) }; });
+      const r = await pick({ items, x: 84, y: 40, w: 164, info: i => gearInfo(t, ids[i]) });
+      if (r < 0) break;
+      const id = ids[r], g = t === 'w' ? WEAPONS[id] : ARMORS[id];
+      if ((t === 'w' ? P.w : P.a) === id) continue;
+      if (t === 'w') P.w = id; else P.a = id; sfx('ok');
+      await say(`ヲタ太は ${g.name}を そうびした！`); closeMsg();
+    }
+  }
+  closeMenu(cat);
+}
 function gearInfo(t, id) {
   const w = t === 'w', g = w ? WEAPONS[id] : ARMORS[id], cur = w ? WEAPONS[P.w] : ARMORS[P.a];
   const stat = w ? 'こうげき力' : 'しゅび力', v = w ? g.atk : g.def, cv = w ? cur.atk : cur.def, now = w ? atkOf() : defOf();
@@ -870,7 +904,8 @@ const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeA
 function makeCode() {
   const a = [1, P.name, P.lv, P.hp, P.mhp, P.mp, P.mmp, P.str, P.vit, P.agi, P.exp, P.gold, P.w, P.a,
     CODE_ITEMS.map(k => Math.min(9, P.items[k] || 0)).join(''), bitsOf(CODE_FLAGS.map(k => flags[k])),
-    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y, flags.cycle || 0, flags.yosegaki || 0, flags.flasta || 0, flags.honne || 0];
+    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y, flags.cycle || 0, flags.yosegaki || 0, flags.flasta || 0, flags.honne || 0,
+    (ensureOwned(), bitsOf(WEAPONS.map((_, i) => P.ownW.includes(i)))), bitsOf(ARMORS.map((_, i) => P.ownA.includes(i)))];
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   return b + codeSum(b);
 }
@@ -881,7 +916,7 @@ function parseCode(text) {
     const body = t.slice(0, -2);
     if (t.length < 10 || codeSum(body) !== t.slice(-2)) return null;
     const a = JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/')))));
-    if (!Array.isArray(a) || a[0] !== 1 || a.length < 20 || a.length > 24) return null;
+    if (!Array.isArray(a) || a[0] !== 1 || a.length < 20 || a.length > 26) return null;
     const n = a.slice(2, 14);
     if (typeof a[1] !== 'string' || !n.every(v => Number.isInteger(v) && v >= 0 && v < 1e6)) return null;
     const [lv, hp, mhp, mp, mmp, str, vit, agi, exp, gold, w, ar] = n;
@@ -895,9 +930,10 @@ function parseCode(text) {
     if ([1, 2, 3].includes(a[21])) fl.yosegaki = a[21];
     if ([1, 2, 3].includes(a[22])) fl.flasta = a[22];
     if ([1, 2, 3].includes(a[23])) fl.honne = a[23];
+    const own = (v, list) => Number.isInteger(v) ? list.map((_, i) => i).filter(i => v & (1 << i)) : [];
     const map = CODE_MAPS[a[17]], m = MAPS[map];
     const x = clamp(a[18] | 0, 0, m.w - 1), y = clamp(a[19] | 0, 0, m.h - 1);
-    return { P: { name: Array.from(a[1]).slice(0, NAME_MAX).join('') || 'ヲタ太', lv, hp: Math.min(hp, mhp), mhp, mp: Math.min(mp, mmp), mmp, str, vit, agi, exp, gold, w, a: ar, items }, flags: fl, map, x, y, dir: 'down' };
+    return { P: { name: Array.from(a[1]).slice(0, NAME_MAX).join('') || 'ヲタ太', lv, hp: Math.min(hp, mhp), mhp, mp: Math.min(mp, mmp), mmp, str, vit, agi, exp, gold, w, a: ar, items, ownW: own(a[24], WEAPONS), ownA: own(a[25], ARMORS) }, flags: fl, map, x, y, dir: 'down' };
   } catch (e) { return null; }
 }
 const codePanel = document.getElementById('code-panel');
@@ -1687,13 +1723,13 @@ async function openChest(c) {
   if (c.gold) { P.gold += c.gold; await say(`たからばこを あけた！\n${c.gold}円を てにいれた！`); return; }
   if (c.weapon !== undefined) {
     await say(`たからばこを あけた！\n${WEAPONS[c.weapon].name}を てにいれた！`, { noWait: true }); await jingle('get'); playBgm(game.map.bgm);
-    if (WEAPONS[c.weapon].atk > WEAPONS[P.w].atk) { P.w = c.weapon; await say(`ヲタ太は ${WEAPONS[c.weapon].name}を そうびした！`); }
+    if (gainGear('w', c.weapon)) { await say(`ヲタ太は ${WEAPONS[c.weapon].name}を そうびした！`); }
     else await waitA();
     return;
   }
   if (c.armor !== undefined) {
     await say(`たからばこを あけた！\n${ARMORS[c.armor].name}を てにいれた！`, { noWait: true }); await jingle('get'); playBgm(game.map.bgm);
-    if (ARMORS[c.armor].def > ARMORS[P.a].def) { P.a = c.armor; await say(`ヲタ太は ${ARMORS[c.armor].name}を そうびした！`); }
+    if (gainGear('a', c.armor)) { await say(`ヲタ太は ${ARMORS[c.armor].name}を そうびした！`); }
     else await waitA();
     return;
   }
@@ -1726,14 +1762,15 @@ async function fieldMenu() {
   sfx('ok');
   const sw = statusWin(); extraWins.push(sw);
   const gw = goldWin(8, 84); extraWins.push(gw);
-  const m = openMenu({ items: ['つよさ', 'どうぐ', 'スキル', 'きろく', 'とじる'], x: 176, y: 8, w: 72 });
+  const m = openMenu({ items: ['つよさ', 'そうび', 'どうぐ', 'スキル', 'きろく', 'とじる'], x: 176, y: 8, w: 72 });
   while (true) {
     const r = await chooseMenu(m);
-    if (r === -1 || r === 4) break;
-    if (r === 3) await recordMenu();
+    if (r === -1 || r === 5) break;
+    if (r === 4) await recordMenu();
     if (r === 0) await showStats();
-    if (r === 1) await itemMenu(false);
-    if (r === 2) await skillMenu(false);
+    if (r === 1) await equipMenu();
+    if (r === 2) await itemMenu(false);
+    if (r === 3) await skillMenu(false);
   }
   closeMenu(m);
 }
@@ -2139,8 +2176,8 @@ async function battle(id, opt = {}) {
     if (e.dropArmor && chance(e.dropArmor[1])) {
       const ar = ARMORS[e.dropArmor[0]];
       await say(`${e.short || e.name}は ${ar.name}を\nおとしていった！`, { append: true, auto: 44 });
-      if (ar.def > ARMORS[P.a].def) { P.a = e.dropArmor[0]; await say(`ヲタ太は ${ar.name}を そうびした！`, { append: true, auto: 40 }); }
-      else await say('…でも いまの ぼうぐの ほうが つよい。', { append: true, auto: 40 });
+      if (gainGear('a', e.dropArmor[0])) await say(`ヲタ太は ${ar.name}を そうびした！`, { append: true, auto: 40 });
+      else await say('いまの ぼうぐの ほうが つよいので\n「そうび」に しまった。', { append: true, auto: 40 });
     }
     if (e.drop && chance(e.drop[1]) && (P.items[e.drop[0]] || 0) < 9) { addItem(e.drop[0]); await say(`${e.short || e.name}は ${ITEMS[e.drop[0]].name}を おとしていった！`, { append: true, auto: 50 }); }
     await waitA();
@@ -2186,7 +2223,7 @@ async function talkMom() {
     await say('母「これ、 もっていきなさい。」', { noWait: true });
     await jingle('get'); playBgm(game.map.bgm);
     const mw = WEAPONS.findIndex(w => w.name === '母のペンライト');
-    if (WEAPONS[mw].atk > WEAPONS[P.w].atk) { P.w = mw; await say('母のペンライトを 受けとった！\nヲタ太は 母のペンライトを そうびした！'); }
+    if (gainGear('w', mw)) { await say('母のペンライトを 受けとった！\nヲタ太は 母のペンライトを そうびした！'); }
     else await say('母のペンライトを 受けとった！');
   }
   if (!flags.show) await say('母「劇場は 町の 北東よ。\n百花ちゃんに よろしくね。」');
@@ -2231,7 +2268,7 @@ async function talkShop(stock) {
     while (true) {
       const list = c === 0
         ? goods.map(id => ({ label: ITEMS[id].name, right: ITEMS[id].price + '円' }))
-        : gear.map(([t, id]) => { const g = t === 'w' ? WEAPONS[id] : ARMORS[id]; return { label: g.name, right: (t === 'w' ? P.w : P.a) === id ? 'E' : g.price + '円' }; });
+        : gear.map(([t, id]) => { const g = t === 'w' ? WEAPONS[id] : ARMORS[id]; ensureOwned(); return { label: g.name, right: (t === 'w' ? P.w : P.a) === id ? 'E' : (t === 'w' ? P.ownW : P.ownA).includes(id) ? 'もってる' : g.price + '円' }; });
       const info = c === 0 ? i => itemInfo(goods[i]) : i => gearInfo(...gear[i]);
       const r = await pick({ items: list, x: 8, y: 8, w: 160, idx, info });
       if (r < 0) break;
@@ -2245,11 +2282,13 @@ async function talkShop(stock) {
       } else {
         const [t, id] = gear[r], g = t === 'w' ? WEAPONS[id] : ARMORS[id];
         const cur = t === 'w' ? WEAPONS[P.w].atk : ARMORS[P.a].def, nv = t === 'w' ? g.atk : g.def;
-        if ((t === 'w' ? P.w : P.a) === id) { await say('店員「それは もう そうびしてるよ。」', { noWait: true }); await framesWait(50); continue; }
-        if (nv <= cur) { await say('店員「いまの そうびの ほうが\nつよいみたいだよ。」', { noWait: true }); await framesWait(60); continue; }
+        ensureOwned();
+        if ((t === 'w' ? P.ownW : P.ownA).includes(id)) { await say('店員「それは もう もってるよ。」', { noWait: true }); await framesWait(50); continue; }
         if (P.gold < g.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
-        P.gold -= g.price; if (t === 'w') P.w = id; else P.a = id; sfx('ok');
-        await say(`店員「まいど！」\nヲタ太は ${g.name}を そうびした！`, { noWait: true }); await framesWait(60);
+        P.gold -= g.price; sfx('ok');
+        if (gainGear(t, id)) await say(`店員「まいど！」\nヲタ太は ${g.name}を そうびした！`, { noWait: true });
+        else await say(`店員「まいど！」\n${g.name}を「そうび」に しまった。\n（いまの そうびの ほうが つよい）`, { noWait: true });
+        await framesWait(60);
       }
     }
     await say('店員「ほかに みていく？」', { noWait: true });
@@ -3231,7 +3270,7 @@ async function titleScreen() {
 async function newGamePlus(save) {
   if (game.fade < 1) await fadeOut(20);
   newGame();
-  Object.assign(P, save.P); P.hp = P.mhp; P.mp = P.mmp;
+  Object.assign(P, save.P); P.hp = P.mhp; P.mp = P.mmp; ensureOwned();
   const cycle = (save.flags.cycle || 0) + 1;
   Object.assign(flags, { cycle, skMatome: !!save.flags.skMatome, skGundan: !!save.flags.skGundan });
   await caption([`強くてニューゲーム（${cycle + 1}周目）`, '敵も 強くなっているぞ！'], 120);
@@ -3295,7 +3334,7 @@ async function resume(save) {
   if (game.fade < 1) await fadeOut(20);
   newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
   if (flags.kidnap) flags.skMatome = true;
-  repairProofs();
+  repairProofs(); ensureOwned();
   game.mode = 'map';
   setMap(save.map, save.x, save.y, save.dir);
   toast(game.map.name);
