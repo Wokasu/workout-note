@@ -444,7 +444,22 @@ function gearInfo(t, id) {
     : `${stat} ${now} → ${now - cv + v} にアップ！`;
   return `【${w ? 'ぶき' : 'ぼうぐ'}】そうびすると ずっと こうか\n${stat} +${v}（いまの そうびは +${cv}）\n${last}`;
 }
+// ヲタクを煽る: general lines, plus one that cuts deepest for each enemy
+const TAUNTS = [
+  '三列目以降は 在宅と おなじだぜ', 'そのレス、 うしろの人に だったぞ', '握手5秒で 何が 伝わるんだ？',
+  '積んだ枚数で 愛は はかれないぜ', 'お前の コール、 半拍 ずれてるぞ', '推しカラー、 ペンラの色 ちがうぞ',
+  '接触だけ来て 公演は 来ないのか？', '手紙 便せん5枚は さすがに 重いって', '匂わせ投稿で 認知は ふえないぞ',
+  '最前でも 推しの目線は 全体だぞ', 'チェキの ポーズ、 毎回 おなじだな', '生誕の 寄せ書き、 お前だけ 長すぎ',
+  '俺の後ろで見てて\nレス来ると 思ってんの？'];
+const TAUNT_FOR = {
+  gachikoi: '推しは みんなの 推しなんだよ', ninchi: '名前を 呼ばれたの、\n名札を 見ただけ だぞ',
+  kosan: '研究生時代の 話、 それ3回目だぞ', mix: 'そのMIX、 バラードで うってたよな',
+  penra: 'うしろの人、 ステージ 見えてないぞ', yakkai: '嫁？ 推しは 結婚の予定 ないぞ',
+  chizou: '棒立ちで 楽しいのか？', saizen: '最前は お前の 指定席じゃ ないぞ',
+  gou: 'TOって 自分で 名乗るもん じゃないぞ', kyohiru: '同担拒否で 現場が 回ると 思うなよ',
+};
 function skillInfo(sk) {
+  if (sk.kind === 'taunt') return '【こうげき】MP 1・せんとう中だけ\nヲタクを 煽って ダメージ（1.1倍）\n50%で 1ターン 行動不能（ボスは25%）';
   if (sk.kind === 'heal') return `【かいふく】MP ${sk.mp} を つかう\nHPを やく ${Math.round((sk.pow[0] + sk.pow[1]) / 2 + P.lv)} かいふくする。\nいどう中も せんとう中も つかえる。`;
   return `【こうげき】MP ${sk.mp} を つかう\nふつうの こうげきより つよい\n（ダメージ やく ${sk.mult}倍）。 せんとう中だけ。`;
 }
@@ -464,6 +479,7 @@ const ARMORS = [
 ];
 const SKILLS = [
   { name: '推しコール', lv: 1, mp: 3, kind: 'heal', pow: [22, 30], text: '「百花ーーっ！」 推しの名を さけんだ！' },
+  { name: 'ヲタクを煽る', lv: 2, mp: 1, kind: 'taunt', mult: 1.1 },
   { name: 'ヲタ芸', lv: 3, mp: 2, kind: 'atk', mult: 1.8, text: 'ロマンスを うった！' },
   { name: 'サイリウム乱舞', lv: 6, mp: 5, kind: 'atk', mult: 2.6, text: 'サイリウムを ふりみだした！' },
   { name: '全力コール', lv: 8, mp: 6, kind: 'heal', pow: [70, 90], text: '腹の底から 全力で コールした！' },
@@ -1408,6 +1424,7 @@ async function playerAct(e, act) {
     else { sfx('hit'); await enemyHurt(e, Math.max(1, dmgTo(atkOf(), e.def))); }
   } else if (act.type === 'skill') {
     const s = act.skill; P.mp -= s.mp; sfx('skill');
+    if (s.kind === 'taunt') { await taunt(e, s); return; }
     await say(`ヲタ太は ${s.name}を となえた！`, { append: true, auto: 22 });
     await say(s.text, { append: true, auto: 26 });
     if (s.kind === 'heal') {
@@ -1418,8 +1435,24 @@ async function playerAct(e, act) {
     // already handled while choosing
   }
 }
+async function taunt(e, s) {
+  const nm = e.short || e.name;
+  const line = TAUNT_FOR[e.id] && chance(0.5) ? TAUNT_FOR[e.id] : TAUNTS[rnd(0, TAUNTS.length - 1)];
+  await say('ヲタ太は 煽った！', { append: true, auto: 22 });
+  await say(`「${line}」`, { append: true, auto: 50 });
+  await say(`${nm}の 心に ぐさっと 刺さった！`, { append: true, auto: 26 });
+  sfx('hit');
+  await enemyHurt(e, Math.max(1, Math.floor(dmgTo(atkOf(), e.def) * s.mult)));
+  if (e.hp <= 0) return;
+  // 1-turn stun: 50%, bosses 25%
+  if (chance(e.boss ? 0.25 : 0.5)) {
+    e.stun = 1;
+    await say(e.id === 'chizou' ? `${nm}は 心が折れた！ …が、もともと うごかない！` : `${nm}は 心が折れて うごけない！`, { append: true, auto: 40 });
+  } else await say(`${nm}は 聞こえないふりを した！`, { append: true, auto: 36 });
+}
 async function enemyAct(e) {
   const nm = e.short || e.name;
+  if (e.stun) { e.stun = 0; await say(`${nm}は ショックで うごけない！`, { append: true, auto: 36 }); return; }
   const mv = pickMove(e);
   const [, type, mult, text, hits] = mv;
   const rage = e.rage ? 1.5 : 1;
@@ -2292,7 +2325,7 @@ async function boot() {
   cv.focus();
   titleScreen();
 }
-window.__mq = { wrap, menus, game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
+window.__mq = { wrap, menus, msg, battleS, game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, ending, kyohiruEvent };
 boot();
 </script>
 <!--/BODY-->
