@@ -332,6 +332,7 @@ function initSprites() {
   SPR.otaku3 = charSet('fat', { p: 'o', P: '#a85a18' });
   SPR.otaku4 = charSet('fat', { ...NOBAND, p: 'e', P: '#1e5a28', h: 'g' });
   SPR.boss = charSet('hero', { ...NOBAND, h: 'g', p: 'G', P: 'k', w: 'w', c: 'w' });
+  SPR.moto = charSet('fat', { p: 'G', P: 'k', h: 'g', H: 'w', Y: 'G', w: 'r' });
   SPR.gou = charSet('fat', { p: 'y', P: 'o', H: 'r', Y: 'y', w: 'r' });
   SPR.kyohiru = charSet('maou');
   SPR.chest = buildSprite(TPL.chest.rows);
@@ -490,6 +491,8 @@ const TAUNT_FOR = {
   onnawota: 'お前が ヲタヲタしてる子、\n彼氏 できたってよ',
 };
 function skillInfo(sk) {
+  if (sk.kind === 'money') return '【こうげき】MP 0・せんとう中だけ\n所持金を ぜんぶ 使って、\n使った額の 1.5倍の ダメージ';
+  if (sk.kind === 'gundan') return '【こうげき】MP 4・せんとう中だけ\n元TOの 軍団 3〜5人が 駆けつけ、\nひとりずつ こうげき（各0.5倍）';
   if (sk.kind === 'taunt') return '【こうげき】MP 1・せんとう中だけ\nヲタクを 煽って ダメージ（1.1倍）\n50%で 1ターン 行動不能（ボスは25%）';
   if (sk.kind === 'heal') return `【かいふく】MP ${sk.mp} を つかう\nHPを やく ${Math.round((sk.pow[0] + sk.pow[1]) / 2 + P.lv)} かいふくする。\nいどう中も せんとう中も つかえる。`;
   return `【こうげき】MP ${sk.mp} を つかう\nふつうの こうげきより つよい\n（ダメージ やく ${sk.mult}倍）。 せんとう中だけ。`;
@@ -511,6 +514,9 @@ const ARMORS = [
 const SKILLS = [
   { name: '推しコール', lv: 1, mp: 3, kind: 'heal', pow: [22, 30], text: '「百花ーーっ！」 推しの名を さけんだ！' },
   { name: 'ヲタクを煽る', lv: 2, mp: 1, kind: 'taunt', mult: 1.1 },
+  // learned through episodes, not levels
+  { name: 'まとめ出し', flag: 'skMatome', mp: 0, kind: 'money', mult: 1.5 },
+  { name: '軍団呼び', flag: 'skGundan', mp: 4, kind: 'gundan', mult: 0.5 },
   { name: 'ヲタ芸', lv: 3, mp: 2, kind: 'atk', mult: 1.8, text: 'ロマンスを うった！' },
   { name: 'サイリウム乱舞', lv: 6, mp: 5, kind: 'atk', mult: 2.6, text: 'サイリウムを ふりみだした！' },
   { name: '全力コール', lv: 8, mp: 6, kind: 'heal', pow: [70, 90], text: '腹の底から 全力で コールした！' },
@@ -646,7 +652,7 @@ function saveMode() {
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
 const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan'];
 const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4'];
 const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
@@ -1431,7 +1437,7 @@ async function itemMenu(inBattle) {
   if (!inBattle) closeMsg();
   return true;
 }
-function learned() { return SKILLS.filter(s => s.lv <= P.lv); }
+function learned() { return SKILLS.filter(s => s.flag ? flags[s.flag] : s.lv <= P.lv); }
 // field: heal only. battle: returns skill or null
 async function skillMenu(inBattle) {
   const list = learned();
@@ -1484,6 +1490,8 @@ async function playerAct(e, act) {
   } else if (act.type === 'skill') {
     const s = act.skill; P.mp -= s.mp; sfx('skill');
     if (s.kind === 'taunt') { await taunt(e, s); return; }
+    if (s.kind === 'money') { await matomeDashi(e, s); return; }
+    if (s.kind === 'gundan') { await gundan(e, s); return; }
     await say(`ヲタ太は ${s.name}を となえた！`, { append: true, auto: 22 });
     await say(s.text, { append: true, auto: 26 });
     if (s.kind === 'heal') {
@@ -1519,6 +1527,24 @@ async function taunt(e, s) {
     e.stun = 1;
     await say(e.id === 'chizou' ? `${nm}は 心が折れた！ …が、もともと うごかない！` : `${nm}は 心が折れて うごけない！`, { append: true, auto: 40 });
   } else await say(`${nm}は 聞こえないふりを した！`, { append: true, auto: 36 });
+}
+async function matomeDashi(e, s) {
+  const amt = P.gold; P.gold = 0;
+  await say('ヲタ太は まとめ出しした！', { append: true, auto: 22 });
+  await say(`「推しの ためなら 全財産！」\n${amt}円を ぜんぶ 積んだ！`, { append: true, auto: 44 });
+  sfx('crit');
+  await enemyHurt(e, Math.max(1, Math.floor(amt * s.mult)));
+}
+const GUNDAN = ['軍団の 古参', '軍団の 新規', '軍団の 遠征組', '軍団の MIX担当', '軍団の 最前組'];
+async function gundan(e, s) {
+  await say('ヲタ太は 軍団を 呼んだ！', { append: true, auto: 22 });
+  await say('「みんなー！ 集合ーっ！」', { append: true, auto: 30 });
+  const n = rnd(3, 5);
+  for (let i = 0; i < n && e.hp > 0; i++) {
+    await say(`${GUNDAN[i]}の こうげき！`, { append: true, auto: 18 });
+    sfx('hit');
+    await enemyHurt(e, Math.max(1, Math.floor(dmgTo(atkOf(), e.def) * s.mult)));
+  }
 }
 async function enemyAct(e) {
   const nm = e.short || e.name;
@@ -1585,7 +1611,13 @@ async function chooseCommand(e) {
     if (r === 0) act = { type: 'attack' };
     else if (r === 1) {
       const s = await skillMenu(true);
-      if (s) act = { type: 'skill', skill: s };
+      if (s && s.kind === 'money') {
+        // the command menu would cover the question, so step it aside while asking
+        closeMenu(m);
+        if (P.gold <= 0) await say('お金を もっていない！', { auto: 40 });
+        else if (await ask(`所持金 ${P.gold}円を\nぜんぶ 使いますか？`, ['はい', 'いいえ']) === 0) act = { type: 'skill', skill: s };
+        menus.push(m);
+      } else if (s) act = { type: 'skill', skill: s };
       closeMsg();
     } else if (r === 2) {
       closeMenu(m); extraWins.splice(extraWins.indexOf(nameWin), 1);
@@ -1759,6 +1791,23 @@ async function talkShop() {
   closeMenu(cat);
   await say('店員「推し活 がんばってね！」');
 }
+async function motoTO() {
+  if (flags.skGundan) { await say('元TO「軍団には 話を つけてある。\n困ったら いつでも 呼べ。\n百花ちゃんを たのんだぞ。」'); return; }
+  if (!flags.motoHeard) {
+    await say('元TO「……おれは 元TOの テツ。\nいまは 出禁の 身だ。」');
+    await say('元TO「マナーの 悪い 若いのに\n現場で 説教したら、 おれの 方が\n出禁に なっちまってな。」');
+    await say('元TO「正しいことを したつもりだった。\nでも 現場を 一番 さわがせたのは\nおれ だったんだ。」');
+    flags.motoHeard = true;
+  }
+  await say('元TO「百花ちゃんが さらわれたって\n聞いても、 おれは 会場にも\n入れねえ……」');
+  const r = await ask('ヲタ太は……', ['それでも できることは あるよ', '自業自得だね'], { x: 40, y: 92, w: 208, cancel: false });
+  if (r === 1) { await say('元TO「……ああ、 その通りだ。\n返す言葉も ねえ。」'); return; }
+  await say('元TO「……できること、 か。」');
+  await say('元TO「おれは もう 現場に 行けない。\nだが おれの 軍団は まだ 動ける。」');
+  await say('元TO「困ったら 呼べ。\nおれの 軍団を 貸してやる！」', { noWait: true });
+  flags.skGundan = true; await jingle('lvup'); playBgm(game.map.bgm);
+  await say('ヲタ太は 「軍団呼び」を おぼえた！\n（仲間が 駆けつけて 連続こうげき）');
+}
 async function talkStaff() {
   if (!flags.show) await say('スタッフ「まもなく 開演です！\nステージ前へ どうぞ！」');
   else if (!flags.gou) await say('スタッフ「握手会場は 町を出て 南東だよ。\n百花ちゃんを… たのむ！」');
@@ -1778,6 +1827,7 @@ async function showConcert() {
   await say('ヲタ太は 両手の 薄ピンクの\nペンライトを 全力で ふった！');
   await say('百花「あっ！ 一番前で 薄ピンクの\nペンライトを ふってくれてる 人だ！\nありがとう！」');
   await say('ヲタ太の むねが たかなった！');
+  await say('（レスが… 来た……！\n先週の ぶんまで 報われた……！）');
   await say('百花「このあと 握手会場で\n握手会が あります！\nみんな 来てね〜！」');
   game.lights = false;
   await fadeOut(16); flags.show = true; playBgm('town'); await fadeIn(16);
@@ -1797,6 +1847,11 @@ async function venueEnter() {
   await say('スタッフ「同担拒否魔王 キョヒールが\nあらわれて 百花ちゃんを\nさらっていった！」');
   await say('スタッフ「『百花は おれだけの 推しだ！\n推し被りは ゆるさん！』とか いって…\n北東の 島にある 推し被りの塔へ！」');
   await say('スタッフ「会場も キョヒールの 手下に\n占拠されちまった。 奥にいる ボス\n『TOのゴウ』が 通行証を もってる！」');
+  await say('ヲタ太は ポケットの\n握手券の 束を 見つめた。');
+  await say('今日の ために 積んだ 握手券 50枚。\n握手会は 中止……\n50枚 ぜんぶ 死券に なった。');
+  await say('（……いや。 使えなかった お金も\n想いも、 ぜんぶ ぶつけてやる！）', { noWait: true });
+  flags.skMatome = true; await jingle('lvup'); playBgm(game.map.bgm);
+  await say('ヲタ太は 「まとめ出し」を おぼえた！\n（所持金を ぜんぶ 使って こうげき）');
   await say('ヲタ太は 百花を 救うことを\nちかった！');
 }
 async function gouEvent() {
@@ -1807,6 +1862,9 @@ async function gouEvent() {
   flags.gou = true;
   await say('ゴウ「ぐっ… なんて 熱い 推しへの 愛だ…」');
   await say('ゴウ「おれも わかってたんだ。\n推しを 独り占め するなんて\nヲタクの 道に はずれてるって…」');
+  await say('ゴウ「…おれな、 TOなのに 一度も\n百花ちゃんに 名前を\n呼ばれたことが ないんだ。」');
+  await say('ゴウ「握手で 何十回 名乗っても\n『いつも ありがとう』だけ。\n認知されてるのかも わからねえ。」');
+  await say('ゴウ「独り占めすれば… 名前で\n呼んでもらえると 思ったんだ。」');
   await say('ゴウ「これは 推し被りの塔への 通行証だ。\n百花ちゃんを… たのんだぞ！」', { noWait: true });
   addItem('pass'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 通行証を てにいれた！');
@@ -1853,6 +1911,8 @@ async function ending() {
   await say('百花「今日は ヲタ太くんと\nみんなへの ありがとうを こめて\n歌います！」');
   burst(19 * 16 + 8, 3 * 16, 'note', 12);
   await say('キョヒール「百花ーっ！！\n…推し被りの みんなも\nいっしょに コールしようぜ！」');
+  await say('百花「ゴウさんも、 いつも\n号令 ありがとう！」');
+  await say('ゴウ「……い、 いま…… 名前……！！」');
   await say('ゴウ「TOとして 号令を かける！\nせーのっ！」');
   await say('ヲタクたち「百花ーーーーっ！！」');
   burst(19 * 16 + 8, 3 * 16, 'heart', 14);
@@ -1947,7 +2007,9 @@ T.npcs = [
     else if (!flags.gou) await say('ヲタク「町の 外には 推し被りの\nヲタクたちが うろついてるぞ。\nつかれたら 家で 休むと いい。」');
     else await say('ヲタク「キンブレと 特攻服が\nグッズショップに 入荷したってさ！」');
   } },
+  { id: 'moto', x: 25, y: 18, spr: 'moto', fixed: 1, show: () => !!flags.kidnap && !flags.scene, talk: motoTO },
   { id: 'w2', x: 22, y: 11, spr: 'otaku4', wander: 1, talk: async () => {
+    if (flags.kidnap && !flags.skGundan) { await say('ヲタク「町の 南東の すみに、 出禁に\nなった 元TOの おじさんが いるよ。\n昔は 軍団を ひきいてたらしい。」'); return; }
     await say('ヲタク「Bボタン（Xキー）で メニュー。\n「スキル」の 推しコールで\nHPを かいふくできるぞ。」');
   } },
   { id: 'w3', x: 14, y: 18, spr: 'otaku1', wander: 1, talk: async () => {
@@ -2172,8 +2234,11 @@ async function titleScreen() {
   playBgm('town');
   await fadeIn(30);
   await runScript(async () => {
+    await say('（先週の 公演……\n一度も レスが 来なかった……）');
+    await say('（一番前で 薄ピンクの ペンライト\n振ってたのに……\n認知なんて されてないのかな……）');
     await say('母「ヲタ太！ いつまで 寝てるの！\n今日は 百花ちゃんの 公演でしょ！」');
     face(player, 'right');
+    await say('母「なに 落ち込んでるの。\nレスが 来なくたって、 あんたが\n好きなら それで いいじゃない。」');
     await say('母「劇場は 町の 北東よ。\nほら、 これ もっていきなさい。」', { noWait: true });
     addItem('drink', 3); await jingle('get'); playBgm('town');
     await say('エナドリを 3本 もらった！');
@@ -2185,6 +2250,7 @@ async function titleScreen() {
 async function resume(save) {
   if (game.fade < 1) await fadeOut(20);
   newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
+  if (flags.kidnap) flags.skMatome = true;
   game.mode = 'map';
   setMap(save.map, save.x, save.y, save.dir);
   toast(game.map.name);
