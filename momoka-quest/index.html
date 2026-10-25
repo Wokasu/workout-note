@@ -896,7 +896,7 @@ function saveMode() {
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
 const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel', 'minato', 'hall', 'studio', 'seitanhall', 'towerB', 'towerC', 'market1', 'market2'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp', 'dafuru', 'skDoutan', 'meeting', 'momEp', 'feePaid', 'dafuruBeaten', 'dafuruGone'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp', 'dafuru', 'skDoutan', 'meeting', 'momEp', 'feePaid', 'dafuruBeaten', 'dafuruGone', 'townDema', 'townSeitan', 'townRevive'];
 const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4', 'h1', 'h2', 's1', 's2', 'j1', 'j2', 'b1', 'c1', 'm1', 'm2', 'm3', 'm4'];
 const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass', 'shoMinato', 'shoHaishin', 'shoSeitan'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
@@ -2375,7 +2375,8 @@ async function zentsuEvent() {
   await say('ゼンツウ「……これを もっていけ。\nホールは 地元の みんなに 返す。」', { noWait: true });
   addItem('shoMinato'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 遠征の証を てにいれた！');
-  await say('ゼンツウ「次の 四天王は ツイ廃王\nバズリ。 北の 配信スタジオから\n百花ちゃんの デマを 流してる。」');
+  await say('ゼンツウ「次の 四天王は ツイ廃王\nバズリだ。 ……アキハバラで 百花\nちゃんの デマが 広まってるらしい。」');
+  await say('ゼンツウ「一度 町に 戻って\nようすを 見てこい。」');
   await flashback({ title: 'ゼンツウの 記憶', who: 'zentsu', at: [19, 6], cast: STAGE(), body: async () => {
     await say('ゼンツウが はじめて 遠征した 日。');
     await say('百花「遠くから 来てくれたの？\nすっごく うれしい！」');
@@ -2394,7 +2395,7 @@ async function buzzriEvent() {
   await say('バズリ「デマは ぜんぶ 消して 訂正する。\n……これを もっていけ。」', { noWait: true });
   addItem('shoHaishin'); await jingle('get'); playBgm(game.map.bgm);
   await say('ヲタ太は 配信の証を てにいれた！');
-  await say('バズリ「最後の 四天王は 生誕委員長\nシキリ。 東の 準備会場で\n生誕祭の お金を 握ってる。」');
+  await say('バズリ「最後の 四天王は 生誕委員長\nシキリ。 ……今ごろ アキハバラは\n生誕祭の ことで 大さわぎだぜ。」');
   await flashback({ title: 'バズリの 記憶', who: 'buzzri', at: [19, 7], cast: STAGE(), body: async () => {
     await say('バズリが はじめて 公演を 見た 日。');
     await say('百花「今日の こと、 たくさんの\n人に 伝えてくれたら うれしいな！」');
@@ -2407,6 +2408,38 @@ async function commentEpisode() {
   await say('（百花ちゃんの 配信……。 おれの\nコメントは 一度も 読まれたことが\nない。）');
   await say('（それでも 毎回、\n『おつかれさま』だけは\n送りつづけてたんだ。）');
   await say('（今度は おれが 届けに いく番だ。）');
+}
+// coming home between chapters: the town shows what Momoka's absence is doing to it, and points to the next place
+function crowd(list) { list.forEach(([id, x, y, spr, dir]) => game.npcs.push({ id, x, y, px: x * TS, py: y * TS, hx: x, hy: y, spr, fixed: 1, dir: dir || 'down', mv: null, wt: 999 })); }
+function clearCrowd() { game.npcs.forEach(n => { if (n.id.startsWith('crowd')) n.hidden = true; }); }
+async function townArrival() {
+  if (flags.zentsu && !flags.buzzri && !flags.townDema) {
+    crowd([['crowdA', 10, 17, 'otaku1', 'right'], ['crowdB', 12, 17, 'otaku4', 'left'], ['crowdC', 11, 16, 'girl', 'down']]);
+    await say('アキハバラが 騒がしい……');
+    await say('ヲタク「百花ちゃん、 配信も 止めて\n逃げたって マジ？」');
+    await say('ヲタク「バズリの ポストで 見た！\n10万 いいね だぞ！」');
+    await say('女の子「うそ…… 百花ちゃんが\nそんなこと するわけ ない……」');
+    await say('（デマだ…… 百花ちゃんは\nさらわれたんだ！）');
+    await say('ヲタク「デマの 出どころ？ バズリは\n北の 配信スタジオに こもって\nポストしてるらしいぞ。」');
+    flags.townDema = true; clearCrowd();
+    await say('（北の 配信スタジオへ 行こう。\n町の 人の 話も 聞いておこう）');
+  } else if (flags.buzzri && !flags.shikiri && !flags.townSeitan) {
+    crowd([['crowdA', 10, 17, 'otaku3', 'right'], ['crowdB', 12, 17, 'maid', 'left'], ['crowdC', 11, 16, 'girl', 'down']]);
+    await say('町の 入口に 人だかりが できている。');
+    await say('ヲタク「生誕祭、 中止だって……！\n集めた 資金が 消えたらしい。」');
+    await say('女の子「フラスタも 寄せ書きも、\nぜんぶ 準備してたのに……」');
+    await say('メイド「うちの コラボメニューも\n止まっちゃいました……」');
+    await say('ヲタク「委員長の シキリが 東の\n準備会場に 立てこもってるって\n噂だ。」');
+    await say('（生誕祭は、 百花ちゃんが\n帰ってくる 場所だ。\n取り戻さなきゃ。）');
+    flags.townSeitan = true; clearCrowd();
+    await say('（東の 生誕祭の 準備会場へ 行こう）');
+  } else if (flags.shikiri && !flags.kyohiru && !flags.townRevive) {
+    crowd([['crowdA', 10, 17, 'otaku1', 'right'], ['crowdB', 12, 17, 'otaku3', 'left']]);
+    await say('町じゅうに 『生誕祭 開催決定』の\nポスターが 貼りだされた！');
+    await say('ヲタクたち「生誕祭、 やれるぞー！\nあとは 百花ちゃんが\n帰ってくるだけだ！」');
+    flags.townRevive = true; clearCrowd();
+    await say('（四天王の 証が そろった。\n北東の 推し被りの塔へ 行こう）');
+  }
 }
 async function talkDemaFan() {
   if (flags.demaDone) { await say('ヲタク「デマに のせられて 恥ずかしい。\n百花ちゃんの 帰りを\nみんなで 待とうな。」'); return; }
@@ -2914,15 +2947,17 @@ F.enc = (x, y) => {
   return flags.gou ? ['kosan', 'yakkai', 'kagijime', 'tsuihai'] : ['ninchi', 'kosan', 'kagijime', 'tsuihai'];
 };
 F.onStep = (x, y, t) => {
-  if (t === 'A') return async () => { sfx('door'); await fadeOut(8); setMap('town', 11, 19, 'up'); toast('アキハバラ'); await fadeIn(8); };
+  if (t === 'A') return async () => { sfx('door'); await fadeOut(8); setMap('town', 11, 19, 'up'); toast('アキハバラ'); await fadeIn(8); await townArrival(); };
   if (t === 'V') return async () => { sfx('door'); await fadeOut(8); setMap('venue', 9, 14, 'up'); toast('握手会場'); await fadeIn(8); await venueEnter(); };
   if (t === 'O') return towerGate;
   if (t === 'J') return async () => {
     if (!flags.buzzri) { await say('委員「生誕祭の 準備中です。\n委員以外は 立ち入り 禁止です！」'); player.y = 14; player.py = 14 * TS; return; }
+    if (!flags.townSeitan && !flags.shikiri) { await say('委員「……今は だれも 入れられません。」'); await say('（アキハバラで 何が 起きているか\nたしかめてみよう）'); player.y = 14; player.py = 14 * TS; return; }
     sfx('door'); await fadeOut(8); setMap('seitanhall', 9, 12, 'up'); toast('生誕祭の準備会場'); await fadeIn(8);
   };
   if (t === 'Y') return async () => {
     if (!flags.zentsu) { await say('警備員「ただいま 配信機材の\n調整中です。 関係者以外\n立ち入り禁止です。」'); player.y = 3; player.py = 3 * TS; return; }
+    if (!flags.townDema && !flags.buzzri) { await say('警備員「関係者以外 立ち入り禁止です。」'); await say('（アキハバラで 噂を\nたしかめてみよう）'); player.y = 3; player.py = 3 * TS; return; }
     sfx('door'); await fadeOut(8); setMap('studio', 9, 12, 'up'); toast('配信スタジオ'); await fadeIn(8);
   };
   if (t === 'H') return async () => { sfx('door'); await fadeOut(8); setMap('minato', 11, 1, 'down'); toast('港町'); await fadeIn(8); };
