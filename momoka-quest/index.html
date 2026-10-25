@@ -884,8 +884,9 @@ function loadSave() {
   let local = null;
   if (STORE.local) try { const t = localStorage.getItem(SAVE_KEY); local = t ? JSON.parse(t) : null; } catch (e) {}
   const cloud = STORE.cloudState === 'on' ? STORE.cloudData : null;
-  if (local && cloud) return (cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local;
-  return local || cloud;
+  const pick = local && cloud ? ((cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local) : local || cloud;
+  // the cloud copy can arrive frozen (read-only); the game writes into P.items / flags.chests, so always hand out a fresh copy
+  try { return pick ? JSON.parse(JSON.stringify(pick)) : null; } catch (e) { return null; }
 }
 function saveMode() {
   if (STORE.cloudState === 'on') return 'アカウントに 自動セーブ';
