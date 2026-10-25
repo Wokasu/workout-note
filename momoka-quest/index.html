@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!--PAGE-->
-<title>百花クエスト</title>
+<title>百花クエストⅠ THE LAST WOTA</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -156,7 +156,7 @@ button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
 <body>
 <!--BODY-->
 <div class="console">
-  <div class="screen-wrap"><canvas id="screen" tabindex="0" aria-label="百花クエスト ゲーム画面"></canvas></div>
+  <div class="screen-wrap"><canvas id="screen" tabindex="0" aria-label="百花クエストⅠ THE LAST WOTA ゲーム画面"></canvas></div>
   <div class="name-field" id="name-field" hidden>
     <label for="hero-name">キーボードで入力（漢字もOK・6文字まで）</label>
     <div class="name-row">
@@ -199,7 +199,7 @@ button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
 <script>
 'use strict';
 // ============================================================
-//  百花クエスト 〜推し被りの塔〜
+//  百花クエストⅠ THE LAST WOTA 〜消えないペンライトの灯〜
 // ============================================================
 const W = 256, H = 224, S = 3, TS = 16;
 const cv = document.getElementById('screen');
@@ -3565,9 +3565,10 @@ function drawTitle() {
   ctx.beginPath(); ctx.moveTo(120, 0); ctx.lineTo(136, 0); ctx.lineTo(176, 140); ctx.lineTo(80, 140); ctx.fill(); ctx.restore();
   ctx.textAlign = 'center';
   txt('MOMOKA QUEST', W / 2, 22, '#fde2ee', 10);
-  txt('百花クエスト', W / 2 + 2, 40, '#c0507e', 30);
-  txt('百花クエスト', W / 2, 38, '#fff', 30);
-  txt('〜 推し被りの塔 〜', W / 2, 76, '#f8d838', 12);
+  txt('百花クエストⅠ', W / 2 + 2, 40, '#c0507e', 30);
+  txt('百花クエストⅠ', W / 2, 38, '#fff', 30);
+  txt('THE LAST WOTA', W / 2, 70, '#f8d838', 12);
+  txt('〜消えないペンライトの灯〜', W / 2, 84, '#fde2ee', 10);
   ctx.textAlign = 'left';
   const f = (game.frame >> 4) % 2;
   ctx.drawImage(SPR.hero.right[f], 92, 92, 32, 32);
@@ -3584,7 +3585,8 @@ function drawEnd() {
   for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#f890b8' : '#fff'; ctx.fillRect(x, y + 20, 1, 1); } }
   ctx.textAlign = 'center';
   txt('THE END', W / 2, 40, '#fff', 30);
-  txt('百花クエスト 〜推し被りの塔〜', W / 2, 84, '#fde2ee', 12);
+  txt('百花クエストⅠ THE LAST WOTA', W / 2, 72, '#fde2ee', 12);
+  txt('〜消えないペンライトの灯〜', W / 2, 86, '#fde2ee', 10);
   const f = (game.frame >> 4) % 2;
   ctx.drawImage(SPR.hero.right[f], 92, 108, 32, 32);
   ctx.drawImage(SPR.momoka.down[f], 132, 108, 32, 32);
