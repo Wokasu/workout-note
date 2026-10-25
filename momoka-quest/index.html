@@ -1314,16 +1314,24 @@ const closeMsg = () => { msg.visible = false; msg.lines = []; };
 
 function openMenu(o) {
   const m = { items: o.items, x: o.x, y: o.y, w: o.w, idx: o.idx || 0, cancel: o.cancel !== false, title: o.title || null, active: false, lh: o.lh || 16, info: o.info || null };
-  m.h = o.h || (m.items.length * m.lh + 12 + (m.title ? 4 : 0));
+  // long lists scroll: show only the rows that fit above the info box (or the screen bottom)
+  const bottom = m.info ? 144 : H - 4;
+  m.rows = Math.max(1, Math.min(m.items.length, Math.floor((bottom - m.y - 12) / m.lh)));
+  m.top = 0; scrollMenu(m);
+  m.h = o.h || (m.rows * m.lh + 12 + (m.title ? 4 : 0));
   menus.push(m); return m;
+}
+function scrollMenu(m) {
+  if (m.idx < m.top) m.top = m.idx;
+  if (m.idx >= m.top + m.rows) m.top = m.idx - m.rows + 1;
 }
 function chooseMenu(m) {
   return new Promise(res => {
     m.active = true;
     modal = k => {
       const n = m.items.length;
-      if (k === 'up') { m.idx = (m.idx - 1 + n) % n; sfx('cur'); }
-      else if (k === 'down') { m.idx = (m.idx + 1) % n; sfx('cur'); }
+      if (k === 'up') { m.idx = (m.idx - 1 + n) % n; scrollMenu(m); sfx('cur'); }
+      else if (k === 'down') { m.idx = (m.idx + 1) % n; scrollMenu(m); sfx('cur'); }
       else if (k === 'a') {
         const it = m.items[m.idx];
         if (it && it.disabled) { sfx('ng'); return; }
@@ -1801,7 +1809,7 @@ async function itemMenu(inBattle) {
   const ids = itemList();
   if (!ids.length) { await say('どうぐを なにも もっていない。'); closeMsg(); return false; }
   const items = ids.map(id => ({ label: ITEMS[id].name, right: ITEMS[id].kind === 'key' ? '★' : '×' + P.items[id] }));
-  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156, info: i => itemInfo(ids[i]) });
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 8 : 40, w: 156, info: i => itemInfo(ids[i]) });
   if (r < 0) return false;
   const id = ids[r], it = ITEMS[id];
   if (it.kind === 'key') {
@@ -1825,7 +1833,7 @@ function learned() { return SKILLS.filter(s => s.flag ? flags[s.flag] : s.lv <= 
 async function skillMenu(inBattle) {
   const list = learned();
   const items = list.map(s => ({ label: s.name, right: 'MP' + s.mp, disabled: (!inBattle && s.kind !== 'heal') }));
-  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 52 : 40, w: 156, info: i => skillInfo(list[i]) });
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 8 : 40, w: 156, info: i => skillInfo(list[i]) });
   if (r < 0) return null;
   const s = list[r];
   if (P.mp < s.mp) { await say('MPが たりない！', inBattle ? { auto: 40 } : {}); if (!inBattle) closeMsg(); return null; }
@@ -3441,16 +3449,23 @@ function drawUI() {
   }
   for (const m of menus) {
     drawWin(m.x, m.y, m.w, m.h);
-    m.items.forEach((it, i) => {
+    const top = m.top || 0, rows = m.rows || m.items.length;
+    m.items.slice(top, top + rows).forEach((it, j) => {
+      const i = top + j;
       const label = typeof it === 'string' ? it : it.label;
       const col = it.disabled ? '#7a7488' : '#fff';
-      txt(label, m.x + 20, m.y + 8 + i * m.lh, col);
-      if (it.right) txt(it.right, m.x + m.w - 10 - textW(it.right), m.y + 8 + i * m.lh, col);
+      txt(label, m.x + 20, m.y + 8 + j * m.lh, col);
+      if (it.right) txt(it.right, m.x + m.w - 10 - textW(it.right), m.y + 8 + j * m.lh, col);
       if (i === m.idx && (!m.active || (game.frame >> 4) % 2 === 0)) {
-        const cx = m.x + 9, cy = m.y + 10 + i * m.lh; ctx.fillStyle = '#fff';
+        const cx = m.x + 9, cy = m.y + 10 + j * m.lh; ctx.fillStyle = '#fff';
         for (let k = 0; k < 4; k++) ctx.fillRect(cx + k, cy + k, 1, 8 - k * 2);
       }
     });
+    // more above / below
+    ctx.fillStyle = '#fff';
+    const mx = m.x + m.w / 2;
+    if (top > 0) for (let k = 0; k < 3; k++) ctx.fillRect(mx - k, m.y + 2 + k, 1 + k * 2, 1);
+    if (top + rows < m.items.length) for (let k = 0; k < 3; k++) ctx.fillRect(mx - k, m.y + m.h - 2 - k, 1 + k * 2, 1);
     if (m.info && m.active) {
       drawWin(8, 144, 240, 76);
       String(m.info(m.idx)).split('\n').forEach((l, i) => txt(l, 20, 154 + i * 20, l.startsWith('【') ? '#f7b0cc' : '#fff', 12, 216));
