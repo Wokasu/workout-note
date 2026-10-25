@@ -2549,18 +2549,21 @@ async function seiriDoor(n) {
   await fadeOut(8); setMap('towerB', 7, 11, 'up'); await fadeIn(8);
 }
 async function hashiraEvent() {
-  await say('ハシラ「ここから 先は 最前だ。\n最前管理団長 ハシラが 通さん。」');
-  await say('ハシラ「誰よりも 積んで、 誰よりも\n通って、 この列を 守ってきた。\n推し被りに 渡す 場所は ない！」');
+  await say('ハシラ「止まれ。 ここから 先は 最前だ。」');
+  await say('ハシラ「最前はな、 積んで 通って\n認知された、 選ばれた ヲタク\nだけの 場所だ。」');
+  await say('ハシラ「お前みたいな 弱い ヲタクが\n来て いい 場所じゃ ない。\n後ろで ペンラでも 振ってろ。」');
   const r = await battle('hashira', { intro: '最前管理団長ハシラが\nたちはだかった！' });
   if (r !== 'win') return;
   flags.hashira = true;
-  await say('ハシラ「……列を 守るのに 必死で、\n推しの 顔を 見る ひまも\nなかったのかも しれん。」');
+  await say('ハシラ「……後ろの ヲタクに\n負けるとはな。」');
+  await say('ハシラ「最前に いれば、 推しに\n一番 近いと 思ってた。」');
+  await say('ハシラ「でも 百花ちゃんの 目線は、\nいつも おれの 後ろを\n見ていた 気がする。」');
   await say('ハシラ「行け。 最上階で キョヒールが\n待っている。」');
   const h = npcById('hashira'); await walk(h, 'L', 1); face(h, 'down');
   await flashback({ title: 'ハシラの 記憶', who: 'hashira', at: [19, 4], cast: STAGE(), body: async () => {
     await say('ハシラが はじめて 最前に 立った 日。');
     await say('百花「わあ、 近い！\nいつも 応援 ありがとう！」');
-    await say('ハシラ（この 笑顔を、 いちばん\n近くで 守りたい。）');
+    await say('ハシラ（この 笑顔を、 いちばん\n近くで 見ていたい。）');
   } });
 }
 async function gradEpisode() {
@@ -2721,7 +2724,7 @@ async function strategyMeeting() {
   await say('バズリ「転売サイトを 追った。\nダフールの 倉庫は アキバの 地下……\n闇チケット市場だ。」');
   await say('テツ「闇市の 入口なら 知ってる。\n町の 南東、 裏路地の\nマンホールだ。」');
   await say('ゼンツウ「全国の 遠征仲間にも\n声を かけた。 転売の 買い手を\n止めてくれる。」');
-  await say('ハシラ「最前管理団も 手を 貸す。\n本物の ファンが 並べる 列を\n作ってやる。」');
+  await say('ハシラ「最前管理団も 手を 貸す。\n……生誕祭の 最前は、 お前らに\n譲ってやるよ。」');
   await say('ゴウ「TOとして 号令だ！ 生誕祭は\nおれたち 全員で 取り戻す！」');
   await say('キョヒール「……ヲタ太、 たのむ。\nおれの ぶんまで。」');
   await say('みんな「おーーっ！！」');
