@@ -896,7 +896,7 @@ function saveMode() {
 
 // --- ふっかつのじゅもん: the whole save packed into one copyable code
 const CODE_MAPS = ['town', 'field', 'venue', 'tower1', 'tower2', 'chapel', 'minato', 'hall', 'studio', 'seitanhall', 'towerB', 'towerC', 'market1', 'market2'];
-const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp', 'dafuru', 'skDoutan', 'meeting', 'momEp', 'feePaid', 'dafuruBeaten', 'dafuruGone', 'townDema', 'townSeitan', 'townRevive'];
+const CODE_FLAGS = ['show', 'kidnap', 'gou', 'bridge', 'kyohiru', 'skMatome', 'skGundan', 'cleared', 'barrierSeen', 'zentsu', 'barrierOpen', 'buzzri', 'commentEp', 'demaDone', 'shikiri', 'yoseSeen', 'allies', 'doorSolved', 'hashira', 'gradEp', 'dafuru', 'skDoutan', 'meeting', 'momEp', 'feePaid', 'dafuruBeaten', 'dafuruGone', 'townDema', 'townSeitan', 'townRevive', 'minatoSeen'];
 const CODE_CHESTS = ['v1', 'v2', 'v3', 't1', 't2', 't3', 't4', 'h1', 'h2', 's1', 's2', 'j1', 'j2', 'b1', 'c1', 'm1', 'm2', 'm3', 'm4'];
 const CODE_ITEMS = ['drink', 'drink2', 'photo', 'pass', 'shoMinato', 'shoHaishin', 'shoSeitan'];
 const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
@@ -2412,6 +2412,18 @@ async function commentEpisode() {
 // coming home between chapters: the town shows what Momoka's absence is doing to it, and points to the next place
 function crowd(list) { list.forEach(([id, x, y, spr, dir]) => game.npcs.push({ id, x, y, px: x * TS, py: y * TS, hx: x, hy: y, spr, fixed: 1, dir: dir || 'down', mv: null, wt: 999 })); }
 function clearCrowd() { game.npcs.forEach(n => { if (n.id.startsWith('crowd')) n.hidden = true; }); }
+// 港町: the local fans who lost their show to the touring army, seen before facing ゼンツウ
+async function minatoArrival() {
+  if (!flags.barrierSeen || flags.zentsu || flags.minatoSeen) return;
+  crowd([['crowdA', 10, 3, 'girl', 'right'], ['crowdB', 12, 3, 'otaku2', 'left'], ['crowdC', 11, 4, 'fisher', 'up']]);
+  await say('港町の 人たちが 肩を 落としている……');
+  await say('地元の 女の子「百花ちゃんの 地方公演、\nずっと 楽しみに してたのに……」');
+  await say('地元の ヲタク「チケットは 遠征の\n人たちが 全部 取っちゃって、\n地元は 一枚も 当たらなかった。」');
+  await say('地元の ヲタク「しかも 公演が 中止に\nなったのに、 遠征軍団が\nホールに 居座ってるんだ。」');
+  await say('地元の 女の子「わたしたち、\n百花ちゃんに 『おかえり』って\n言いたかった だけなのに……」');
+  flags.minatoSeen = true; clearCrowd();
+  await say('（ホールの 遠征軍団を\nなんとかしよう）');
+}
 async function townArrival() {
   if (flags.zentsu && !flags.buzzri && !flags.townDema) {
     crowd([['crowdA', 10, 17, 'otaku1', 'right'], ['crowdB', 12, 17, 'otaku4', 'left'], ['crowdC', 11, 16, 'girl', 'down']]);
@@ -2960,7 +2972,7 @@ F.onStep = (x, y, t) => {
     if (!flags.townDema && !flags.buzzri) { await say('警備員「関係者以外 立ち入り禁止です。」'); await say('（アキハバラで 噂を\nたしかめてみよう）'); player.y = 3; player.py = 3 * TS; return; }
     sfx('door'); await fadeOut(8); setMap('studio', 9, 12, 'up'); toast('配信スタジオ'); await fadeIn(8);
   };
-  if (t === 'H') return async () => { sfx('door'); await fadeOut(8); setMap('minato', 11, 1, 'down'); toast('港町'); await fadeIn(8); };
+  if (t === 'H') return async () => { sfx('door'); await fadeOut(8); setMap('minato', 11, 1, 'down'); toast('港町'); await fadeIn(8); await minatoArrival(); };
   return null;
 };
 
