@@ -1,0 +1,3367 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--PAGE-->
+<title>Kairi Quest</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
+<style>
+/* layout: one console column — the NES-ratio screen on top, controls under it */
+:root {
+  --bg: #060a14;
+  --shell: #0f1a2e;
+  --shell-edge: #24385e;
+  --ink: #e8f2ff;
+  --dim: #8fa3c4;
+  --oshi: #78d0f4;
+  --btn: #172640;
+  --btn-press: #2c4a7a;
+  --font: "DotGothic16", "Hiragino Kaku Gothic ProN", "MS Gothic", monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px;
+  box-sizing: border-box;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.console {
+  --reserve: 96px;
+  width: min(100%, 768px, calc((100dvh - var(--reserve)) * 256 / 224));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.screen-wrap {
+  background: var(--shell);
+  border: 2px solid var(--shell-edge);
+  border-radius: 10px;
+  padding: 8px;
+}
+canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 256 / 224;
+  max-width: 100%;
+  background: #000;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  border-radius: 2px;
+  outline: none;
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  font-size: 13px;
+  color: var(--dim);
+}
+.bar kbd {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--btn);
+  border: 1px solid var(--shell-edge);
+  border-radius: 4px;
+  padding: 0 6px;
+}
+.keys { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+button {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--btn);
+  border: 1px solid var(--shell-edge);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:focus-visible { outline: 2px solid var(--oshi); outline-offset: 2px; }
+.name-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--dim); }
+.name-field[hidden] { display: none; }
+.err { margin: 0; font-size: 12px; line-height: 1.5; color: #f8c070; overflow-wrap: anywhere; }
+.code-panel textarea {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 13px; line-height: 1.4;
+  color: var(--ink); background: #000; border: 2px solid var(--shell-edge); border-radius: 6px;
+  padding: 6px 10px; resize: none; word-break: break-all; min-width: 0;
+  -webkit-user-select: text; user-select: text;
+}
+.code-panel .name-row { justify-content: flex-end; }
+.code-panel button[hidden] { display: none; }
+.name-row { display: flex; gap: 8px; }
+.name-row input {
+  flex: 1; min-width: 0;
+  font-family: var(--font); font-size: 18px;
+  color: var(--ink); background: #000;
+  border: 2px solid var(--shell-edge); border-radius: 6px; padding: 6px 10px;
+  -webkit-user-select: text; user-select: text;
+}
+.name-row input:focus-visible { outline: 2px solid var(--oshi); outline-offset: 1px; }
+.pad {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px 0;
+  touch-action: none;
+}
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 54px);
+  grid-template-rows: repeat(3, 54px);
+}
+.dpad button, .ab button {
+  padding: 0;
+  font-size: 18px;
+  touch-action: none;
+}
+.dpad button.on, .ab button.on { background: var(--btn-press); }
+.dpad .u { grid-area: 1 / 2; border-radius: 8px 8px 0 0; }
+.dpad .l { grid-area: 2 / 1; border-radius: 8px 0 0 8px; }
+.dpad .r { grid-area: 2 / 3; border-radius: 0 8px 8px 0; }
+.dpad .d { grid-area: 3 / 2; border-radius: 0 0 8px 8px; }
+.dpad .c { grid-area: 2 / 2; background: var(--btn); border-radius: 0; pointer-events: none; }
+.ab { display: flex; gap: 18px; align-items: center; transform: rotate(-12deg); }
+.ab button {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--oshi); border-color: #cdeefc; color: #0a2440; font-size: 20px;
+}
+.ab .b { background: #3a86d8; margin-top: 34px; }
+.ab button.on { background: #e4f6ff; color: #0a2440; }
+@media (pointer: coarse) {
+  .console { --reserve: 270px; }
+  .pad { display: flex; }
+  .keys { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
+</style>
+<!--/PAGE-->
+</head>
+<body>
+<!--BODY-->
+<div class="console">
+  <div class="screen-wrap"><canvas id="screen" tabindex="0" aria-label="Kairi Quest ゲーム画面"></canvas></div>
+  <div class="name-field" id="name-field" hidden>
+    <label for="hero-name">キーボードで入力（漢字もOK・6文字まで）</label>
+    <div class="name-row">
+      <input id="hero-name" type="text" maxlength="6" autocomplete="off" enterkeyhint="done" placeholder="アオ太">
+      <button id="name-ok" type="button">けってい</button>
+    </div>
+  </div>
+  <div class="name-field code-panel" id="code-panel" hidden>
+    <label id="code-label" for="code-text">ふっかつのじゅもん</label>
+    <textarea id="code-text" rows="3" spellcheck="false" autocomplete="off"></textarea>
+    <div class="name-row">
+      <button id="code-copy" type="button">コピー</button>
+      <button id="code-ok" type="button">けってい</button>
+      <button id="code-close" type="button">とじる</button>
+    </div>
+  </div>
+  <p class="err" id="err" hidden></p>
+  <div class="bar">
+    <div class="keys">
+      <span><kbd>↑↓←→</kbd> いどう</span>
+      <span><kbd>Z</kbd> <kbd>Enter</kbd> けってい・はなす</span>
+      <span><kbd>X</kbd> <kbd>Esc</kbd> キャンセル・メニュー</span>
+    </div>
+    <button id="sound" type="button" aria-pressed="true">サウンド ON</button>
+  </div>
+  <div class="pad" aria-hidden="true">
+    <div class="dpad">
+      <button class="u" data-k="up" type="button">▲</button>
+      <button class="l" data-k="left" type="button">◀</button>
+      <span class="c"></span>
+      <button class="r" data-k="right" type="button">▶</button>
+      <button class="d" data-k="down" type="button">▼</button>
+    </div>
+    <div class="ab">
+      <button class="b" data-k="b" type="button">B</button>
+      <button class="a" data-k="a" type="button">A</button>
+    </div>
+  </div>
+</div>
+<script>
+'use strict';
+// ============================================================
+//  Kairi Quest 〜蒼のメロディ〜 （百花クエスト 続編・非公式ファンゲーム）
+// ============================================================
+const W = 256, H = 224, S = 3, TS = 16;
+const cv = document.getElementById('screen');
+cv.width = W * S; cv.height = H * S;
+const ctx = cv.getContext('2d');
+const FONT = '"DotGothic16", "Hiragino Kaku Gothic ProN", "MS Gothic", monospace';
+function resetT() { ctx.setTransform(S, 0, 0, S, 0, 0); ctx.imageSmoothingEnabled = false; }
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const chance = p => Math.random() < p;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+// ------------------------------------------------------------
+//  Palette & sprites
+// ------------------------------------------------------------
+const PAL = {
+  k: '#120c18', w: '#f8f8f8', s: '#f8c8a0', S: '#d8986c', h: '#2a1c16',
+  p: '#f7b0cc', P: '#d47aa0', l: '#fde2ee', b: '#3858c8', B: '#22307a',
+  g: '#a0a0ae', G: '#4a4a5a', r: '#d83838', R: '#8a1c1c', y: '#f8d838',
+  n: '#8a5a30', e: '#3a9a3a', o: '#f89838', c: '#78d8f8', m: '#f890b8',
+  H: '#f8f8f8', Y: '#d83838',
+};
+
+const TPL = {
+  hero_down: { rows: [
+    '....kkkkkkkk....', '...khhhhhhhhk...', '..khHHYHHYHHhk..', '..khhhhhhhhhhk..',
+    '..ksGGGssGGGsk..', '..ksGcGssGcGsk..', '..kssssSSssssk..', '...ksssrrsssk...',
+    '....kkSSSSkk....', '..kpppwwwwpppk..', '.kspppwwwwpppsk.', '.kspppwyywpppsk.',
+    '..kPPPPPPPPPPk..', '...kbbbbbbbbk...', '...kbbk..kbbk...', '...kkkk..kkkk...'],
+    alt: { 14: '....kbbbbbbk....', 15: '....kkkkkkkk....' } },
+  hero_up: { rows: [
+    '....kkkkkkkk....', '...khhhhhhhhk...', '..khHHHHHHHHhk..', '..khhhhhhhhhhk..',
+    '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...khhhhhhhhk...',
+    '....kkSSSSkk....', '..kpppnnnnpppk..', '.kspnnnnnnnnpsk.', '.kspnnnnnnnnpsk.',
+    '..kPPnnnnnnPPk..', '...kbbbbbbbbk...', '...kbbk..kbbk...', '...kkkk..kkkk...'],
+    alt: { 14: '....kbbbbbbk....', 15: '....kkkkkkkk....' } },
+  hero_right: { rows: [
+    '.....kkkkkk.....', '....khhhhhhk....', '...khhHHYHHHk...', '...khhhhhhhhk...',
+    '...khhhsGGGsk...', '...khhssGcGsk...', '...khssssssssk..', '....kssssrsk....',
+    '.....kSSSSk.....', '...knpppppwk....', '..knnppppswk....', '..knnpppppsk....',
+    '...knPPPPPPk....', '....kbbbbbbk....', '...kbbk..kbbk...', '...kkkk..kkkk...'],
+    alt: { 14: '....kbbbbbbk....', 15: '....kkkkkkkk....' } },
+  fat: { rows: [
+    '....kkkkkkkk....', '...khhhhhhhhk...', '..khhhhhhhhhhk..', '..khHHYHHYHHhk..',
+    '..ksGGGssGGGsk..', '..ksGcGssGcGsk..', '.kSsssrrrrsssSk.', '.kSSssssssssSSk.',
+    '.kpppwwwwwwpppk.', 'kspppwwwwwwpppsk', 'kspppwwwwwwpppsk', 'kspppwwyywwpppsk',
+    '.kPPPPPPPPPPPPk.', '..kbbbbbbbbbbk..', '..kbbbk..kbbbk..', '..kkkkk..kkkkk..'],
+    alt: { 14: '...kbbbbbbbbk...', 15: '...kkkkkkkkkk...' } },
+  girl_down: { rows: [
+    '...kpkkkkkkpk...', '..kplhhhhhhlpk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..',
+    '..khhsssssshhk..', '..khskwsswkshk..', '..khskksskkshk..', '..khsmssssmshk..',
+    '..khhssrrsshhk..', '..khkppwwppkhk..', '.kshpppwwppphsk.', '.kskppppppppksk.',
+    '..kwlwlwlwlwlk..', '.kppppppppppppk.', '...kssk..kssk...', '...kPPk..kPPk...'],
+    alt: { 14: '....kssssssk....', 15: '....kPPPPPPk....' } },
+  girl_up: { rows: [
+    '...kpkkkkkkpk...', '..kplhhhhhhlpk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..',
+    '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..',
+    '..khhhhhhhhhhk..', '..khhpppppphhk..', '.kshpppppppphsk.', '.kskppppppppksk.',
+    '..kwlwlwlwlwlk..', '.kppppppppppppk.', '...kssk..kssk...', '...kPPk..kPPk...'],
+    alt: { 14: '....kssssssk....', 15: '....kPPPPPPk....' } },
+  maou: { rows: [
+    '.r....kkkk....r.', '.rk..khhhhk..kr.', '..rkkhhhhhhkkr..', '...khhhhhhhhk...',
+    '..ksGrGssGrGsk..', '..ksGGGssGGGsk..', '..kssssssssssk..', '..ksswkkkkwssk..',
+    '.GGkSSSSSSSSkGG.', 'GrrkPPPwwPPPkrrG', 'GrrksPPwwPPskrrG', 'GrrksPPyyPPskrrG',
+    'GrrrkPPPPPPkrrrG', 'GGrrkBBBBBBkrrGG', 'GGGrkBBkkBBkrGGG', 'GGGGkkk..kkkGGGG'],
+    alt: { 15: 'GGGGkkkkkkkkGGGG' } },
+  manhole: { rows: [
+    '................', '................', '....kkkkkkkk....', '...kGGGGGGGGk...',
+    '..kGgGgGgGgGGk..', '..kGGGGGGGGGGk..', '..kGgGgGgGgGGk..', '..kGGGGGGGGGGk..',
+    '..kGgGgGgGgGGk..', '..kGGGGGGGGGGk..', '..kGgGgGgGgGGk..', '...kGGGGGGGGk...',
+    '....kkkkkkkk....', '................', '................', '................'] },
+  memo: { rows: [
+    '................', '................', '................', '................',
+    '................', '.....kkkkkkk....', '.....kwwwwwk....', '.....kwGGGwk....',
+    '.....kwwwwwk....', '.....kwGGwwk....', '.....kwwwwwk....', '.....kkkkkkk....',
+    '................', '................', '................', '................'] },
+  chest: { rows: [
+    '................', '................', '................', '...kkkkkkkkkk...',
+    '..knnnnnnnnnnk..', '..knyyyyyyyynk..', '..knnnnnnnnnnk..', '..kkkkkyykkkkk..',
+    '..knnnnyynnnnk..', '..knnnnnnnnnnk..', '..knnnnnnnnnnk..', '..knyyyyyyyynk..',
+    '..kkkkkkkkkkkk..', '................', '................', '................'] },
+  chest_open: { rows: [
+    '................', '...kkkkkkkkkk...', '..knnnnnnnnnnk..', '..kkkkkkkkkkkk..',
+    '..kGGGGGGGGGGk..', '..kGkkkkkkkkGk..', '..kGkkkkkkkkGk..', '..kkkkkkkkkkkk..',
+    '..knnnnnnnnnnk..', '..knnnnnnnnnnk..', '..knnnnnnnnnnk..', '..knyyyyyyyynk..',
+    '..kkkkkkkkkkkk..', '................', '................', '................'] },
+};
+
+const sprCache = {};
+function buildSprite(rows, map) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d');
+  rows.forEach((row, y) => {
+    for (let x = 0; x < 16; x++) {
+      const ch = row[x];
+      if (!ch || ch === '.') continue;
+      const m = map && map[ch] !== undefined ? map[ch] : ch;
+      if (m === '.') continue;
+      g.fillStyle = PAL[m] || m;
+      g.fillRect(x, y, 1, 1);
+    }
+  });
+  return c;
+}
+function bigSprite(rows, extra) {
+  const c = document.createElement('canvas'); c.width = rows[0].length; c.height = rows.length;
+  const g = c.getContext('2d');
+  rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === '.') return; g.fillStyle = extra[ch] || PAL[ch] || ch; g.fillRect(x, y, 1, 1); }));
+  return c;
+}
+function mirror(c) {
+  const m = document.createElement('canvas'); m.width = m.height = 16;
+  const g = m.getContext('2d'); g.translate(16, 0); g.scale(-1, 1); g.drawImage(c, 0, 0); return m;
+}
+function frames(tpl, map) {
+  const t = TPL[tpl];
+  const f1 = buildSprite(t.rows, map);
+  const rows2 = t.rows.slice();
+  if (t.alt) for (const k in t.alt) rows2[k] = t.alt[k];
+  return [f1, buildSprite(rows2, map)];
+}
+// a character set: {down, up, left, right} → [frame1, frame2]
+function charSet(kind, map) {
+  if (kind === 'hero') {
+    const d = frames('hero_down', map), u = frames('hero_up', map), r = frames('hero_right', map);
+    return { down: d, up: u, right: r, left: r.map(mirror) };
+  }
+  if (kind === 'girl') {
+    const d = frames('girl_down', map), u = frames('girl_up', map);
+    return { down: d, up: u, right: d, left: d };
+  }
+  const d = frames(kind, map);
+  return { down: d, up: d, right: d, left: d };
+}
+const NOBAND = { H: 'h', Y: 'h' };
+
+Object.assign(TPL, {
+  mic: { rows: [
+    '................', '......kkkk......', '.....kGgGgk.....', '.....kgGgGk.....',
+    '.....kGgGgk.....', '......kkkk......', '.......kk.......', '.......kG.......',
+    '.......kG.......', '.......kG.......', '.......kG.......', '.......kG.......',
+    '.......kG.......', '.....kkkkkk.....', '....kGGGGGGk....', '................'] },
+});
+// a small canvas painted with p(x, y, w, h, colour)
+function paint(w, h, fn) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  fn((x, y, ww, hh, col) => { g.fillStyle = PAL[col] || col; g.fillRect(x, y, ww, hh); }, g);
+  return c;
+}
+function cloneC(src) { return paint(src.width, src.height, (p, g) => g.drawImage(src, 0, 0)); }
+// カイリ's blue guitar held across the body: body lower left, neck up to the right
+function guitarOn(c) {
+  const g = c.getContext('2d'), r = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  r(1, 10, 5, 4, '#2f6cc0'); r(2, 9, 3, 6, '#2f6cc0'); r(2, 11, 2, 2, '#120c18'); r(1, 10, 1, 1, '#78c8f0'); r(5, 13, 1, 1, '#1a3a78');
+  [[6, 10], [7, 10], [8, 9], [9, 9], [10, 9], [11, 8], [12, 8]].forEach(([x, y]) => r(x, y, 1, 1, '#c8a060'));
+  r(13, 7, 2, 1, '#5a3418'); r(14, 6, 1, 1, '#5a3418');
+  return c;
+}
+const still = c => ({ down: [c, c], up: [c, c], left: [c, c], right: [c, c] });
+// the static blob Mute leaves behind; seed changes the grain
+function noiseArt(seed, cols, eye) {
+  return paint(16, 16, p => {
+    let s = seed; const r = () => (s = (s * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let y = 1; y < 16; y++) for (let x = 1; x < 15; x++) {
+      const d = Math.hypot(x - 7.5, (y - 8.5) * 1.1);
+      if (d < 6.2 + r() * 1.4) p(x, y, 1, 1, cols[Math.floor(r() * cols.length)]);
+    }
+    p(4, 6, 3, 3, '#f8f8f8'); p(9, 6, 3, 3, '#f8f8f8'); p(5, 7, 1, 1, eye); p(10, 7, 1, 1, eye);
+    p(5, 11, 6, 1, '#120c18'); p(6, 12, 1, 1, '#120c18'); p(9, 12, 1, 1, '#120c18');
+  });
+}
+// 無音魔王ミュート: a hooded figure with a muted mask, holding カイリ's voice as a blue orb
+function muteArt(orb) {
+  return paint(32, 32, p => {
+    p(10, 1, 12, 2, '#3a3a52'); p(8, 3, 16, 4, '#3a3a52'); p(6, 7, 20, 6, '#3a3a52');
+    p(4, 13, 24, 17, '#2a2a3a'); p(2, 18, 28, 12, '#2a2a3a'); p(1, 30, 30, 2, '#1a1a26');
+    p(9, 3, 1, 10, '#24243a'); p(22, 3, 1, 10, '#24243a');
+    p(11, 5, 10, 10, '#e8e8f0'); p(12, 15, 8, 2, '#e8e8f0'); p(11, 5, 10, 1, '#c8c8d8'); p(11, 14, 1, 1, '#c8c8d8'); p(20, 14, 1, 1, '#c8c8d8');
+    p(13, 8, 2, 2, orb ? '#5a6a8a' : '#78c8f0'); p(17, 8, 2, 2, orb ? '#5a6a8a' : '#78c8f0');
+    if (orb) { p(14, 12, 1, 1, '#120c18'); p(17, 12, 1, 1, '#120c18'); p(15, 13, 2, 1, '#120c18'); p(14, 14, 1, 1, '#120c18'); p(17, 14, 1, 1, '#120c18'); }
+    else { p(14, 12, 4, 1, '#120c18'); p(13, 11, 1, 1, '#120c18'); p(18, 11, 1, 1, '#120c18'); p(12, 10, 1, 1, '#78c8f0'); }
+    p(4, 13, 24, 1, '#8a9ab8'); p(15, 17, 2, 13, '#8a9ab8');
+    p(6, 19, 4, 7, '#3a3a52'); p(22, 19, 4, 7, '#3a3a52');
+    if (orb) { p(23, 15, 7, 7, '#78d8f8'); p(24, 14, 5, 9, '#78d8f8'); p(25, 16, 3, 3, '#e4f6ff'); p(22, 16, 1, 5, '#3a78d8'); p(30, 16, 1, 5, '#3a78d8'); p(24, 22, 5, 1, '#3a78d8'); }
+    else { p(23, 18, 3, 3, '#4a4a5a'); }
+    p(11, 21, 3, 4, '#8a9ab8'); p(14, 20, 1, 6, '#8a9ab8');
+    if (orb) [[17, 20], [19, 22], [17, 24], [21, 20], [21, 24]].forEach(([x, y]) => p(x, y, 1, 1, '#d83838'));
+    else [[17, 21], [18, 20], [19, 21], [20, 22], [21, 21]].forEach(([x, y]) => p(x, y, 1, 1, '#78d8f8'));
+  });
+}
+const SPR = {};
+const KAIRI_MAP = { p: '#8ad8f8', P: '#3a78d8', l: '#ffffff' };
+function initSprites() {
+  SPR.hero = charSet('hero', { p: '#78c8f0', P: '#2f6cc0', Y: '#2f6cc0' });
+  SPR.legend = charSet('hero');
+  SPR.momoka = charSet('girl');
+  SPR.kairi = charSet('girl', KAIRI_MAP);
+  const kg = SPR.kairi.down.map(c => guitarOn(cloneC(c)));
+  SPR.kairiG = { down: kg, up: kg, left: kg, right: kg };
+  SPR.oya = charSet('girl', { h: 'g', p: '#6a8ac8', P: '#3a5a98', l: 'w', m: 's', r: 'S' });
+  SPR.girl = charSet('girl', { h: 'n', p: 'm', P: '#b85a88', l: 'w' });
+  SPR.girl2 = charSet('girl', { h: 'k', p: 'c', P: '#2a7aa8', l: 'w' });
+  SPR.maid = charSet('girl', { h: 'k', p: 'k', P: 'w', l: 'w' });
+  SPR.tourist = charSet('hero', { ...NOBAND, p: 'y', P: '#3858c8', h: 'y' });
+  SPR.clerk = charSet('hero', { ...NOBAND, p: 'e', P: '#1e5a28', c: 'w', G: 'h', h: 'n' });
+  SPR.cafe = charSet('hero', { ...NOBAND, p: 'G', P: 'k', G: 's', c: 's' });
+  SPR.staff = charSet('hero', { H: 'G', Y: 'y', p: 'G', P: 'k', w: 'y' });
+  SPR.otaku1 = charSet('hero', { p: 'c', P: '#2a7aa8', Y: '#3a78d8' });
+  SPR.otaku2 = charSet('hero', { ...NOBAND, p: '#3a78d8', P: '#1a3a78' });
+  SPR.otaku3 = charSet('fat', { p: 'c', P: '#2a7aa8', Y: 'b' });
+  SPR.otaku4 = charSet('fat', { ...NOBAND, p: 'e', P: '#1e5a28', h: 'g' });
+  SPR.band = charSet('hero', { ...NOBAND, p: 'k', P: 'G', h: 'r', w: 'g' });
+  SPR.fesfan = charSet('hero', { ...NOBAND, p: 'y', P: 'o', w: 'w' });
+  SPR.unchiku = charSet('fat', { ...NOBAND, p: 'n', P: '#5a3410', h: 'g', w: '#e8d8b0' });
+  SPR.ganari = charSet('hero', { p: 'r', P: 'k', H: 'y', Y: 'r', h: 'k' });
+  SPR.pitch = charSet('hero', { ...NOBAND, p: '#3a3a6a', P: '#1a1a3a', h: 'k', w: 'y' });
+  SPR.rokuon = charSet('fat', { ...NOBAND, p: '#4a6a4a', P: '#2a3a2a', h: 'k' });
+  SPR.mute = charSet('maou', { r: '#8a9ab8', G: '#2a2a3a', P: '#3a3a52', B: '#1a1a2a', h: '#3a3a52', s: '#e8e8f0', S: '#c8c8d8', y: '#78d8f8' });
+  SPR.exmute = charSet('hero', { ...NOBAND, p: '#5a6a8a', P: '#2a2a3a', h: 'g', w: 'c' });
+  SPR.chest = buildSprite(TPL.chest.rows);
+  SPR.chestOpen = buildSprite(TPL.chest_open.rows);
+  SPR.mic = still(buildSprite(TPL.mic.rows));
+  const bar = f => mkTile(p => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if ((x + y * 2 + f * 3) % 7 === 0) p(x, y, 1, 1, 'rgba(190,230,255,0.9)');
+      else if ((x * 3 - y + 32 + f * 2) % 5 === 0) p(x, y, 1, 1, 'rgba(90,150,230,0.7)');
+      else p(x, y, 1, 1, 'rgba(40,60,110,0.35)');
+    }
+  });
+  SPR.barrier = { down: [bar(0), bar(1)] }; SPR.barrier.up = SPR.barrier.left = SPR.barrier.right = SPR.barrier.down;
+  // battle portraits
+  const hd = map => frames('hero_down', map)[0], ft = map => frames('fat', map)[0];
+  SPR.e = {
+    noise: noiseArt(7, ['#5a5a6a', '#9a9aae', '#2a2a3a', '#7a7a8a'], '#120c18'),
+    bignoise: noiseArt(31, ['#3a3a4a', '#6a6a7a', '#1a1a26', '#8a2a3a'], '#d83838'),
+    hanauta: hd({ ...NOBAND, p: 'y', P: 'o' }),
+    kabuse: hd({ p: 'c', P: '#2a7aa8', H: 'w', Y: 'b' }),
+    archive: hd({ ...NOBAND, p: 'g', P: 'G' }),
+    kizai: ft({ ...NOBAND, p: 'G', P: 'k', h: 'g' }),
+    mimicopy: hd({ ...NOBAND, p: 'e', P: '#1e5a28' }),
+    pickthief: hd({ ...NOBAND, p: 'k', P: 'k', h: 'k', w: 'G', s: '#c8a080', S: '#a07858' }),
+    mosh: ft({ p: 'r', P: 'R', H: 'k', Y: 'r' }),
+    dive: hd({ p: 'o', P: '#a85a18', H: 'y', Y: 'r' }),
+    uchiage: ft({ ...NOBAND, p: '#d8a038', P: '#7a5010', s: '#f8a888', S: '#d87868' }),
+    saiten: hd({ ...NOBAND, p: '#9a4ad8', P: '#5a2490' }),
+    micman: ft({ ...NOBAND, p: '#c83838', P: '#7a1c1c', h: 'g' }),
+    harmo: hd({ ...NOBAND, p: 'm', P: '#b85a88' }),
+    rokuota: hd({ ...NOBAND, p: 'G', P: 'k' }),
+    resale: hd({ ...NOBAND, p: '#5a5a6a', P: '#2a2a3a', h: 'k', w: '#d8c8a0' }),
+    sheet: ft({ ...NOBAND, p: 'b', P: 'B' }),
+    shizuka: hd({ ...NOBAND, p: '#c8c8d8', P: '#8a8a9a', h: '#9a9aaa' }),
+    mutek: ft({ p: '#5a6a8a', P: '#2a2a3a', H: '#8a9ab8', Y: '#5a6a8a', s: '#c8c8d8', S: '#9a9aaa', h: '#2a2a3a' }),
+    unchiku: ft({ ...NOBAND, p: 'n', P: '#5a3410', h: 'g', w: '#e8d8b0' }),
+    ganari: hd({ p: 'r', P: 'k', H: 'y', Y: 'r', h: 'k' }),
+    pitch: hd({ ...NOBAND, p: '#3a3a6a', P: '#1a1a3a', h: 'k', w: 'y' }),
+    rokuon: ft({ ...NOBAND, p: '#4a6a4a', P: '#2a3a2a', h: 'k' }),
+    mute: muteArt(true),
+  };
+  SPR.e.mute2 = muteArt(false);
+  // props drawn on top: [x, y, w, h, colour]
+  const prop = (id, rects) => { const g = SPR.e[id].getContext('2d'); rects.forEach(([x, y, w, h, c]) => { g.fillStyle = PAL[c] || c; g.fillRect(x, y, w, h); }); };
+  prop('hanauta', [[12, 1, 1, 4, 'k'], [13, 1, 2, 1, 'k'], [10, 4, 3, 2, 'k']]); // a note
+  prop('kabuse', [[11, 6, 5, 4, 'w'], [10, 7, 1, 2, 'g'], [15, 5, 1, 6, 'w']]); // megaphone
+  prop('archive', [[2, 2, 1, 5, 'k'], [13, 2, 1, 5, 'k'], [3, 0, 10, 1, 'k'], [1, 4, 2, 3, 'G'], [13, 4, 2, 3, 'G']]); // headphones
+  prop('kizai', [[0, 9, 4, 6, 'k'], [1, 10, 2, 2, 'g'], [1, 13, 2, 1, 'r'], [12, 11, 4, 4, 'b'], [13, 12, 1, 1, 'y']]); // amp + pedal
+  prop('mimicopy', [[2, 2, 1, 5, 'k'], [13, 2, 1, 5, 'k'], [3, 0, 10, 1, 'k'], [1, 4, 2, 3, 'e'], [13, 4, 2, 3, 'e']]);
+  prop('pickthief', [[4, 6, 8, 2, 'w'], [13, 10, 3, 3, 'y'], [14, 13, 1, 1, 'y']]); // mask + pick
+  prop('dive', [[0, 3, 2, 2, 's'], [14, 3, 2, 2, 's']]); // arms up
+  prop('uchiage', [[12, 9, 4, 5, '#f8d838'], [12, 9, 4, 1, 'w'], [15, 10, 1, 3, 'g']]); // mug
+  prop('saiten', [[12, 9, 4, 5, 'n'], [13, 10, 2, 3, 'w'], [13, 10, 1, 1, 'r']]); // score board
+  prop('micman', [[13, 6, 2, 2, 'G'], [13, 8, 1, 6, 'k']]); // mic
+  prop('harmo', [[1, 1, 1, 4, 'k'], [2, 1, 2, 1, 'k'], [0, 4, 2, 2, 'k'], [13, 0, 1, 4, 'k'], [14, 0, 2, 1, 'k'], [12, 3, 2, 2, 'k']]); // two notes
+  prop('rokuota', [[11, 8, 5, 4, 'k'], [12, 9, 2, 2, 'c'], [15, 7, 1, 1, 'r']]); // camera
+  prop('resale', [[3, 4, 10, 2, 'k'], [12, 8, 4, 6, 'w'], [12, 10, 4, 1, 'c'], [13, 12, 2, 1, 'r']]); // sunglasses + shirt
+  prop('sheet', [[0, 13, 16, 3, '#3a78d8'], [2, 14, 2, 1, 'w']]); // leisure sheet
+  prop('shizuka', [[6, 5, 4, 3, 'w'], [7, 8, 1, 3, 's'], [12, 8, 4, 5, 'w'], [13, 9, 2, 1, 'k']]); // shh + sign
+  prop('mutek', [[13, 4, 1, 10, 'g'], [12, 12, 3, 1, 'y'], [0, 8, 4, 6, '#5a6a8a'], [1, 9, 2, 2, 'w']]); // sword + shield
+  prop('unchiku', [[13, 2, 1, 10, '#5a3418'], [11, 11, 5, 5, '#c87a30'], [12, 13, 2, 1, 'k'], [3, 4, 4, 2, 'k'], [9, 4, 4, 2, 'k'], [7, 4, 2, 1, 'k']]); // vintage guitar + glasses
+  prop('ganari', [[11, 5, 5, 4, 'y'], [10, 6, 1, 2, 'g'], [15, 4, 1, 6, 'y'], [0, 2, 2, 1, 'w'], [0, 5, 2, 1, 'w']]); // gold megaphone
+  prop('pitch', [[3, 0, 10, 2, '#1a1a3a'], [6, 0, 4, 1, 'y'], [12, 9, 4, 5, 'w'], [13, 10, 2, 1, 'r'], [13, 12, 1, 1, 'k']]); // cap + ticket
+  prop('rokuon', [[10, 6, 6, 5, 'k'], [11, 7, 3, 3, 'c'], [15, 5, 1, 1, 'r'], [0, 9, 3, 6, 'G'], [1, 8, 1, 1, 'k']]); // video camera + recorder
+}
+
+// ------------------------------------------------------------
+//  Tiles
+// ------------------------------------------------------------
+
+function mkTile(fn) {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const g = c.getContext('2d');
+  const p = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  fn(p, g); return c;
+}
+function grass(p) {
+  p(0, 0, 16, 16, '#48b03c');
+  [[2, 3], [9, 1], [12, 8], [5, 11], [14, 13], [1, 14], [7, 6], [11, 4]].forEach(([x, y]) => p(x, y, 2, 1, '#2f8a2c'));
+}
+function wood(p) {
+  p(0, 0, 16, 16, '#c8904a');
+  p(0, 3, 16, 1, '#a06a30'); p(0, 7, 16, 1, '#a06a30'); p(0, 11, 16, 1, '#a06a30'); p(0, 15, 16, 1, '#a06a30');
+  p(5, 0, 1, 3, '#a06a30'); p(12, 4, 1, 3, '#a06a30'); p(3, 8, 1, 3, '#a06a30'); p(10, 12, 1, 3, '#a06a30');
+}
+function stone(p) {
+  p(0, 0, 16, 16, '#5c5a70');
+  p(0, 7, 16, 1, '#46445a'); p(0, 15, 16, 1, '#46445a'); p(7, 0, 1, 7, '#46445a'); p(15, 8, 1, 7, '#46445a');
+  p(2, 2, 1, 1, '#6c6a82'); p(10, 11, 1, 1, '#6c6a82');
+}
+function carpet(p) {
+  p(0, 0, 16, 16, '#6e34a8');
+  for (let i = 0; i < 16; i += 4) { p(i, i, 2, 2, '#8a50c8'); p((i + 8) % 16, i, 2, 2, '#8a50c8'); }
+}
+function bricks(p, base, line, top) {
+  p(0, 0, 16, 16, base);
+  [3, 7, 11, 15].forEach(y => p(0, y, 16, 1, line));
+  for (let r = 0; r < 4; r++) { const off = r % 2 ? 4 : 0; p((off + 0) % 16, r * 4, 1, 3, line); p((off + 8) % 16, r * 4, 1, 3, line); }
+  if (top) p(0, 0, 16, 1, top);
+}
+const TILES = {
+  '.': { d: grass },
+  ',': { d: p => { grass(p); [[3, 4, '#f8f070'], [10, 9, '#f890b8'], [6, 12, '#ffffff'], [13, 3, '#f890b8']].forEach(([x, y, c]) => { p(x, y, 2, 2, c); p(x, y + 2, 1, 1, '#2f8a2c'); }); } },
+  'T': { solid: 1, d: p => { grass(p); p(3, 1, 10, 10, '#0e3a16'); p(1, 3, 14, 6, '#0e3a16'); p(4, 2, 8, 8, '#2a7a30'); p(2, 4, 12, 4, '#2a7a30'); p(4, 3, 4, 3, '#4aa848'); p(6, 11, 4, 4, '#5a3418'); p(7, 11, 1, 4, '#8a5a30'); } },
+  '~': { solid: 1, anim: 1, d: (p, g, f) => { p(0, 0, 16, 16, '#2848c8'); const o = f ? 4 : 0; p((2 + o) % 16, 3, 5, 1, '#6888f8'); p((10 + o) % 16, 8, 4, 1, '#6888f8'); p((4 + o) % 16, 12, 5, 1, '#6888f8'); } },
+  '^': { solid: 1, d: p => { grass(p); for (let i = 0; i < 7; i++) { p(8 - i - 1, 2 + i * 2, (i + 1) * 2, 2, i < 2 ? '#f0f0f0' : '#9a6a3a'); p(8, 2 + i * 2, i + 1, 2, i < 2 ? '#c8c8d0' : '#6a4422'); } p(1, 15, 14, 1, '#6a4422'); } },
+  '=': { d: p => { p(0, 0, 16, 16, '#8a8a96'); p(0, 0, 16, 1, '#9e9eaa'); p(7, 0, 1, 16, '#767682'); p(0, 7, 7, 1, '#767682'); p(8, 11, 8, 1, '#767682'); } },
+  'B': { d: p => { p(0, 0, 16, 16, '#2848c8'); p(2, 0, 12, 16, '#b07838'); for (let y = 0; y < 16; y += 4) p(2, y, 12, 1, '#7a4a20'); p(1, 0, 1, 16, '#5a3418'); p(14, 0, 1, 16, '#5a3418'); } },
+  'A': { d: p => { grass(p); p(1, 6, 5, 9, '#c8c8d0'); p(6, 2, 5, 13, '#9a9ab0'); p(11, 7, 4, 8, '#d8a0c8'); [[2, 8], [2, 11], [7, 4], [7, 7], [7, 10], [12, 9], [12, 12]].forEach(([x, y]) => p(x, y, 2, 1, '#f8f070')); p(8, 4, 2, 1, '#f890b8'); p(0, 15, 16, 1, '#2f8a2c'); } },
+  'V': { d: p => { grass(p); p(2, 7, 12, 8, '#e8e8f0'); p(4, 4, 8, 3, '#e8e8f0'); p(6, 3, 4, 1, '#e8e8f0'); p(2, 13, 12, 2, '#9a9ab0'); p(7, 11, 2, 4, '#5a2490'); p(8, 0, 1, 4, '#4a4a5a'); p(9, 0, 3, 2, '#9a4ad8'); } },
+  ...Object.fromEntries(['1', '2', '3', '4'].map(n => [n, { d: p => {
+    stone(p); p(2, 0, 12, 16, '#6a4020'); p(3, 1, 10, 14, '#8a5a30'); p(11, 8, 1, 2, '#f8d838');
+    const D = { 1: ['.#.', '##.', '.#.', '.#.', '###'], 2: ['##.', '..#', '.#.', '#..', '###'], 3: ['##.', '..#', '.#.', '..#', '##.'], 4: ['#.#', '#.#', '###', '..#', '..#'] }[n];
+    D.forEach((row, y) => [...row].forEach((c, x) => { if (c === '#') p(6 + x, 4 + y, 1, 1, '#f8f8f8'); }));
+  } }])),
+  'F': { d: p => { stone(p); p(2, 0, 12, 16, '#a88a20'); p(3, 1, 10, 14, '#d8b040'); p(11, 8, 1, 2, '#5a3418'); p(5, 4, 1, 7, '#5a3418'); p(4, 5, 4, 1, '#5a3418'); p(4, 8, 4, 1, '#5a3418'); p(5, 4, 3, 1, '#5a3418'); } },
+  'J': { d: p => { grass(p); p(2, 5, 12, 10, '#e8d8c8'); p(1, 4, 14, 1, '#d47aa0'); p(7, 11, 2, 4, '#5a3418'); [[3, 7], [11, 7]].forEach(([x, y]) => { p(x, y, 3, 3, '#f7b0cc'); p(x + 1, y + 1, 1, 1, '#f8f8f8'); }); p(4, 1, 8, 3, '#f8f8f8'); p(5, 2, 6, 1, '#d47aa0'); } },
+  'Y': { d: p => { grass(p); p(4, 3, 8, 12, '#9a9ab0'); p(4, 3, 8, 1, '#c8c8d8'); p(7, 0, 2, 3, '#4a4a5a'); p(7, 0, 2, 1, '#d83838'); [[5, 5], [9, 5], [5, 8], [9, 8]].forEach(([x, y]) => p(x, y, 2, 2, '#38a8f8')); p(7, 12, 2, 3, '#120c18'); } },
+  'H': { d: p => { grass(p); p(0, 11, 16, 5, '#2848c8'); p(2, 4, 5, 7, '#e8d8b0'); p(1, 3, 7, 1, '#c83838'); p(9, 6, 5, 5, '#e8d8b0'); p(8, 5, 7, 1, '#3858c8'); p(3, 7, 2, 2, '#4a4a5a'); p(10, 8, 2, 2, '#4a4a5a'); p(5, 12, 7, 2, '#8a5a30'); p(8, 9, 1, 3, '#f8f8f8'); } },
+  'O': { d: p => { grass(p); p(5, 3, 6, 12, '#5a2490'); p(4, 5, 8, 1, '#9a4ad8'); p(4, 9, 8, 1, '#9a4ad8'); p(6, 0, 4, 3, '#d83838'); p(7, 12, 2, 3, '#120c18'); p(7, 6, 2, 2, '#f8d838'); } },
+  '#': { solid: 1, d: p => bricks(p, '#a04828', '#5a2410', '#c86840') },
+  'f': { d: wood },
+  'c': { d: carpet },
+  'k': { solid: 1, d: p => { p(0, 0, 16, 16, '#3a2a24'); p(0, 13, 16, 3, '#6a4a3a'); p(0, 13, 16, 1, '#c8a080'); p(2, 4, 1, 1, '#f8d838'); p(9, 8, 1, 1, '#f890b8'); p(13, 3, 1, 1, '#78d8f8'); } },
+  'C': { solid: 1, d: p => { wood(p); p(0, 2, 16, 12, '#8a5028'); p(0, 2, 16, 2, '#c87a40'); p(0, 13, 16, 1, '#4a2810'); } },
+  'h': { solid: 1, d: p => { p(0, 0, 16, 16, '#6a4a30'); p(0, 7, 16, 1, '#3a2410'); p(0, 15, 16, 1, '#3a2410'); [[1, 2, '#f890b8'], [5, 1, '#9a4ad8'], [9, 3, '#f8d838'], [12, 2, '#78d8f8'], [2, 10, '#9a4ad8'], [6, 9, '#f8f8f8'], [10, 10, '#f890b8']].forEach(([x, y, c]) => p(x, y, 3, 7 - (y % 7) - 1 > 3 ? 4 : 5, c)); } },
+  'v': { solid: 1, d: p => { wood(p); p(1, 8, 14, 7, '#8a5028'); p(3, 1, 10, 8, '#4a4a5a'); p(4, 2, 8, 6, '#9a4ad8'); p(6, 3, 3, 3, '#f8c8a0'); p(5, 2, 5, 1, '#2a1c16'); p(7, 9, 2, 1, '#4a4a5a'); } },
+  'b': { solid: 1, d: p => { wood(p); p(1, 1, 14, 14, '#5a3418'); p(2, 2, 12, 4, '#f8f8f8'); p(2, 6, 12, 8, '#3858c8'); p(2, 6, 12, 1, '#6888f8'); } },
+  'x': { d: stone },
+  'W': { solid: 1, d: p => bricks(p, '#3a2a52', '#1c142c', '#5a4878') },
+  'r': { solid: 1, d: p => { stone(p); p(1, 4, 2, 11, '#d8b040'); p(13, 4, 2, 11, '#d8b040'); p(3, 6, 10, 2, '#c82838'); p(3, 8, 10, 1, '#8a1c1c'); } },
+  'U': { d: p => { stone(p); for (let i = 0; i < 4; i++) { p(2, 2 + i * 3, 12, 2, i % 2 ? '#a8a6bc' : '#8a88a0'); } } },
+  'd': { d: p => { p(0, 0, 16, 16, '#120c18'); for (let i = 0; i < 4; i++) p(2 + i, 2 + i * 3, 12 - i * 2, 2, '#5c5a70'); } },
+  'q': { solid: 1, d: p => { wood(p); p(0, 4, 16, 8, '#6a3a18'); p(0, 4, 16, 2, '#9a5a28'); } },
+  'o': { solid: 1, d: p => { carpet(p); p(6, 9, 4, 6, '#e8e8f0'); p(3, 2, 10, 7, '#3a9a3a'); [[4, 3, '#f8f8f8'], [8, 2, '#f890b8'], [10, 5, '#f8f8f8'], [5, 6, '#f890b8']].forEach(([x, y, c]) => p(x, y, 3, 3, c)); } },
+  'a': { solid: 1, d: p => { carpet(p); p(1, 4, 14, 10, '#f0f0f8'); p(1, 4, 14, 2, '#f8d838'); p(7, 0, 2, 5, '#f8d838'); p(5, 1, 6, 1, '#f8d838'); } },
+  // アキハバラ landmarks
+  'S': { solid: 1, d: p => { p(0, 0, 16, 16, '#5a4038'); p(0, 3, 16, 10, '#c8a0a8'); p(0, 4, 16, 8, '#f4ece4'); for (let x = 3; x < 16; x += 4) { p(x, 1, 2, 1, '#e8d8a0'); p(x, 14, 2, 1, '#e8d8a0'); } p(5, 7, 6, 2, '#c890a8'); } },
+  'M': { solid: 1, d: p => { p(0, 0, 16, 16, '#f2c8d6'); for (let x = 0; x < 16; x += 4) { p(x, 0, 2, 2, '#ffffff'); p(x + 2, 14, 2, 2, '#ffffff'); } p(0, 2, 16, 1, '#ffffff'); p(0, 13, 16, 1, '#ffffff'); p(5, 5, 2, 2, '#c87890'); p(9, 5, 2, 2, '#c87890'); p(5, 7, 6, 2, '#c87890'); p(6, 9, 4, 1, '#c87890'); p(7, 10, 2, 1, '#c87890'); } },
+  'P': { solid: 1, d: p => { p(0, 0, 16, 16, '#5a4a40'); p(0, 2, 16, 12, '#f0e6d0'); p(0, 2, 16, 1, '#fbf6ea'); p(0, 13, 16, 1, '#c8b898'); p(3, 6, 10, 1, '#8a7a6a'); p(3, 9, 7, 1, '#8a7a6a'); } },
+  'g': { solid: 1, d: p => { p(0, 0, 16, 16, '#9a9aa8'); [[1, '#c08088'], [9, '#8090b0']].forEach(([x, c]) => { p(x, 1, 6, 14, c); p(x + 1, 2, 4, 5, '#d8f0ff'); p(x + 2, 3, 1, 1, '#f8d838'); p(x + 3, 5, 1, 1, '#f890b8'); p(x + 1, 9, 4, 2, '#f8f8f8'); p(x + 2, 12, 2, 2, '#2a1c16'); }); } },
+  ' ': { solid: 1, d: p => p(0, 0, 16, 16, '#000000') },
+};
+const tileImg = {};
+function initTiles() {
+  for (const k in TILES) {
+    const t = TILES[k];
+    tileImg[k] = [mkTile((p, g) => t.d(p, g, 0)), t.anim ? mkTile((p, g) => t.d(p, g, 1)) : null];
+  }  for (const th in THEMES) {
+    themeImg[th] = {}; themeDeco[th] = {};
+    for (const k in THEMES[th].tiles) { const f = THEMES[th].tiles[k]; themeImg[th][k] = [mkTile((p, g) => f(p, g, 0)), THEMES[th].anim && THEMES[th].anim[k] ? mkTile((p, g) => f(p, g, 1)) : null]; }
+    for (const k in THEMES[th].deco || {}) themeDeco[th][k] = THEMES[th].deco[k].map(f => [mkTile((p, g) => f(p, g, 0)), mkTile((p, g) => f(p, g, 1))]);
+    if (THEMES[th].accent) themeDeco[th].accent = THEMES[th].accent.map(f => [mkTile((p, g) => f(p, g, 0)), null]);
+  }
+}
+// field landmarks for this story, plus sand
+Object.assign(TILES, {
+  G: { d: p => { grass(p); p(2, 5, 12, 10, '#c8a070'); p(1, 4, 14, 2, '#5a3418'); p(6, 10, 4, 5, '#3a2410'); p(3, 7, 2, 2, '#78d8f8'); p(11, 7, 2, 2, '#78d8f8'); p(7, 0, 2, 4, '#5a3418'); p(6, 2, 4, 3, '#3a78d8'); p(7, 3, 2, 1, '#120c18'); } },
+  L: { d: p => { grass(p); p(2, 4, 12, 11, '#2a2a34'); p(2, 4, 12, 1, '#4a4a5a'); p(4, 6, 8, 2, '#f83848'); p(7, 11, 2, 4, '#120c18'); p(3, 9, 2, 1, '#78d8f8'); p(11, 9, 2, 1, '#f8d838'); } },
+  K: { d: p => { grass(p); p(4, 1, 8, 14, '#6a34a8'); p(4, 1, 8, 1, '#9a6ad8'); [[5, 3], [9, 3], [5, 6], [9, 6], [5, 9], [9, 9]].forEach(([x, y]) => p(x, y, 2, 2, '#f8d838')); p(7, 12, 2, 3, '#120c18'); p(6, 0, 4, 1, '#f890b8'); } },
+  E: { d: p => { grass(p); for (let i = 0; i < 6; i++) p(7 - i, 3 + i, 2 * (i + 1), 1, i % 2 ? '#f8f8f8' : '#3a78d8'); p(2, 9, 12, 6, '#f8f8f8'); p(2, 9, 12, 1, '#3a78d8'); p(7, 11, 2, 4, '#120c18'); p(7, 0, 1, 3, '#4a4a5a'); p(8, 0, 3, 2, '#78d8f8'); } },
+  Z: { d: p => { grass(p); p(2, 5, 12, 10, '#6a6a7a'); p(1, 3, 3, 3, '#6a6a7a'); p(12, 3, 3, 3, '#6a6a7a'); p(6, 1, 4, 4, '#7a7a8a'); [1, 3, 12, 14].forEach(x => p(x, 2, 1, 1, '#6a6a7a')); p(6, 10, 4, 5, '#1a1a26'); p(7, 2, 2, 2, '#2a2a3a'); p(2, 15, 12, 1, '#4a4a5a'); } },
+  s: { d: p => { p(0, 0, 16, 16, '#e8d8a8'); [[2, 3], [9, 6], [13, 12], [5, 11], [11, 2]].forEach(([x, y]) => p(x, y, 1, 1, '#c8b888')); } },
+});
+// per-dungeon looks: replacement floor/wall tiles plus occasional decorated variants
+// calm building face: one colour per block, a regular grid of windows
+
+function akibaBldg(p, base, shade) { p(0, 0, 16, 16, base); p(0, 15, 16, 1, shade); [[2, 2], [9, 2], [2, 9], [9, 9]].forEach(([x, y]) => { p(x, y, 5, 4, '#56606e'); p(x, y, 5, 1, '#7a8494'); }); }
+function checker(p, a, b, n = 8) { for (let y = 0; y < 16; y += n) for (let x = 0; x < 16; x += n) p(x, y, n, n, ((x + y) / n) % 2 ? b : a); }
+const THEMES = {
+  akiba: {
+    rate: { T: 1 }, block: 3,
+    tiles: {
+      '.': p => { p(0, 0, 16, 16, '#bdb6ac'); p(0, 7, 16, 1, '#ada69c'); p(0, 15, 16, 1, '#ada69c'); p(7, 0, 1, 7, '#ada69c'); p(15, 8, 1, 7, '#ada69c'); },
+      ',': p => { p(0, 0, 16, 16, '#9a968e'); p(1, 1, 14, 14, '#6a5038'); [[3, 3, '#f7d4e2'], [9, 4, '#f4f0ea'], [5, 9, '#f4f0ea'], [11, 10, '#f7d4e2']].forEach(([x, y, c]) => { p(x - 1, y + 1, 4, 2, '#5a8a5a'); p(x, y, 2, 2, c); }); },
+      '=': p => { p(0, 0, 16, 16, '#6a6a70'); p(0, 0, 16, 1, '#747479'); },
+      T: p => akibaBldg(p, '#8e8c92', '#76747c'),
+    },
+    deco: {
+      T: [p => akibaBldg(p, '#8e8c92', '#76747c'), p => akibaBldg(p, '#a89e90', '#8e8476'), p => akibaBldg(p, '#848a96', '#6c7280')],
+    },
+    // occasional small pale-pink shop sign on a building
+    accent: [p => { akibaBldg(p, '#8e8c92', '#76747c'); p(2, 1, 12, 5, '#f4f0ea'); p(2, 1, 12, 1, '#e8b4c8'); p(4, 3, 8, 1, '#a07888'); }],
+  },
+  // オチャノミズ楽器街: wooden floors, cream walls hung with guitars, racks of instruments
+  gakki: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#9a6a3a'); [3, 7, 11, 15].forEach(y => p(0, y, 16, 1, '#7a4a20')); p(5, 0, 1, 3, '#7a4a20'); p(12, 4, 1, 3, '#7a4a20'); p(3, 8, 1, 3, '#7a4a20'); p(10, 12, 1, 3, '#7a4a20'); },
+      W: p => { p(0, 0, 16, 16, '#e8dcc4'); p(0, 0, 16, 1, '#fff6e4'); p(0, 11, 16, 5, '#7a4a20'); p(0, 11, 16, 1, '#c8904a'); },
+      h: p => { p(0, 0, 16, 16, '#9a6a3a'); p(0, 13, 16, 3, '#5a3418'); [[1, '#3a78d8'], [6, '#d83838'], [11, '#f8d838']].forEach(([x, c]) => { p(x + 1, 1, 1, 6, '#5a3418'); p(x, 7, 4, 6, c); p(x + 1, 6, 2, 1, c); p(x + 1, 9, 2, 2, '#120c18'); }); },
+    },
+    deco: {
+      W: [p => { THEMES.gakki.tiles.W(p); p(7, 1, 1, 5, '#5a3418'); p(5, 6, 5, 5, '#c87a30'); p(6, 5, 3, 1, '#c87a30'); p(6, 8, 2, 1, '#120c18'); },
+        p => { THEMES.gakki.tiles.W(p); p(3, 2, 10, 7, '#d83838'); p(4, 4, 8, 1, '#f8f8f8'); p(4, 6, 6, 1, '#f8f8f8'); },
+        p => { THEMES.gakki.tiles.W(p); p(8, 1, 1, 5, '#5a3418'); p(6, 6, 5, 5, '#3a78d8'); p(7, 5, 3, 1, '#3a78d8'); p(7, 8, 2, 1, '#120c18'); }],
+    },
+  },
+  // シモキタ: a basement live house, black walls covered in stickers and flyers
+  live: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#3a3a44'); p(3, 4, 2, 1, '#4a4a56'); p(11, 10, 3, 1, '#2c2c34'); p(7, 13, 1, 1, '#4a4a56'); },
+      W: p => { p(0, 0, 16, 16, '#1a1a22'); p(0, 15, 16, 1, '#0a0a10'); p(0, 7, 16, 1, '#14141a'); p(5, 0, 1, 7, '#14141a'); p(12, 8, 1, 7, '#14141a'); },
+      k: p => { p(0, 0, 16, 16, '#120c18'); p(1, 2, 6, 12, '#2a2a34'); p(9, 2, 6, 12, '#2a2a34'); p(2, 3, 4, 4, '#4a4a56'); p(10, 3, 4, 4, '#4a4a56'); p(2, 8, 4, 5, '#3a3a44'); p(10, 8, 4, 5, '#3a3a44'); p(0, 14, 16, 2, '#5a3418'); },
+    },
+    deco: {
+      W: [p => { THEMES.live.tiles.W(p); p(2, 3, 3, 2, '#f8d838'); p(9, 6, 4, 3, '#f83848'); p(4, 10, 3, 3, '#78d8f8'); p(12, 12, 2, 2, '#f8f8f8'); },
+        p => { THEMES.live.tiles.W(p); p(3, 1, 10, 12, '#f8f8f0'); p(4, 2, 8, 5, '#3a78d8'); p(4, 8, 8, 1, '#120c18'); p(4, 10, 6, 1, '#120c18'); },
+        (p, g, f) => { THEMES.live.tiles.W(p); const c = f ? '#f83848' : '#8a1c24'; p(1, 4, 14, 8, '#0a0a10'); p(2, 5, 1, 6, c); p(2, 10, 3, 1, c); p(6, 5, 1, 6, c); p(8, 5, 1, 5, c); p(9, 10, 1, 1, c); p(10, 5, 1, 5, c); p(12, 5, 3, 1, c); p(12, 5, 1, 6, c); p(12, 7, 2, 1, c); p(12, 10, 3, 1, c); }],
+    },
+  },
+  // カラオケタワー: purple carpets, rows of room doors, neon microphones
+  karaoke: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#3a1c5a'); [[2, 2], [10, 4], [6, 9], [13, 12], [3, 13]].forEach(([x, y]) => p(x, y, 1, 1, '#f8d838')); p(8, 1, 1, 1, '#78d8f8'); },
+      W: p => { p(0, 0, 16, 16, '#5a2a7a'); p(0, 0, 16, 1, '#8a5aa8'); p(0, 15, 16, 1, '#2a0e3a'); p(0, 7, 16, 1, '#4a1a6a'); },
+    },
+    deco: {
+      W: [p => { THEMES.karaoke.tiles.W(p); p(4, 2, 8, 13, '#2a1a1a'); p(5, 3, 6, 12, '#8a5a3a'); p(6, 4, 4, 4, '#78d8f8'); p(9, 10, 1, 1, '#f8d838'); },
+        (p, g, f) => { THEMES.karaoke.tiles.W(p); const c = f ? '#f890b8' : '#a04870'; p(6, 2, 4, 4, c); p(7, 6, 2, 5, c); p(5, 11, 6, 1, c); }],
+    },
+  },
+  // 海辺フェス: trampled grass, white fences, food stalls and the main stage
+  fes: {
+    tiles: {
+      x: p => { p(0, 0, 16, 16, '#7ab84a'); [[2, 3], [9, 1], [12, 8], [5, 11], [14, 13]].forEach(([x, y]) => p(x, y, 2, 1, '#5a9a3a')); },
+      W: p => { p(0, 0, 16, 16, '#7ab84a'); p(0, 4, 16, 10, '#e8e8f0'); p(0, 4, 16, 1, '#ffffff'); [1, 5, 9, 13].forEach(x => p(x, 4, 1, 10, '#b8b8c8')); p(0, 13, 16, 1, '#9898a8'); },
+      h: p => { p(0, 0, 16, 16, '#7ab84a'); p(0, 1, 16, 4, '#3a78d8'); [0, 4, 8, 12].forEach(x => p(x + 2, 1, 2, 4, '#f8f8f8')); p(1, 5, 14, 10, '#c8904a'); p(1, 5, 14, 1, '#e8b06a'); p(3, 8, 3, 2, '#f8d838'); p(9, 8, 4, 2, '#d83838'); },
+      k: p => { p(0, 0, 16, 16, '#1a1a2a'); p(0, 12, 16, 4, '#4a4a5a'); p(2, 2, 1, 10, '#9a9aae'); p(13, 2, 1, 10, '#9a9aae'); p(0, 1, 16, 1, '#9a9aae'); p(4, 4, 8, 5, '#2a3a6a'); },
+    },
+    deco: {
+      W: [(p, g, f) => { THEMES.fes.tiles.W(p); p(3, 0, 1, 5, '#4a4a5a'); p(4, 0, 6, 3, f ? '#78d8f8' : '#3a78d8'); },
+        p => { THEMES.fes.tiles.W(p); p(2, 6, 12, 6, '#3a78d8'); p(4, 8, 8, 2, '#f8f8f8'); }],
+    },
+  },
+  // 沈黙の城: grey stone with no colour at all, banners asking for silence
+  castle: {
+    tiles: {
+      x: p => { checker(p, '#4a4a56', '#3a3a46'); p(1, 1, 1, 1, '#5a5a66'); },
+      W: p => { p(0, 0, 16, 16, '#22222c'); p(0, 0, 16, 1, '#5a5a6a'); p(0, 7, 16, 1, '#16161e'); p(3, 0, 1, 7, '#16161e'); p(11, 8, 1, 7, '#16161e'); },
+    },
+    deco: {
+      W: [p => { THEMES.castle.tiles.W(p); p(4, 1, 8, 12, '#3a3a52'); p(4, 1, 8, 1, '#8a9ab8'); p(6, 4, 4, 4, '#e8e8f0'); p(7, 6, 2, 1, '#120c18'); },
+        p => { THEMES.castle.tiles.W(p); p(4, 3, 8, 9, '#2a2a3a'); p(5, 4, 6, 7, '#4a4a5a'); p(7, 6, 2, 3, '#1a1a22'); p(4, 3, 8, 1, '#5a5a6a'); p(3, 2, 1, 1, '#d83838'); p(12, 12, 1, 1, '#d83838'); }],
+    },
+  },
+};
+const themeImg = {}, themeDeco = {};
+
+
+// ------------------------------------------------------------
+//  Data: items, equipment, skills, enemies
+// ------------------------------------------------------------
+const ITEMS = {
+  drink: { name: 'エナドリ', kind: 'hp', v: 30, price: 8 },
+  drink2: { name: '高級エナドリ', kind: 'hp', v: 90, price: 30 },
+  lemon: { name: 'はちみつレモン', kind: 'mp', v: 20, price: 40 },
+  letter: { name: 'ファンレター', kind: 'revive', v: 50, price: 60 },
+};
+// what an item / gear / skill does, shown under menus. A 【tag】 first line says what kind of thing it is.
+function itemInfo(id) {
+  const it = ITEMS[id];
+  if (it.kind === 'revive') return '【どうぐ】1回 つかうと なくなる\nたおれた なかまを HP半分で ふっかつ。\nげんきな なかまなら HPを 50 かいふく。';
+  return `【どうぐ】1回 つかうと なくなる\nひとりの ${it.kind === 'hp' ? 'HP' : 'MP'}を ${it.v} かいふくする。\nいどう中も せんとう中も つかえる。`;
+}
+
+// collected equipment: every piece ever obtained stays in P.ownW / P.ownA
+function ensureOwned() {
+  const w = new Set(P.ownW || []), a = new Set(P.ownA || []);
+  w.add(0); w.add(P.w); a.add(0); a.add(P.a);
+  for (const id in MAPS) for (const c of MAPS[id].chests || []) if (flags.chests && flags.chests[c.id]) { if (c.weapon !== undefined) w.add(c.weapon); if (c.armor !== undefined) a.add(c.armor); }
+  P.ownW = [...w].filter(i => WEAPONS[i]).sort((x, y) => x - y); P.ownA = [...a].filter(i => ARMORS[i]).sort((x, y) => x - y);
+}
+// adds a piece to the collection and equips it only when it is stronger; returns true if equipped
+function gainGear(t, id) {
+  ensureOwned();
+  const own = t === 'w' ? P.ownW : P.ownA; if (!own.includes(id)) { own.push(id); own.sort((x, y) => x - y); }
+  if (t === 'w' ? WEAPONS[id].atk > WEAPONS[P.w].atk : ARMORS[id].def > ARMORS[P.a].def) { if (t === 'w') P.w = id; else P.a = id; return true; }
+  return false;
+}
+async function equipMenu() {
+  ensureOwned();
+  const cat = openMenu({ items: ['ぶき', 'ぼうぐ', 'もどる'], x: 176, y: 40, w: 72 });
+  while (true) {
+    const c = await chooseMenu(cat);
+    if (c === -1 || c === 2) break;
+    while (true) {
+      const t = c === 0 ? 'w' : 'a', ids = t === 'w' ? P.ownW : P.ownA;
+      const items = ids.map(id => { const g = t === 'w' ? WEAPONS[id] : ARMORS[id]; return { label: ((t === 'w' ? P.w : P.a) === id ? 'E ' : '  ') + g.name, right: '+' + (t === 'w' ? g.atk : g.def) }; });
+      const r = await pick({ items, x: 84, y: 40, w: 164, info: i => gearInfo(t, ids[i]) });
+      if (r < 0) break;
+      const id = ids[r], g = t === 'w' ? WEAPONS[id] : ARMORS[id];
+      if ((t === 'w' ? P.w : P.a) === id) continue;
+      if (t === 'w') P.w = id; else P.a = id; sfx('ok');
+      await say(`アオ太は ${g.name}を そうびした！`); closeMsg();
+    }
+  }
+  closeMenu(cat);
+}
+function gearInfo(t, id) {
+  const w = t === 'w', g = w ? WEAPONS[id] : ARMORS[id], cur = w ? WEAPONS[P.w] : ARMORS[P.a];
+  const stat = w ? 'こうげき力' : 'しゅび力', v = w ? g.atk : g.def, cv = w ? cur.atk : cur.def, now = w ? atkOf() : defOf();
+  const last = (w ? P.w : P.a) === id ? 'いま そうびしている。'
+    : v <= cv ? 'いまの そうびの ほうが つよい。'
+    : `${stat} ${now} → ${now - cv + v} にアップ！`;
+  return `【${w ? 'ぶき' : 'ぼうぐ'}】そうびすると ずっと こうか\n${stat} +${v}（いまの そうびは +${cv}）\n${last}`;
+}
+// ヲタクを煽る: lines for any enemy, plus one aimed at what each type is proudest of
+const TAUNTS = [
+  'ライブ中に 腕組みしてる 時点で\n負けてるぞ', 'その声援、 推しには\n1ミリも 届いてないぜ',
+  '曲の 途中で トイレに\n行くタイプだろ', '今日の 推しの 笑顔、\nぜんぶ おれが もらったぞ'];
+const TAUNT_FOR = {
+  noise: '雑音は 雑音でも、 お前は\n誰の 心にも 残らないな',
+  bignoise: 'でかいだけの 音は、\nただの 騒音だ',
+  hanauta: 'その 鼻歌、 サビしか\n合ってないぞ',
+  kabuse: 'お前の コール、\nいつも 半拍 ズレてるぞ',
+  archive: 'アーカイブじゃ、 会場の\n熱気は 届かないぞ',
+  kizai: '機材は 一流、\n腕前は 初心者だな',
+  mimicopy: '耳コピは 完璧。\nで、 オリジナル曲は？',
+  pickthief: 'ピックは 盗めても、\n音は 盗めないぞ',
+  mosh: '押すだけなら\n満員電車でも できるぞ',
+  dive: 'その ダイブ、\nだれも 受け止めてないぞ',
+  uchiage: '打ち上げの 主役は\nお前じゃない',
+  saiten: '100点でも、 だれも\n聞いてないじゃん',
+  micman: 'そろそろ 次の人に\nマイク 渡しなよ',
+  harmo: 'ハモりって、 主旋律が\nいてこそ だぞ',
+  rokuota: '録った 音源、\n一度も 聞き返してないだろ',
+  resale: '定価で 買えた 人の\n笑顔は 売れないぞ',
+  sheet: '場所は 取れても、\n推しの 視線は 取れないぞ',
+  shizuka: 'お前が いちばん\nうるさいぞ',
+  mutek: 'その剣より、 おれの\nペンラの 方が 光ってるぜ',
+  unchiku: 'その知識、 ステージで\n披露したこと ある？',
+  ganari: 'お前の 声しか 聞こえない\nライブ、 楽しいか？',
+  pitch: '点数でしか 音楽を\n聞けないなんて、 さみしいな',
+  rokuon: '録るのに 夢中で、\n本物の ライブ 見てないだろ',
+  mute: '静かに させたいなら、\nまず その マントの 音から 消せよ',
+};
+// who: 'h' アオ太 / 'k' カイリ. Hero skills come with levels, カイリ's with each string won back.
+const SKILLS = [
+  { who: 'h', name: '推しコール', lv: 1, mp: 3, kind: 'heal', pow: [22, 30], text: '「カイリーーっ！」 推しの名を さけんだ！' },
+  { who: 'h', name: 'ヲタクを煽る', lv: 2, mp: 1, kind: 'taunt', mult: 1.1 },
+  { who: 'h', name: 'ペンラ二刀流', lv: 3, mp: 2, kind: 'atk', mult: 1.8, text: '水色と ブルーの ペンラを\nふりぬいた！' },
+  { who: 'h', name: 'ハンドクラップ', lv: 5, mp: 2, kind: 'clap' },
+  { who: 'h', name: 'ヲタ芸ロマンス', lv: 7, mp: 5, kind: 'atk', mult: 2.6, text: 'ロマンスを うった！' },
+  { who: 'h', name: '全力コール', lv: 9, mp: 6, kind: 'healAll', pow: [50, 64], text: '腹の 底から 全力で コールした！' },
+  { who: 'h', name: '推しへの愛', lv: 12, mp: 10, kind: 'atk', mult: 4, text: '推しへの 愛が ばくはつした！' },
+  { who: 'k', name: 'ストローク', mp: 2, kind: 'atk', mult: 1.6, text: 'ギターを 力強く かき鳴らした！' },
+  { who: 'k', name: 'アルペジオ', flag: 's1', mp: 4, kind: 'healAll', pow: [24, 32], text: 'やさしい アルペジオを 奏でた♪' },
+  { who: 'k', name: 'パワーコード', flag: 's2', mp: 5, kind: 'atk', mult: 2.7, text: '歪んだ パワーコードを\nひびかせた！' },
+  { who: 'k', name: 'カッティング', flag: 's3', mp: 6, kind: 'multi', mult: 0.8, hits: 4, text: 'キレのある カッティング！' },
+  { who: 'k', name: 'バラード', flag: 's4', mp: 9, kind: 'healAll', pow: [80, 100], cure: 1, text: 'しずかな バラードを 弾いた…♪' },
+  { who: 'k', name: '蒼のメロディ', flag: 'voice', mp: 14, kind: 'melody', mult: 5, text: 'ギターを 鳴らし、 歌った！\n「──♪」' },
+];
+function skillInfo(sk) {
+  if (sk.kind === 'taunt') return '【こうげき】MP 1・せんとう中だけ\nヲタクを 煽って ダメージ（1.1倍）\n50%で 1ターン 行動不能（ボスは25%）';
+  if (sk.kind === 'clap') return '【ほじょ】MP 2・せんとう中だけ\n手拍子で リズムを きざみ、 カイリの\nつぎの 演奏が 1.5倍に なる';
+  if (sk.kind === 'heal') return `【かいふく】MP ${sk.mp} を つかう\nひとりの HPを やく ${Math.round((sk.pow[0] + sk.pow[1]) / 2 + P.lv)} かいふく。\nいどう中も せんとう中も つかえる。`;
+  if (sk.kind === 'healAll') return `【かいふく】MP ${sk.mp} を つかう\nみんなの HPを やく ${Math.round((sk.pow[0] + sk.pow[1]) / 2 + P.lv)} かいふく。\n${sk.cure ? '封印や 弱体も なおす。 ' : ''}いどう中も つかえる。`;
+  if (sk.kind === 'multi') return `【こうげき】MP ${sk.mp} を つかう\n${sk.hits}回 れんぞくで こうげき\n（1回 やく ${sk.mult}倍）。 せんとう中だけ。`;
+  if (sk.kind === 'melody') return `【ひっさつ】MP ${sk.mp} を つかう\nダメージ やく ${sk.mult}倍の こうげきと、\nみんなの HPを 半分 かいふく。`;
+  return `【こうげき】MP ${sk.mp} を つかう\nふつうの こうげきより つよい\n（ダメージ やく ${sk.mult}倍）。 せんとう中だけ。`;
+}
+const WEAPONS = [
+  { name: 'ふつうのペンラ', atk: 2 },
+  { name: '水色ペンラ', atk: 6, price: 50 },
+  { name: 'ブルーペンラ', atk: 11, price: 180 },
+  { name: '蒼のキンブレ', atk: 18, price: 450 },
+  { name: 'フェス限定ペンラ', atk: 24, price: 800 },
+  { name: '伝説の水色サイリウム', atk: 32 },
+];
+const ARMORS = [
+  { name: 'Tシャツ', def: 1 },
+  { name: 'カイリT', def: 4, price: 40 },
+  { name: '水色ハッピ', def: 9, price: 150 },
+  { name: '弾き語り公演T', def: 15, price: 400 },
+  { name: 'フェスタオル', def: 20, price: 700 },
+  { name: '蒼の特攻服', def: 27 },
+];
+// moves: [weight, type, mult, text, hits]; flags: last (always acts last)
+const ENEMIES = {
+  noise: { name: 'ノイズ', hp: 22, atk: 6, def: 2, agi: 6, exp: 6, gold: 4,
+    moves: [[3, 'atk'], [1, 'drain', 3, 'ザザッ…… 雑音を ながした！']], drop: ['drink', 0.1] },
+  hanauta: { name: '鼻歌ヲタク', hp: 34, atk: 7, def: 3, agi: 4, exp: 8, gold: 7,
+    moves: [[3, 'atk'], [1, 'mult', 1.4, 'うろ覚えの 鼻歌を\n耳元で 聞かせてきた！']], drop: ['drink', 0.1] },
+  kabuse: { name: 'コール被せヲタ', hp: 48, atk: 10, def: 4, agi: 7, exp: 12, gold: 10,
+    moves: [[3, 'atk'], [1, 'silence', 1, 'バラードに コールを 被せた！']], drop: ['drink', 0.1] },
+  archive: { name: 'アーカイブ勢', hp: 40, atk: 9, def: 4, agi: 12, exp: 11, gold: 9,
+    moves: [[3, 'atk'], [1, 'flee', 0, '「あとで アーカイブで 見るわ」と\n帰っていった！']], drop: ['lemon', 0.06] },
+  kizai: { name: '機材自慢ヲタ', hp: 72, atk: 12, def: 9, agi: 3, exp: 18, gold: 18,
+    moves: [[3, 'atk'], [1, 'fortify', 1.4, '高級エフェクターを 並べた！\n守りが あがった！']], drop: ['drink', 0.12] },
+  mimicopy: { name: '耳コピ自慢', hp: 60, atk: 12, def: 6, agi: 9, exp: 17, gold: 14,
+    moves: [[2, 'atk'], [2, 'copy']], drop: ['lemon', 0.06] },
+  pickthief: { name: 'ピック泥棒', hp: 54, atk: 11, def: 5, agi: 14, exp: 16, gold: 20,
+    moves: [[2, 'atk'], [2, 'steal', 0, '「その ピック、 もらった！」']], drop: ['drink', 0.1] },
+  mosh: { name: 'モッシュ厨', hp: 110, atk: 17, def: 9, agi: 6, exp: 28, gold: 24,
+    moves: [[2, 'atk'], [2, 'all', 0.8, 'モッシュに 巻きこんできた！']], drop: ['drink2', 0.06] },
+  dive: { name: 'ダイブ厨', hp: 100, atk: 19, def: 8, agi: 10, exp: 27, gold: 22,
+    moves: [[3, 'atk'], [1, 'lift', 1.9, '客席に ダイブ！\n上から のしかかってきた！']], drop: ['drink2', 0.06] },
+  uchiage: { name: '打ち上げ強制おじ', short: '打ち上げおじ', hp: 120, atk: 18, def: 10, agi: 5, exp: 30, gold: 30,
+    moves: [[3, 'atk'], [1, 'stun', 0.5, '「打ち上げ 来るよね？」と\nうでを つかんできた！']], drop: ['drink2', 0.08] },
+  saiten: { name: '採点厨', hp: 140, atk: 24, def: 13, agi: 10, exp: 40, gold: 34,
+    moves: [[3, 'atk'], [1, 'heal', 30, '「自己ベスト 100点！」\n自分に 酔っている！']], drop: ['lemon', 0.08] },
+  micman: { name: 'マイク離さないおじさん', short: 'マイクおじさん', hp: 160, atk: 25, def: 14, agi: 6, exp: 44, gold: 38,
+    moves: [[3, 'atk'], [1, 'mic', 0, 'マイクを 離さない！\n3曲 つづけて 歌いだした！']], drop: ['drink2', 0.1] },
+  harmo: { name: 'ハモり厨', hp: 130, atk: 26, def: 12, agi: 12, exp: 42, gold: 30,
+    moves: [[2, 'atk'], [2, 'copy']], drop: ['lemon', 0.08] },
+  rokuota: { name: '無断録音ヲタ', hp: 170, atk: 32, def: 16, agi: 13, exp: 58, gold: 44,
+    moves: [[3, 'atk'], [1, 'expose', 0, '無断録音を 拡散した！']], drop: ['drink2', 0.1] },
+  resale: { name: 'フェスT転売ヤー', short: '転売ヤー', hp: 160, atk: 31, def: 15, agi: 15, exp: 55, gold: 60,
+    moves: [[2, 'atk'], [2, 'steal', 40, '「限定T、 定価の 5倍です」']], drop: ['letter', 0.08] },
+  sheet: { name: '場所取りシート厨', short: 'シート厨', hp: 200, atk: 30, def: 22, agi: 4, exp: 60, gold: 40,
+    moves: [[3, 'atk'], [1, 'guard', 0, 'レジャーシートを 広げて\n場所を 守っている！']], drop: ['drink2', 0.1] },
+  bignoise: { name: 'ビッグノイズ', hp: 230, atk: 40, def: 20, agi: 10, exp: 90, gold: 50,
+    moves: [[3, 'atk'], [1, 'drain', 8, 'ギィィン！ 大雑音を ながした！'], [1, 'all', 0.8, 'ハウリングを おこした！']], drop: ['lemon', 0.1] },
+  shizuka: { name: 'お静かに係', hp: 210, atk: 40, def: 20, agi: 14, exp: 95, gold: 60,
+    moves: [[3, 'atk'], [1, 'silence', 2, '「お静かに 願います」']], drop: ['letter', 0.1] },
+  mutek: { name: 'ミュート騎士', hp: 280, atk: 46, def: 26, agi: 10, exp: 120, gold: 70,
+    moves: [[3, 'atk'], [1, 'mult', 1.5, '消音の 剣で 斬りつけた！'], [1, 'guard', 0, '盾を かまえた！']], drop: ['drink2', 0.12] },
+  unchiku: { name: 'ギター講釈王ウンチク', short: 'ウンチク', hp: 340, atk: 19, def: 11, agi: 6, exp: 160, gold: 150, boss: 1,
+    moves: [[3, 'atk'], [2, 'lecture', 0.6, '「この ギターの 年代はね……」\n講釈が はじまった！'], [1, 'mult', 1.6, 'ヴィンテージで なぐってきた！'], [1, 'heal', 40, '機材を うっとり 磨いて\n元気を とりもどした！']] },
+  ganari: { name: 'コール被せ番長ガナリ', short: 'ガナリ', hp: 560, atk: 27, def: 16, agi: 10, exp: 300, gold: 260, boss: 1,
+    moves: [[3, 'atk'], [2, 'silence', 2, '特大の コールを 被せてきた！'], [1, 'multi', 0.7, 'MIXを 連打してきた！', 3], [1, 'rage', 0, '声を ためている……！']] },
+  pitch: { name: '音程警察ピッチ', short: 'ピッチ', hp: 720, atk: 35, def: 20, agi: 14, exp: 480, gold: 380, boss: 1,
+    moves: [[3, 'atk'], [2, 'judge', 0.85, '「音程 違反です！」\n採点で 減点された！'], [1, 'all', 0.9, '採点ビームを はなった！'], [1, 'heal', 70, '自分の 歌で 100点を 出した！']] },
+  rokuon: { name: '無断録音王ロクオン', short: 'ロクオン', hp: 900, atk: 43, def: 24, agi: 16, exp: 700, gold: 500, boss: 1,
+    moves: [[3, 'atk'], [2, 'copy'], [1, 'all', 1.0, '録音した 歓声を\n大音量で 再生した！'], [1, 'steal', 80, '「グッズ代、 いただきます」']] },
+  mute: { name: '無音魔王ミュート', short: 'ミュート', hp: 1400, atk: 50, def: 30, agi: 18, exp: 0, gold: 0, boss: 1,
+    moves: [[3, 'atk'], [2, 'hush', 0, '「……しずかに。」\n世界から 音が 消えた！'], [2, 'all', 1.0, '無音の 波動を はなった！'], [1, 'mult', 1.8, '静寂の 鎌を ふりおろした！']] },
+};
+
+const EXP_TABLE = [0, 0, 8, 22, 45, 80, 130, 200, 290, 400, 540, 720, 950, 1250, 1600, 2000,
+  2450, 2950, 3500, 4100, 4800, 5600, 6500, 7500, 8600, 9800, 11100, 12500, 14000, 15600, 17300];
+const MAX_LV = 30;
+
+// ------------------------------------------------------------
+//  State
+// ------------------------------------------------------------
+let P, flags;
+function newGame() {
+  P = { name: 'アオ太', lv: 1, hp: 22, mhp: 22, mp: 5, mmp: 5, str: 6, vit: 3, agi: 5, exp: 0, gold: 30, w: 0, a: 0, items: {}, k: { hp: 26, mp: 13 } };
+  flags = { chests: {} };
+}
+// カイリ grows with アオ太's level; every string won back makes her guitar hit harder
+const STRING_FLAGS = ['s1', 's2', 's3', 's4'];
+const strings = () => 2 + STRING_FLAGS.filter(k => flags[k]).length;
+const kStat = () => ({ mhp: 20 + P.lv * 6, mmp: 10 + P.lv * 3, atk: 4 + P.lv * 2 + strings() * 3, def: 2 + Math.floor(P.lv * 1.7), agi: 6 + P.lv });
+// ピッチ's 減点 lowers the whole party's attack for the rest of a battle
+const atkMul = () => battleS.e ? (battleS.atkMul || 1) : 1;
+const atkOf = () => Math.round((P.str + WEAPONS[P.w].atk) * atkMul());
+const defOf = () => P.vit + ARMORS[P.a].def;
+const HERO = { id: 'h', get name() { return P.name; }, get hp() { return P.hp; }, set hp(v) { P.hp = v; }, get mhp() { return P.mhp; },
+  get mp() { return P.mp; }, set mp(v) { P.mp = v; }, get mmp() { return P.mmp; }, get atk() { return atkOf(); }, get def() { return defOf(); } };
+const KAIRI = { id: 'k', name: 'カイリ', get hp() { return P.k.hp; }, set hp(v) { P.k.hp = v; }, get mhp() { return kStat().mhp; },
+  get mp() { return P.k.mp; }, set mp(v) { P.k.mp = v; }, get mmp() { return kStat().mmp; }, get atk() { return Math.round(kStat().atk * atkMul()); }, get def() { return kStat().def; } };
+const party = () => flags.kairi ? [HERO, KAIRI] : [HERO];
+const alive = () => party().filter(m => m.hp > 0);
+function fullHeal() { for (const m of [HERO, KAIRI]) { m.hp = m.mhp; m.mp = m.mmp; } }
+function fixKairi() { P.k = P.k || {}; P.k.hp = clamp(P.k.hp === undefined ? KAIRI.mhp : P.k.hp, 0, KAIRI.mhp); P.k.mp = clamp(P.k.mp === undefined ? KAIRI.mmp : P.k.mp, 0, KAIRI.mmp); }
+const addItem = (id, n = 1) => { P.items[id] = Math.min(9, (P.items[id] || 0) + n); };
+const useItemCount = id => { P.items[id]--; if (P.items[id] <= 0) delete P.items[id]; };
+
+const SAVE_KEY = 'kairi-quest.save.v1';
+// Saves go to up to two places: the player's private slot in the artifact's db (signed-in players
+// who may write it), and this browser's localStorage. Either can be missing, so the game also
+// offers a copyable "ふっかつのじゅもん" that restores progress anywhere.
+const STORE = { local: false, cloud: null, cloudState: 'pending', cloudData: null, cloudJson: '', cloudAt: 0, writing: false, onChange: null };
+function probeLocal() {
+  try { const k = SAVE_KEY + '.probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; } catch (e) { return false; }
+}
+async function initCloud() {
+  const done = state => { STORE.cloudState = state; if (STORE.onChange) STORE.onChange(); };
+  try {
+    if (!window.claude || !window.claude.use) return done('off');
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    const uid = user ? await user.id() : null;
+    if (!db || !uid) return done('off');
+    if (user.can && (await user.can('data.write')) === false) return done('off');
+    STORE.cloud = db.doc('data/users/' + uid + '/save');
+    const snap = await STORE.cloud.get();
+    STORE.cloudData = snap.exists ? snap.data() : null;
+    if (STORE.cloudData) { const { savedAt, ...rest } = STORE.cloudData; STORE.cloudJson = JSON.stringify(rest); }
+    done('on');
+  } catch (e) { done('off'); }
+}
+const saveState = () => ({ P, flags: { ...flags, scene: null }, map: game.mapId, x: player.x, y: player.y, dir: player.dir });
+// returns false only when the game could be kept nowhere
+function saveGame(force, state) {
+  const json = JSON.stringify(state || saveState()), now = Date.now();
+  let ok = false;
+  if (STORE.local) {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...JSON.parse(json), savedAt: now })); ok = true; } catch (e) { STORE.local = false; }
+  }
+  if (STORE.cloudState === 'on') {
+    ok = true;
+    // the cloud copy is written on a change, at most every 20 s while walking, right away when forced
+    if (json !== STORE.cloudJson && !STORE.writing && (force || now - STORE.cloudAt > 20000)) {
+      STORE.writing = true; STORE.cloudAt = now;
+      let w;
+      try { w = STORE.cloud.set({ ...JSON.parse(json), savedAt: now }); } catch (e) { w = Promise.reject(e); }
+      w
+        .then(() => { STORE.cloudJson = json; STORE.cloudData = { ...JSON.parse(json), savedAt: now }; },
+          e => { if (e && ['invalid_argument', 'revoked', 'not_granted', 'capability_disabled', 'capability_removed', 'quota_exceeded'].includes(e.code)) STORE.cloudState = 'off'; })
+        .finally(() => { STORE.writing = false; });
+    }
+  }
+  return ok;
+}
+let lastAuto = 0;
+// quiet save while walking around the map; never mid-event or during the ending
+function autosave(force) {
+  if (game.mode !== 'map' || game.busy || player.mv || flags.scene || !game.map) return;
+  saveGame(force); lastAuto = game.frame;
+}
+window.addEventListener('pagehide', () => autosave(true));
+document.addEventListener('visibilitychange', () => { if (document.hidden) autosave(true); });
+// the newest of the local and cloud copies
+function loadSave() {
+  let local = null;
+  if (STORE.local) try { const t = localStorage.getItem(SAVE_KEY); local = t ? JSON.parse(t) : null; } catch (e) {}
+  const cloud = STORE.cloudState === 'on' ? STORE.cloudData : null;
+  const pick = local && cloud ? ((cloud.savedAt || 0) > (local.savedAt || 0) ? cloud : local) : local || cloud;
+  // the cloud copy can arrive frozen (read-only); the game writes into P.items / flags.chests, so always hand out a fresh copy
+  try { return pick ? JSON.parse(JSON.stringify(pick)) : null; } catch (e) { return null; }
+}
+function saveMode() {
+  if (STORE.cloudState === 'on') return 'アカウントに 自動セーブ';
+  if (STORE.cloudState === 'pending') return 'セーブ先を かくにん中…';
+  if (STORE.local) return 'このブラウザに 自動セーブ';
+  return '自動セーブ不可 → じゅもんを つかってね';
+}
+
+const bitsOf = arr => arr.reduce((a, v, i) => a | (v ? 1 << i : 0), 0);
+const codeSum = t => { let h = 7; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) % 1296; return h.toString(36).padStart(2, '0'); };
+// --- ふっかつのじゅもん: the whole save packed into one copyable code
+const CODE_MAPS = ['town', 'field', 'gakki', 'shimo', 'kara1', 'kara2', 'fes', 'castle1', 'castle2'];
+const CODE_FLAGS = ['show', 'stolen', 'kairi', 'tut', 's1', 's2', 's3', 's4', 'shimoSeen', 'band', 'fesSeen', 'barrierOpen', 'castleSeen', 'voice', 'mute', 'cleared', 'karaSeen', 'gakkiSeen'];
+const CODE_CHESTS = ['g1', 'g2', 'g3', 'm1', 'm2', 'm3', 'k1', 'k2', 'k3', 'f1', 'f2', 'f3', 'c1', 'c2', 'c3', 'c4'];
+const CODE_ITEMS = ['drink', 'drink2', 'lemon', 'letter'];
+function makeCode() {
+  ensureOwned();
+  const a = [2, P.name, P.lv, P.hp, P.mhp, P.mp, P.mmp, P.str, P.vit, P.agi, P.exp, P.gold, P.w, P.a,
+    CODE_ITEMS.map(k => Math.min(9, P.items[k] || 0)).join(''), bitsOf(CODE_FLAGS.map(k => flags[k])),
+    bitsOf(CODE_CHESTS.map(k => flags.chests[k])), CODE_MAPS.indexOf(game.mapId), player.x, player.y, flags.cycle || 0,
+    bitsOf(WEAPONS.map((_, i) => P.ownW.includes(i))), bitsOf(ARMORS.map((_, i) => P.ownA.includes(i))), P.k.hp, P.k.mp];
+  const b = btoa(unescape(encodeURIComponent(JSON.stringify(a)))).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+  return b + codeSum(b);
+}
+// returns a save object, or null when the code is wrong
+function parseCode(text) {
+  try {
+    const t = String(text).replace(/[\s「」]/g, '');
+    const body = t.slice(0, -2);
+    if (t.length < 10 || codeSum(body) !== t.slice(-2)) return null;
+    const a = JSON.parse(decodeURIComponent(escape(atob(body.replace(/-/g, '+').replace(/_/g, '/')))));
+    if (!Array.isArray(a) || a[0] !== 2 || a.length !== 25) return null;
+    const n = a.slice(2, 14);
+    if (typeof a[1] !== 'string' || !n.every(v => Number.isInteger(v) && v >= 0 && v < 1e6)) return null;
+    const [lv, hp, mhp, mp, mmp, str, vit, agi, exp, gold, w, ar] = n;
+    if (lv < 1 || lv > MAX_LV || !WEAPONS[w] || !ARMORS[ar] || !CODE_MAPS[a[17]]) return null;
+    const items = {};
+    String(a[14]).split('').forEach((d, i) => { if (+d > 0 && CODE_ITEMS[i]) items[CODE_ITEMS[i]] = +d; });
+    const fl = { chests: {} };
+    CODE_FLAGS.forEach((k, i) => { if (a[15] & (1 << i)) fl[k] = true; });
+    CODE_CHESTS.forEach((k, i) => { if (a[16] & (1 << i)) fl.chests[k] = 1; });
+    if (Number.isInteger(a[20]) && a[20] > 0 && a[20] < 100) fl.cycle = a[20];
+    const own = (v, list) => Number.isInteger(v) ? list.map((_, i) => i).filter(i => v & (1 << i)) : [];
+    const map = CODE_MAPS[a[17]], m = MAPS[map];
+    const x = clamp(a[18] | 0, 0, m.w - 1), y = clamp(a[19] | 0, 0, m.h - 1);
+    return { P: { name: Array.from(a[1]).slice(0, NAME_MAX).join('') || 'アオ太', lv, hp: Math.min(hp, mhp), mhp, mp: Math.min(mp, mmp), mmp, str, vit, agi, exp, gold, w, a: ar, items,
+      ownW: own(a[21], WEAPONS), ownA: own(a[22], ARMORS), k: { hp: a[23] | 0, mp: a[24] | 0 } }, flags: fl, map, x, y, dir: 'down' };
+  } catch (e) { return null; }
+}
+
+const codePanel = document.getElementById('code-panel');
+const codeText = document.getElementById('code-text');
+const codeLabel = document.getElementById('code-label');
+const codeCopy = document.getElementById('code-copy'), codeOk = document.getElementById('code-ok'), codeClose = document.getElementById('code-close');
+// mode 'show' displays a code to copy; 'input' takes one. Resolves with the entered text or null.
+function openCodePanel(mode, text) {
+  codePanel.hidden = false;
+  codeText.value = text || ''; codeText.readOnly = mode === 'show';
+  codeLabel.textContent = mode === 'show' ? 'ふっかつのじゅもん：コピーして メモしておこう' : 'ふっかつのじゅもんを ここに はりつけてね';
+  codeCopy.hidden = mode !== 'show'; codeOk.hidden = mode === 'show';
+  codeCopy.textContent = 'コピー';
+  return new Promise(res => {
+    const done = v => {
+      codePanel.hidden = true; modal = null;
+      codeCopy.onclick = codeOk.onclick = codeClose.onclick = null;
+      cv.focus(); res(v);
+    };
+    codeOk.onclick = () => done(codeText.value);
+    codeClose.onclick = () => done(null);
+    codeCopy.onclick = () => {
+      const fallback = () => { codeText.focus(); codeText.select(); codeCopy.textContent = '選択したよ'; };
+      try { navigator.clipboard.writeText(codeText.value).then(() => { codeCopy.textContent = 'コピーしました'; }, fallback); } catch (e) { fallback(); }
+    };
+    modal = k => { if (k === 'b' || (k === 'a' && mode === 'show')) done(null); };
+  });
+}
+
+const game = { mode: 'boot', mapId: null, map: null, npcs: [], busy: false, fade: 0, flash: 0, shake: 0, frame: 0, toast: null, fx: [], lights: false, caption: null, steps: 0 };
+const player = { x: 0, y: 0, px: 0, py: 0, dir: 'down', mv: null, spr: 'hero' };
+// カイリ walks one tile behind アオ太 once she has joined
+const FOL = { x: 0, y: 0, px: 0, py: 0, dir: 'down', mv: null };
+const followerOn = () => !!flags.kairi && !flags.scene && !game.flashback && game.mode === 'map';
+function followStep() {
+  if (!flags.kairi || !player.mv) return;
+  const { sx, sy } = player.mv;
+  if (FOL.x === sx && FOL.y === sy) return;
+  if (Math.abs(FOL.x - sx) + Math.abs(FOL.y - sy) > 1) { FOL.x = sx; FOL.y = sy; FOL.px = sx * TS; FOL.py = sy * TS; FOL.mv = null; return; }
+  FOL.dir = sx > FOL.x ? 'right' : sx < FOL.x ? 'left' : sy > FOL.y ? 'down' : 'up';
+  FOL.mv = { tx: sx, ty: sy, sx: FOL.x, sy: FOL.y, t: 0 }; FOL.speed = player.speed;
+}
+
+// ------------------------------------------------------------
+//  Input
+// ------------------------------------------------------------
+const held = { up: 0, down: 0, left: 0, right: 0, a: 0, b: 0 };
+const keyQ = [];
+let modal = null;
+const KEYMAP = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right',
+  W: 'up', S: 'down', A: 'left', D: 'right', z: 'a', Z: 'a', Enter: 'a', ' ': 'a', x: 'b', X: 'b', Escape: 'b', Backspace: 'b' };
+window.addEventListener('keydown', e => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+  const k = KEYMAP[e.key]; if (!k) return;
+  e.preventDefault(); audioWake();
+  if (e.repeat && (k === 'a' || k === 'b')) return;
+  held[k] = 1; keyQ.push(k);
+});
+window.addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k) held[k] = 0; });
+window.addEventListener('blur', () => { for (const k in held) held[k] = 0; });
+document.querySelectorAll('.pad button').forEach(b => {
+  const k = b.dataset.k;
+  const down = e => { e.preventDefault(); audioWake(); held[k] = 1; keyQ.push(k); b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (_) {} };
+  const up = e => { e.preventDefault(); held[k] = 0; b.classList.remove('on'); };
+  b.addEventListener('pointerdown', down);
+  b.addEventListener('pointerup', up);
+  b.addEventListener('pointercancel', up);
+  b.addEventListener('lostpointercapture', up);
+  b.addEventListener('contextmenu', e => e.preventDefault());
+});
+cv.addEventListener('pointerdown', () => { audioWake(); cv.focus(); });
+
+// ------------------------------------------------------------
+//  Sound (WebAudio: pulse-wave chiptune + drums)
+// ------------------------------------------------------------
+const SND = { ctx: null, master: null, on: true, bgm: null, bgmName: null };
+function audioWake() {
+  if (!SND.ctx) {
+    try {
+      SND.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      SND.master = SND.ctx.createGain(); SND.master.gain.value = SND.on ? 0.14 : 0;
+      const comp = SND.ctx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.15;
+      SND.master.connect(comp); comp.connect(SND.ctx.destination);
+      if (SND.pending) { const n = SND.pending; SND.pending = null; playBgm(n); }
+    } catch (e) { SND.ctx = null; }
+  }
+  if (SND.ctx && SND.ctx.state === 'suspended') SND.ctx.resume();
+}
+const NOTE_IDX = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function nf(n) {
+  const m = /^([A-G])(#?)(\d)$/.exec(n); if (!m) return 0;
+  const midi = NOTE_IDX[m[1]] + (m[2] ? 1 : 0) + (+m[3] + 1) * 12;
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+function tone(f, t0, d, type = 'square', v = 0.6, dest) {
+  const c = SND.ctx; if (!c || !f) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t0);
+  g.gain.setValueAtTime(v, t0); g.gain.setValueAtTime(v, t0 + d * 0.6); g.gain.exponentialRampToValueAtTime(0.0008, t0 + d);
+  o.connect(g); g.connect(dest || SND.master); o.start(t0); o.stop(t0 + d + 0.03);
+}
+function noise(t0, d, v = 0.5) {
+  const c = SND.ctx; if (!c) return;
+  const len = Math.floor(c.sampleRate * d), buf = c.createBuffer(1, len, c.sampleRate), data = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = c.createBufferSource(), g = c.createGain(); s.buffer = buf; g.gain.value = v; s.connect(g); g.connect(SND.master); s.start(t0);
+}
+function sfx(name) {
+  try { sfxRaw(name); } catch (e) { console.error(e); }
+}
+function sfxRaw(name) {
+  const c = SND.ctx; if (!c || !SND.on) return; const t = c.currentTime + 0.005;
+  switch (name) {
+    case 'cur': tone(1320, t, 0.035, 'square', 0.25); break;
+    case 'ok': tone(880, t, 0.05, 'square', 0.3); tone(1320, t + 0.05, 0.07, 'square', 0.3); break;
+    case 'ng': tone(220, t, 0.12, 'square', 0.3); break;
+    case 'tick': tone(1760, t, 0.012, 'square', 0.08); break;
+    case 'bump': tone(110, t, 0.06, 'square', 0.3); break;
+    case 'hit': noise(t, 0.12, 0.6); tone(330, t, 0.08, 'square', 0.3); break;
+    case 'crit': noise(t, 0.2, 0.8); tone(660, t, 0.06); tone(990, t + 0.06, 0.1); break;
+    case 'hurt': noise(t, 0.18, 0.7); tone(160, t, 0.16, 'square', 0.4); break;
+    case 'miss': tone(500, t, 0.05, 'triangle', 0.4); tone(400, t + 0.05, 0.05, 'triangle', 0.4); break;
+    case 'heal': [660, 880, 1100, 1320].forEach((f, i) => tone(f, t + i * 0.05, 0.08, 'triangle', 0.5)); break;
+    case 'skill': [523, 784, 1047, 784, 1047, 1568].forEach((f, i) => tone(f, t + i * 0.04, 0.06, 'square', 0.25)); break;
+    case 'enc': [196, 262, 330, 392, 523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.035, 0.05, 'square', 0.3)); break;
+    case 'door': tone(392, t, 0.06, 'square', 0.3); tone(523, t + 0.07, 0.08, 'square', 0.3); break;
+    case 'clap': noise(t, 0.05, 0.55); tone(1760, t, 0.02, 'square', 0.12); break;
+    case 'run': [800, 600, 400, 300].forEach((f, i) => tone(f, t + i * 0.04, 0.05, 'triangle', 0.4)); break;
+  }
+}
+// --- instruments: pulse waves with duty cycles (like the PC-88/FC sound chips), detune, vibrato, drums
+const INST = {
+  lead: { wave: 'p25', vol: 0.2, decay: 0.35, sus: 0.72, vib: 0.007, det: 8 },
+  lead2: { wave: 'p50', vol: 0.15, decay: 0.3, sus: 0.65, vib: 0.005 },
+  harm: { wave: 'p12', vol: 0.075, decay: 0.6, sus: 0.55 },
+  arp: { wave: 'p12', vol: 0.05, decay: 0.07, sus: 0.25 },
+  bass: { wave: 'p50', vol: 0.3, decay: 0.1, sus: 0.5, lp: 650 },
+  tri: { wave: 'triangle', vol: 0.5 },
+  drum: { drum: 1 },
+};
+function pulseWave(duty) {
+  const n = 48, re = new Float32Array(n), im = new Float32Array(n);
+  for (let k = 1; k < n; k++) im[k] = (2 / (k * Math.PI)) * Math.sin(k * Math.PI * duty);
+  return SND.ctx.createPeriodicWave(re, im);
+}
+function voice(f, t0, d, ins, dest) {
+  const c = SND.ctx; if (!c || !f) return;
+  if (!SND.waves) SND.waves = { p12: pulseWave(0.125), p25: pulseWave(0.25), p50: pulseWave(0.5) };
+  const g = c.createGain(), v = ins.vol, sus = v * (ins.sus === undefined ? 1 : ins.sus), end = t0 + d;
+  g.gain.setValueAtTime(0, t0);
+  g.gain.linearRampToValueAtTime(v, t0 + 0.006);
+  if (ins.decay) g.gain.setTargetAtTime(sus, t0 + 0.006, ins.decay / 3);
+  g.gain.setTargetAtTime(0, Math.max(t0 + 0.01, end - 0.015), 0.02);
+  let out = g;
+  if (ins.lp) { const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = ins.lp; fl.Q.value = 2; g.connect(fl); out = fl; }
+  out.connect(dest);
+  const oscs = [c.createOscillator()];
+  if (ins.det) { const o2 = c.createOscillator(); o2.detune.value = ins.det; oscs.push(o2); }
+  let lfo = null;
+  if (ins.vib && d > 0.25) {
+    lfo = c.createOscillator(); lfo.frequency.value = 5.5;
+    const lg = c.createGain(); lg.gain.setValueAtTime(0, t0); lg.gain.linearRampToValueAtTime(f * ins.vib, t0 + Math.min(0.25, d * 0.6));
+    lfo.connect(lg); oscs.forEach(o => lg.connect(o.frequency)); lfo.start(t0); lfo.stop(end + 0.12);
+  }
+  for (const o of oscs) {
+    if (SND.waves[ins.wave]) o.setPeriodicWave(SND.waves[ins.wave]); else o.type = ins.wave;
+    o.frequency.setValueAtTime(f, t0); o.connect(g); o.start(t0); o.stop(end + 0.12);
+  }
+}
+const DRUM_LEVEL = 1.9;
+function drumHit(kind, t0, dest) {
+  const c = SND.ctx; if (!c) return;
+  if (!SND.noiseBuf) {
+    const b = c.createBuffer(1, c.sampleRate, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    SND.noiseBuf = b;
+  }
+  const env = (node, v, len) => { const g = c.createGain(); g.gain.setValueAtTime(v * DRUM_LEVEL, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + len); node.connect(g); g.connect(dest); };
+  const nz = (type, freq, v, len) => {
+    const s = c.createBufferSource(); s.buffer = SND.noiseBuf;
+    const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = freq; s.connect(fl);
+    env(fl, v, len); s.start(t0, Math.random() * 0.5); s.stop(t0 + len + 0.02);
+  };
+  if (kind === 'K') {
+    const o = c.createOscillator(); o.frequency.setValueAtTime(150, t0); o.frequency.exponentialRampToValueAtTime(42, t0 + 0.12);
+    env(o, 1, 0.22); o.start(t0); o.stop(t0 + 0.24);
+    nz('highpass', 3000, 0.35, 0.012); // beater click for punch
+  } else if (kind === 'S') {
+    nz('bandpass', 1700, 0.7, 0.16);
+    const o = c.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(200, t0); o.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
+    env(o, 0.45, 0.09); o.start(t0); o.stop(t0 + 0.11);
+  } else if (kind === 'H') nz('highpass', 7000, 0.2, 0.045);
+  else if (kind === 'O') nz('highpass', 6000, 0.2, 0.2);
+}
+// song-writing helpers: rep repeats a phrase; bass8 pumps a root in octaves for one bar; arp16 is a 16th-note arpeggio bar
+const rep = (str, n) => Array(n).fill(str).join(' ');
+const bass8 = (n, lo, hi) => `${n}${lo} ${n}${lo} ${n}${hi} ${n}${lo} ${n}${lo} ${n}${hi} ${n}${lo} ${n}${hi}`;
+const arp16 = (a, b, c) => rep(`${a}:0.5 ${b}:0.5 ${c}:0.5 ${b}:0.5`, 4);
+const CH = {
+  Am: ['A', 1, 2, 'A4', 'C5', 'E5'], F: ['F', 1, 2, 'F4', 'A4', 'C5'], C: ['C', 2, 3, 'C5', 'E5', 'G5'], G: ['G', 1, 2, 'G4', 'B4', 'D5'],
+  E: ['E', 1, 2, 'E4', 'G#4', 'B4'], Em: ['E', 1, 2, 'E4', 'G4', 'B4'], D: ['D', 2, 3, 'D5', 'F#5', 'A5'], A: ['A', 1, 2, 'A4', 'C#5', 'E5'],
+  Bm: ['B', 1, 2, 'B4', 'D5', 'F#5'], 'F#m': ['F#', 1, 2, 'F#4', 'A4', 'C#5'],
+};
+const arpOf = prog => prog.map(k => arp16(CH[k][3], CH[k][4], CH[k][5])).join(' ');
+const bassOf = prog => prog.map(k => bass8(CH[k][0], CH[k][1], CH[k][2])).join(' ');
+// 「蒼のメロディ」: カイリ's song — title, the theater show, the barrier session and the ending
+const AOI_PROG = ['D', 'A', 'Bm', 'G', 'D', 'A', 'G', 'A', 'Bm', 'F#m', 'G', 'A', 'D', 'A', 'G', 'D'];
+const AOI_MEL = [
+  'F#5:2 A5:2 D6:3 C#6', 'B5:2 A5:2 E5:4', 'F#5:2 B5:2 A5:2 F#5:2', 'G5:3 F#5 E5:4',
+  'F#5:2 A5:2 D6:3 E6', 'C#6:2 B5:2 A5:4', 'B5:2 A5:2 G5:2 E5:2', 'A5:6 -:2',
+  'D6:2 C#6:2 B5:2 A5:2', 'A5:3 F#5 C#6:4', 'B5:2 A5:2 G5:2 B5:2', 'A5:4 E5:4',
+  'F#5:2 A5:2 D6:4', 'E6:2 D6:2 C#6:4', 'B5:2 D6:2 A5:2 C#6:2', 'D6:8'];
+const AOI_HARM = ['F#4', 'E4', 'D4', 'D4', 'F#4', 'E4', 'D4', 'C#4', 'D4', 'C#4', 'D4', 'C#4', 'F#4', 'E4', 'D4', 'F#4'].map(n => n + ':8');
+const aoi = (bars, once) => ({ bpm: 112, once, tr: [
+  ['lead', AOI_MEL.slice(0, bars).join(' ')],
+  ['harm', AOI_HARM.slice(0, bars).join(' ')],
+  ['arp', arpOf(AOI_PROG.slice(0, bars))],
+  ['bass', bassOf(AOI_PROG.slice(0, bars))],
+  ['drum', rep('K H S H', bars * 2)]] });
+// 「路上の 青空」: the street-live song
+const BUSK_PROG = ['G', 'C', 'D', 'G', 'Em', 'C', 'D', 'G'];
+const BUSK_MEL = ['D5:2 G5:2 B5:2 G5:2', 'E5:2 G5:2 C6:2 B5:2', 'A5:2 F#5:2 D5:2 F#5:2', 'G5:4 B5:2 D6:2',
+  'E6:2 D6:2 B5:2 G5:2', 'C6:2 B5:2 A5:2 G5:2', 'A5:2 B5:2 C6:2 A5:2', 'G5:6 -:2'];
+// 「蒼の旅路」: field theme. Each track needs a number of strings back before it plays (need)
+const FIELD_PROG = ['Am', 'F', 'C', 'G', 'Am', 'F', 'G', 'E', 'F', 'G', 'Em', 'Am', 'F', 'G', 'E', 'E'];
+const FIELD_MELODY = [
+  'E5:2 A5:2 B5:2 C6:2', 'C6:3 B5 A5:4', 'G5:2 E5:2 G5:2 C6:2', 'B5:3 A5 G5:4',
+  'A5:2 C6:2 E6:3 D6', 'C6:2 A5:2 F5:4', 'G5:2 B5:2 D6:2 B5:2', 'G#5:6 E5:2',
+  'F5:2 A5:2 C6:4', 'D6:2 C6:2 B5:4', 'B5:2 G5:2 E5:2 G5:2', 'A5:6 -:2',
+  'C6:2 A5:2 F6:3 E6', 'D6:2 B5:2 G5:4', 'G#5:2 B5:2 E6:2 D6:2', 'E6:4 -:2 E5 G#5'];
+const FIELD_HARM = ['C5', 'A4', 'E4', 'D4', 'C5', 'A4', 'B4', 'G#4', 'A4', 'B4', 'G4', 'A4', 'C5', 'B4', 'G#4', 'B4'].map(n => n + ':8');
+const ROCK = 'K H S H K K S H', FILL = 'K H S H S:0.5 S:0.5 S:0.5 S:0.5 S S';
+const SONGS = {
+  title: aoi(16),
+  aoi: aoi(16),
+  aoiS: aoi(16, 1),
+  aoi1: aoi(4, 1),
+  busk: { bpm: 132, once: 1, tr: [
+    ['lead', [...BUSK_MEL, ...BUSK_MEL.slice(0, 7), 'G5:2 D6:2 G6:4'].join(' ')],
+    ['arp', arpOf([...BUSK_PROG, ...BUSK_PROG])],
+    ['bass', bassOf([...BUSK_PROG, ...BUSK_PROG])],
+    ['drum', [rep(ROCK, 7), FILL, rep(ROCK, 7), FILL].join(' ')]] },
+  town: { bpm: 140, tr: [
+    ['lead2', 'C5 E5 G5 E5 F5 A5 G5:2 E5 G5 C6 G5 A5:2 G5:2 F5 E5 D5 E5 F5 D5 G4:2 C5 E5 D5 B4 C5:4', 2],
+    ['tri', 'C3:2 G3:2 F3:2 C3:2 C3:2 E3:2 F3:2 C3:2 D3:2 A3:2 G3:2 B2:2 C3:2 G2:2 C3:4'],
+    ['drum', rep('K H S H', 8), 1]] },
+  field: { bpm: 150, tr: [
+    ['lead', FIELD_MELODY.join(' '), 4],
+    ['harm', FIELD_HARM.join(' '), 2],
+    ['arp', arpOf(FIELD_PROG), 3],
+    ['bass', bassOf(FIELD_PROG)],
+    ['drum', [rep(ROCK, 7), FILL, rep(ROCK, 7), FILL].join(' '), 1]] },
+  dungeon: { bpm: 100, tr: [
+    ['lead2', 'A4:2 C5:2 E5:2 D5:2 C5:2 B4:2 A4:4 F4:2 A4:2 C5:2 B4:2 G#4:4 E4:4'],
+    ['tri', 'A2:4 A2:4 F2:4 F2:2 E2:2 D2:4 D2:4 E2:4 E2:4'],
+    ['drum', rep('K - - - H - - -', 4)]] },
+  battle: { bpm: 170, tr: [
+    ['lead', 'E5 E5 G5 E5 A5 G5 E5 D5 E5 E5 G5 E5 B5:2 A5:2 C6 B5 A5 G5 A5 G5 E5 D5 E5:2 G5:2 E5:4'],
+    ['bass', 'A2 A3 A2 A3 A2 A3 A2 A3 F2 F3 F2 F3 G2 G3 G2 G3 A2 A3 A2 A3 F2 F3 F2 F3 G2 G3 G2 G3 E2 E3 E2 E3'],
+    ['drum', [rep(ROCK, 3), FILL].join(' ')]] },
+  boss: { bpm: 180, tr: [
+    ['lead', 'A4 C5 E5 A5 G#5 E5 B4 G#4 A4 C5 E5 A5 B5:2 C6:2 D6 C6 B5 A5 G#5 A5 B5 G#5 E5:4 -:2 E5 G#5'],
+    ['arp', rep(arp16('A4', 'C5', 'E5'), 2) + ' ' + arp16('D5', 'F5', 'A5') + ' ' + arp16('E5', 'G#5', 'B5')],
+    ['bass', 'A2 A2 A3 A2 E2 E2 E3 E2 A2 A2 A3 A2 F2 F2 G2 G2 D2 D2 D3 D2 E2 E2 E3 E2 E2 E2 E3 E2 E2 E2 G#2 B2'],
+    ['drum', [rep('K K S K K K S H', 3), FILL].join(' ')]] },
+  final: { bpm: 176, tr: [
+    ['lead', 'E5 G5 B5 E6 D#6 B5 F#5 B5 E5 G5 B5 E6 F#6:2 G6:2 A6 G6 F#6 E6 D#6 E6 F#6 D#6 B5:4 -:2 B5 D#6'],
+    ['arp', rep(arp16('E5', 'G5', 'B5'), 2) + ' ' + arp16('A4', 'C5', 'E5') + ' ' + arp16('B4', 'D#5', 'F#5')],
+    ['bass', 'E2 E2 E3 E2 B1 B1 B2 B1 E2 E2 E3 E2 C2 C2 D2 D2 A1 A1 A2 A1 B1 B1 B2 B1 B1 B1 B2 B1 B1 B1 D#2 F#2'],
+    ['drum', [rep('K K S K K K S H', 3), FILL].join(' ')]] },
+  silence: { bpm: 72, tr: [
+    ['lead2', 'E5:4 -:4 G5:4 -:2 F#5:2 E5:8 -:8 B4:4 -:4 C5:4 -:2 B4:2 A4:8 -:8'],
+    ['tri', 'E2:16 C2:16 A1:16 B1:16']] },
+  win: { bpm: 170, once: 1, tr: [['lead2', 'C5 E5 G5 C6:3 G5 C6:6'], ['tri', 'C3 C3 C3 C3:3 G2 C3:6']] },
+  // level-up fanfare: rising pickup, a held high note, a turn, and a bright resolve
+  lvup: { bpm: 150, once: 1, tr: [
+    ['lead', 'E5 G5 C6 E6:2 D6 C6 D6:2 G5:2 C6:6'],
+    ['harm', 'C5 E5 G5 C6:2 B5 A5 B5:2 D5:2 E5:6'],
+    ['tri', 'C3:3 C3:2 F3:2 G3:4 C3:6'],
+    ['drum', 'K:3 S:2 K:2 S S S S K:6']] },
+  get: { bpm: 150, once: 1, tr: [['lead2', 'C5 D5 E5 G5:2 E5 G5:4'], ['tri', 'C3:4 G2:2 C3:4']] },
+  inn: { bpm: 110, once: 1, tr: [['lead2', 'C5 E5 G5 E5 F5 A5 C6:4 B5 G5 C6:6'], ['tri', 'C3:4 F3:4 G3:2 C3:6']] },
+  lose: { bpm: 90, once: 1, tr: [['lead2', 'E5:2 D#5:2 D5:2 C#5:6'], ['tri', 'A2:2 G#2:2 G2:2 F#2:6']] },
+};
+// how many layers of the town / field music can be heard: the theft leaves only the bass,
+// each string brings one more back, and the voice brings back everything
+const musicLevel = () => !flags || !flags.stolen || flags.voice ? 9 : strings() - 2;
+
+function parseTrack(str, drum) {
+  return str.trim().split(/\s+/).map(tok => {
+    const [n, l] = tok.split(':');
+    return [n === '-' ? 0 : drum ? n : nf(n), +(l || 1)];
+  });
+}
+for (const k in SONGS) SONGS[k].tr = SONGS[k].tr.map(([inst, s, need]) => ({ inst: INST[inst], notes: parseTrack(s, inst === 'drum'), need: need || 0 }));
+function stopBgm() {
+  if (SND.bgm) {
+    clearInterval(SND.bgm.timer);
+    try { SND.bgm.gain.gain.setValueAtTime(0, SND.ctx.currentTime); SND.bgm.gain.disconnect(); SND.bgm.echo.disconnect(); } catch (e) {}
+    SND.bgm = null;
+  }
+}
+function playBgm(name, force) {
+  try { playBgmRaw(name, force); } catch (e) { console.error(e); }
+}
+function playBgmRaw(name, force) {
+  if (!force && name === SND.bgmName && SND.bgm) return;
+  stopBgm(); SND.bgmName = name;
+  if (!name) return;
+  if (!SND.ctx) { SND.pending = name; return; }
+  const song = SONGS[name], c = SND.ctx, gain = c.createGain(); gain.connect(SND.master);
+  // a short echo gives the thin pulse waves some room, like the FM-era soundtracks
+  const delay = c.createDelay(1), fb = c.createGain(), echo = c.createGain();
+  delay.delayTime.value = 60 / song.bpm * 0.75; fb.gain.value = 0.28; echo.gain.value = 0.22;
+  gain.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(echo); echo.connect(SND.master);
+  const step = 60 / song.bpm / 2;
+  const lvl = musicLevel();
+  const tracks = song.tr.filter(t => t.need <= lvl).map(t => ({ ...t, i: 0, next: c.currentTime + 0.06 }));
+  const b = { gain, echo, timer: 0, name };
+  const tick = () => {
+    for (const t of tracks) {
+      while (t.next < c.currentTime + 0.2) {
+        if (t.i >= t.notes.length) { if (song.once) break; t.i = 0; }
+        const [f, l] = t.notes[t.i++];
+        if (f) { if (t.inst.drum) drumHit(f, t.next, gain); else voice(f, t.next, step * l * 0.94, t.inst, gain); }
+        t.next += step * l;
+      }
+    }
+  };
+  const safeTick = () => { try { tick(); } catch (e) { console.error(e); } };
+  safeTick(); b.timer = setInterval(safeTick, 40); SND.bgm = b;
+}
+// one-shot jingle; resolves when finished
+function jingle(name) {
+  const song = SONGS[name];
+  const total = song.tr[0].notes.reduce((a, n) => a + n[1], 0) * 60 / song.bpm / 2;
+  playBgm(name, true);
+  return framesWait(Math.ceil(total * 60) + 6);
+}
+const soundBtn = document.getElementById('sound');
+soundBtn.addEventListener('click', () => {
+  SND.on = !SND.on; audioWake();
+  if (SND.master) SND.master.gain.value = SND.on ? 0.14 : 0;
+  soundBtn.textContent = SND.on ? 'サウンド ON' : 'サウンド OFF';
+  soundBtn.setAttribute('aria-pressed', String(SND.on));
+  cv.focus();
+});
+
+// ------------------------------------------------------------
+//  Async helpers (wait, messages, menus)
+// ------------------------------------------------------------
+const waiters = [];
+const until = fn => new Promise(res => waiters.push({ fn, res }));
+function framesWait(n) { let c = 0; return until(() => ++c >= n); }
+
+const msg = { visible: false, lines: [], arrow: false, x: 8, y: 144, w: 240, h: 76 };
+const menus = [];
+const extraWins = [];
+function wrap(text, maxW) {
+  ctx.font = '12px ' + FONT;
+  const out = [];
+  for (const para of String(text).split('\n')) {
+    let line = '';
+    for (const ch of para) {
+      if (ctx.measureText(line + ch).width > maxW && line && !'、。」』！？…ー）'.includes(ch)) {
+        // break at the last space so words stay whole, like DQ text
+        const sp = line.lastIndexOf(' ');
+        if (ch === ' ') { out.push(line); line = ''; }
+        else if (sp > 0) { out.push(line.slice(0, sp)); line = line.slice(sp + 1) + ch; }
+        else { out.push(line); line = ch; }
+      } else line += ch;
+    }
+    out.push(line);
+  }
+  return out;
+}
+function typeLine(L) {
+  return new Promise(res => {
+    let skip = false;
+    modal = k => { if (k === 'a') skip = true; };
+    waiters.push({ fn: () => {
+      if (skip) L.n = L.t.length;
+      else { L.n = Math.min(L.t.length, L.n + (held.a || held.b ? 2 : 0.8)); if (game.frame % 4 === 0) sfx('tick'); }
+      return L.n >= L.t.length;
+    }, res: () => { modal = null; res(); } });
+  });
+}
+function waitA() {
+  msg.arrow = true;
+  return new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; msg.arrow = false; res(); } }; });
+}
+// battle lines used to scroll on by themselves; now they wait for a tap like any other line,
+// and holding A (or B) fast-forwards through them
+function waitAuto(n) {
+  msg.arrow = true;
+  return new Promise(res => {
+    let done = false, hold = 0;
+    const fin = () => { if (done) return; done = true; msg.arrow = false; if (modal === h) modal = null; res(); };
+    const h = k => { if (k === 'a' || k === 'b') fin(); };
+    modal = h;
+    waiters.push({ fn: () => { hold = held.a || held.b ? hold + 1 : 0; return done || hold >= 12; }, res: fin });
+  });
+}
+// say(text, {append, auto, noWait})
+const named = t => String(t).split('アオ太').join(P ? P.name : 'アオ太');
+async function say(text, o = {}) {
+  text = named(text);
+  msg.visible = true;
+  if (!o.append) msg.lines = [];
+  const ls = wrap(text, msg.w - 20);
+  for (const t of ls) {
+    if (msg.lines.length >= 3) {
+      if (o.append) msg.lines.shift();
+      else { await waitA(); msg.lines = []; }
+    }
+    const L = { t, n: 0 }; msg.lines.push(L);
+    await typeLine(L);
+  }
+  if (o.auto) await waitAuto(o.auto);
+  else if (!o.noWait) await waitA();
+}
+const closeMsg = () => { msg.visible = false; msg.lines = []; };
+
+function openMenu(o) {
+  const m = { items: o.items, x: o.x, y: o.y, w: o.w, idx: o.idx || 0, cancel: o.cancel !== false, title: o.title || null, active: false, lh: o.lh || 16, info: o.info || null };
+  // long lists scroll: show only the rows that fit above the info box (or the screen bottom)
+  const bottom = m.info ? 144 : H - 4;
+  m.rows = Math.max(1, Math.min(m.items.length, Math.floor((bottom - m.y - 12) / m.lh)));
+  m.top = 0; scrollMenu(m);
+  m.h = o.h || (m.rows * m.lh + 12 + (m.title ? 4 : 0));
+  menus.push(m); return m;
+}
+function scrollMenu(m) {
+  if (m.idx < m.top) m.top = m.idx;
+  if (m.idx >= m.top + m.rows) m.top = m.idx - m.rows + 1;
+}
+function chooseMenu(m) {
+  return new Promise(res => {
+    m.active = true;
+    modal = k => {
+      const n = m.items.length;
+      if (k === 'up') { m.idx = (m.idx - 1 + n) % n; scrollMenu(m); sfx('cur'); }
+      else if (k === 'down') { m.idx = (m.idx + 1) % n; scrollMenu(m); sfx('cur'); }
+      else if (k === 'a') {
+        const it = m.items[m.idx];
+        if (it && it.disabled) { sfx('ng'); return; }
+        modal = null; m.active = false; sfx('ok'); res(m.idx);
+      } else if (k === 'b' && m.cancel) { modal = null; m.active = false; sfx('cur'); res(-1); }
+    };
+  });
+}
+const closeMenu = m => { const i = menus.indexOf(m); if (i >= 0) menus.splice(i, 1); };
+async function pick(o) { const m = openMenu(o); const r = await chooseMenu(m); closeMenu(m); return r; }
+async function ask(text, items, o = {}) {
+  await say(text, { noWait: true });
+  const w = o.w || Math.max(64, Math.max(...items.map(s => textW(s))) + 30);
+  return pick({ items, x: o.x !== undefined ? o.x : W - 8 - w, y: o.y !== undefined ? o.y : 144 - items.length * 16 - 16, w, cancel: o.cancel });
+}
+const yesno = text => ask(text, ['はい', 'いいえ']).then(r => r === 0);
+function textW(s) { ctx.font = '12px ' + FONT; return ctx.measureText(typeof s === 'string' ? s : s.label).width; }
+
+const errBox = document.getElementById('err');
+let errShown = 0;
+window.addEventListener('unhandledrejection', ev => reportError(ev.reason));
+function reportError(e) {
+  console.error(e);
+  if (errShown++ > 3) return;
+  errBox.hidden = false;
+  errBox.textContent = '不具合が起きたので 画面を立て直しました。くり返し起きるときは、この文をスクショして教えてください：' + (e && (e.stack || e.message) ? String(e.message || e).slice(0, 160) : String(e));
+}
+// put the screen back into a playable map state after a script failed half-way
+function recoverScreen() {
+  if (game.mode === 'battle') { game.mode = 'map'; battleS.e = null; }
+  game.fade = 0; game.flash = 0; game.shake = 0; game.caption = null; game.lights = false;
+  if (game.map) { try { playBgm(game.map.bgm); } catch (e) {} }
+}
+async function runScript(fn) {
+  game.busy = true;
+  try { await fn(); } catch (e) { reportError(e); recoverScreen(); }
+  finally { closeMsg(); menus.length = 0; extraWins.length = 0; modal = null; game.busy = false; autosave(true); }
+}
+async function fadeOut(n = 12) { for (let i = 1; i <= n; i++) { game.fade = i / n; await framesWait(1); } }
+async function fadeIn(n = 12) { for (let i = n - 1; i >= 0; i--) { game.fade = i / n; await framesWait(1); } }
+async function caption(lines, hold = 0) {
+  closeMsg();
+  game.caption = { lines: (Array.isArray(lines) ? lines : [lines]).map(named), a: 0 };
+  for (let i = 1; i <= 20; i++) { game.caption.a = i / 20; await framesWait(1); }
+  if (hold) await framesWait(hold); else { game.caption.arrow = true; await new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; res(); } }; }); game.caption.arrow = false; }
+  for (let i = 19; i >= 0; i--) { game.caption.a = i / 20; await framesWait(1); }
+  game.caption = null;
+}
+function toast(text) { game.toast = { text, t: 120 }; }
+function burst(x, y, kind = 'heart', n = 8) {
+  for (let i = 0; i < n; i++) game.fx.push({ x: x + rnd(-6, 6), y: y + rnd(-4, 4), vx: (Math.random() - 0.5) * 0.8, vy: -0.4 - Math.random() * 0.7, life: 60 + rnd(0, 40), kind, col: ['#78d8f8', '#3a78d8', '#cdeefc', '#f8f8f8'][i % 4] });
+}
+
+// ------------------------------------------------------------
+//  Maps
+// ------------------------------------------------------------
+const R = (...a) => { let s = ''; for (let i = 0; i < a.length; i += 2) s += a[i].repeat(a[i + 1]); return s; };
+const MAPS = {
+  town: { name: 'アキハバラ', bgm: 'town', fill: 'T', theme: 'akiba', rows: [
+    'TTTTTTTTTTTTTTTTTTTTTTTTTTTT',
+    'T..........................T',
+    'T.#######.....############.T',
+    'T.#bfffv#.....#kkkkkkkkkk#.T',
+    'T.#fffff#.....#cccccccccc#.T',
+    'T.#fffff#.....#cccccccccc#.T',
+    'T.###f###.....#cccccccccc#.T',
+    'T....=........#cccccccccc#.T',
+    'T....=........##SS#cc#SS##.T',
+    'T....===============.......T',
+    'T..........=............gggT',
+    'T,,,.......=..........,,,..T',
+    'T.#PPPPP#..=...##MMMMM##...T',
+    'T.#hhfhh#..=...#ffvfvfv#...T',
+    'T.#fCCCf#..=...#Cffffff#...T',
+    'T.#fffff#..=...#fffffff#...T',
+    'T.###f###..=...####f####...T',
+    'T....=.....=.......=.......T',
+    'T....===============.......T',
+    'T..........=...............T',
+    'TTTTTTTTTTT=TTTTTTTTTTTTTTTT'] },
+  field: { name: 'フィールド', bgm: 'field', fill: '^', bg: 'field', rows: [
+    R('^', 40),
+    R('^', 1, '.', 5, 'T', 3, '.', 8, '^', 3, '.', 8, '~', 11, '^', 1),
+    R('^', 1, '.', 2, 'G', 1, '.', 3, 'T', 2, '.', 8, '^', 2, '.', 3, 'K', 1, '.', 5, '~', 3, '.', 5, '~', 3, '^', 1),
+    R('^', 1, '.', 16, '^', 1, '.', 10, '~', 3, '.', 2, 'Z', 1, '.', 2, '~', 3, '^', 1),
+    R('^', 1, '.', 27, '~', 3, '.', 5, '~', 3, '^', 1),
+    R('^', 1, '.', 5, 'T', 3, '.', 19, '~', 3, '.', 5, '~', 3, '^', 1),
+    R('^', 1, '.', 27, '~', 5, 'B', 1, '~', 5, '^', 1),
+    R('^', 1, '.', 27, '~', 5, 'B', 1, '~', 5, '^', 1),
+    R('^', 1, '.', 27, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '.', 4, 'A', 1, '.', 22, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '.', 3, ',', 3, '.', 21, '~', 2, '.', 3, 'T', 3, '.', 3, '^', 1),
+    R('^', 1, '.', 12, 'T', 4, '.', 11, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '.', 27, 'B', 2, '.', 9, '^', 1),
+    R('^', 1, '~', 4, '.', 23, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '~', 5, '.', 6, '^', 3, '.', 13, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '~', 4, '.', 23, '~', 2, '.', 4, 'E', 1, '.', 4, '^', 1),
+    R('^', 1, '~', 3, '.', 24, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '.', 10, 'L', 1, '.', 16, '~', 2, '.', 9, '^', 1),
+    R('^', 1, '.', 27, '~', 2, '.', 9, '^', 1),
+    R('^', 40)] },
+  gakki: { name: 'オチャノミズ楽器街', bgm: 'dungeon', fill: 'W', bg: 'gakki', theme: 'gakki', rows: [
+    'WWWWWWWWWWWWWWWWWWWW',
+    'WxxxxxWxxxxxxxWxxxxW',
+    'WxhhhxWxxxxxxxWxhhxW',
+    'WxxxxxWWWWxWWWWxxxxW',
+    'WWxWWWWxxxxxxxWWWxWW',
+    'WxxxxxxxhhhhhxxxxxxW',
+    'WxhhhhxxxxxxxxhhhhxW',
+    'WxxxxxxxhhhhhxxxxxxW',
+    'WWWWWWxxxxxxxxWWWWWW',
+    'WxxxxxxxWWWWxxxxxxxW',
+    'WxhhhxxxxxxxxxxhhhxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWWxxWWWWWWWWW',
+    'WWWWWWWWWxWWWWWWWWWW'] },
+  shimo: { name: 'ライブハウス街シモキタ', bgm: 'dungeon', fill: 'W', bg: 'live', theme: 'live', encScale: 1.1, rows: [
+    'WWWWWWWWWWWWWWWWWWWW',
+    'WWWWWWkkkkkkkkWWWWWW',
+    'WxxxWWxxxxxxxxWWxxxW',
+    'WxxxWWxxxxxxxxWWxxxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWxWWWWWWxxWWWWWWxWW',
+    'WxxxxxxxWxxWxxxxxxxW',
+    'WxqqqqxxWxxWxxqqqqxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWxWWWWxWWWWWWW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WxWWWWWWWxxWWWWWWWxW',
+    'WxxxxxxxWxxWxxxxxxxW',
+    'WhhxxxxxWxxWxxxxxhhW',
+    'WWWWWWWWWxWWWWWWWWWW',
+    'WWWWWWWWWxWWWWWWWWWW'] },
+  kara1: { name: 'カラオケタワー 1F', bgm: 'dungeon', fill: 'W', bg: 'karaoke', theme: 'karaoke', encScale: 1.2, rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WxxxxxxWxxxxxxUW',
+    'WxWWWWxWxWWWWWxW',
+    'WxWxxxxxxxxxxWxW',
+    'WxWxWWWWWWWWxWxW',
+    'WxxxWxxxxxxWxxxW',
+    'WWWxWxWWWWxWxWWW',
+    'WxxxxxWxxWxxxxxW',
+    'WxWWWWWxxWWWWWxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWWWWWxxWWWWWWW',
+    'WxxxxxxxxxxxxxxW',
+    'WxxxxxxxxxxxxxxW',
+    'WWWWWWWxWWWWWWWW'] },
+  kara2: { name: 'カラオケタワー 最上階', bgm: 'dungeon', fill: 'W', bg: 'karaoke', theme: 'karaoke', encScale: 1.2, rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WWWWWWxxxxWWWWWW',
+    'WWWWWWxccxWWWWWW',
+    'WxxxxxxccxxxxxxW',
+    'WxrrrrxccxrrrrxW',
+    'WxxxxxxccxxxxxxW',
+    'WxrrrrxccxrrrrxW',
+    'WxxxxxxccxxxxxxW',
+    'WWWWWWxccxWWWWWW',
+    'WxxxxxxxxxxxxxxW',
+    'WdxxxxxxxxxxxxxW',
+    'WWWWWWWWWWWWWWWW'] },
+  fes: { name: '海辺フェス会場', bgm: 'dungeon', fill: 'W', bg: 'fes', theme: 'fes', encScale: 1.25, rows: [
+    'WWWWWWWWWWWWWWWWWWWWWWWW',
+    'WWWWWWWkkkkkkkkkkWWWWWWW',
+    'WxxxxxWxxxxxxxxxxWxxxxxW',
+    'WxhhxxWxxxxxxxxxxWxxhhxW',
+    'WxxxxxWWWWxxxxWWWWxxxxxW',
+    'WxxxxxxxxxxxxxxxxxxxxxxW',
+    'WhhhxxhhhxxxxxxhhhxxhhhW',
+    'WxxxxxxxxxxWWxxxxxxxxxxW',
+    'WxxWWWWWxxxWWxxxWWWWWxxW',
+    'WxxxxxxWxxxxxxxxWxxxxxxW',
+    'WxhhhxxWxxhhhhxxWxxhhhxW',
+    'WxxxxxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWWWWxxWWWWWWWWWWW',
+    'WWWWWWWWWWWxxWWWWWWWWWWW'] },
+  castle1: { name: '沈黙の城', bgm: 'silence', fill: 'W', bg: 'castle', theme: 'castle', encScale: 1.3, rows: [
+    'WWWWWWWWWWWWWWWWWWWW',
+    'WxxxxxxxxWxxxxxxxxUW',
+    'WxWWWWWWxWxWWWWWWWxW',
+    'WxWxxxxWxxxWxxxxxWxW',
+    'WxWxWWxWWWWWxWWWxWxW',
+    'WxxxWxxxxxxxxxxWxxxW',
+    'WWWxWxWWWxxWWWxWxWWW',
+    'WxxxxxWxxxxxxWxxxxxW',
+    'WxWWWWWxWWWWxWWWWWxW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWxxxxWWWWWWWW',
+    'WxxxxxxxxxxxxxxxxxxW',
+    'WWWWWWWWWxxWWWWWWWWW',
+    'WWWWWWWWWxWWWWWWWWWW'] },
+  castle2: { name: '沈黙の城 玉座', bgm: 'silence', fill: 'W', bg: 'castle', theme: 'castle', encScale: 1.3, rows: [
+    'WWWWWWWWWWWWWWWW',
+    'WWWWWWxxxxWWWWWW',
+    'WWWWWWxccxWWWWWW',
+    'WxxxxxxccxxxxxxW',
+    'WxWWWWWccWWWWWxW',
+    'WxWxxxxccxxxxWxW',
+    'WxWxWWWWWWWWxWxW',
+    'WxxxWxxxxxxWxxxW',
+    'WxWWWxWWWWxWWWxW',
+    'WdxxxxxxxxxxxxxW',
+    'WWWWWWWWWWWWWWWW'] },
+};
+
+for (const id in MAPS) {
+  const m = MAPS[id];
+  m.w = Math.max(...m.rows.map(r => r.length)); m.h = m.rows.length;
+  m.rows = m.rows.map(r => r.padEnd(m.w, m.fill));
+  m.npcs = m.npcs || []; m.chests = m.chests || [];
+}
+function tileAt(m, x, y) { if (x < 0 || y < 0 || x >= m.w || y >= m.h) return m.fill; return m.rows[y][x]; }
+// ------------------------------------------------------------
+//  Map logic: actors, movement, interaction
+// ------------------------------------------------------------
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+function setMap(id, x, y, dir) {
+  game.mapId = id; game.map = MAPS[id];
+  player.x = x; player.y = y; player.px = x * TS; player.py = y * TS; player.mv = null; if (dir) player.dir = dir;
+  game.npcs = game.map.npcs.map(d => ({ ...d, x: d.x, y: d.y, px: d.x * TS, py: d.y * TS, hx: d.x, hy: d.y, dir: d.dir || 'down', mv: null, wt: rnd(60, 200) }));
+  game.steps = 0;
+  FOL.x = x; FOL.y = y; FOL.px = x * TS; FOL.py = y * TS; FOL.mv = null; FOL.dir = player.dir;
+  if (game.map.bgm) playBgm(game.map.bgm);
+}
+const npcById = id => game.npcs.find(n => n.id === id);
+const npcVisible = n => game.flashback ? !!n.fb : !n.hidden && (!n.show || n.show());
+function blocked(x, y, self) {
+  const m = game.map;
+  if (x < 0 || y < 0 || x >= m.w || y >= m.h) return true;
+  const t = TILES[tileAt(m, x, y)]; if (!t || t.solid) return true;
+  for (const n of game.npcs) {
+    if (n === self || !npcVisible(n)) continue;
+    if ((n.x === x && n.y === y) || (n.mv && n.mv.tx === x && n.mv.ty === y)) return true;
+  }
+  for (const c of m.chests) if (c.x === x && c.y === y) return true;
+  if (self !== player && ((player.x === x && player.y === y) || (player.mv && player.mv.tx === x && player.mv.ty === y))) return true;
+  return false;
+}
+function startMove(a, dir, force) {
+  a.dir = dir;
+  const [dx, dy] = DIRS[dir]; const tx = a.x + dx, ty = a.y + dy;
+  if (!force && blocked(tx, ty, a)) return false;
+  a.mv = { tx, ty, sx: a.x, sy: a.y, t: 0 };
+  return true;
+}
+function stepActor(a) {
+  if (!a.mv) return false;
+  a.mv.t += a.speed || 2;
+  const k = Math.min(1, a.mv.t / TS);
+  a.px = (a.mv.sx + (a.mv.tx - a.mv.sx) * k) * TS;
+  a.py = (a.mv.sy + (a.mv.ty - a.mv.sy) * k) * TS;
+  if (k >= 1) { a.x = a.mv.tx; a.y = a.mv.ty; a.mv = null; return true; }
+  return false;
+}
+// scripted walk: path string like "UUL"
+async function walk(a, path, speed) {
+  const m = { U: 'up', D: 'down', L: 'left', R: 'right' };
+  closeMsg();
+  for (const ch of path) {
+    if (ch === '.') { await framesWait(10); continue; }
+    a.speed = speed || 1;
+    startMove(a, m[ch], true);
+    await until(() => !a.mv);
+    a.speed = 0;
+  }
+}
+function face(a, dir) { a.dir = dir; }
+
+function updateMap() {
+  // npc wander
+  if (!game.busy) for (const n of game.npcs) {
+    if (!n.wander || n.mv || !npcVisible(n)) continue;
+    if (--n.wt > 0) continue;
+    n.wt = rnd(60, 220);
+    const ds = Object.keys(DIRS), d = ds[rnd(0, 3)], [dx, dy] = DIRS[d];
+    if (Math.abs(n.x + dx - n.hx) > 2 || Math.abs(n.y + dy - n.hy) > 2) continue;
+    n.speed = 1; startMove(n, d);
+  }
+  for (const n of game.npcs) stepActor(n);
+  stepActor(FOL);
+  if (stepActor(player) && !game.busy) onStepDone();
+}
+function freeInput(keys) {
+  if (game.busy || game.mode !== 'map') return;
+  for (const k of keys) {
+    if (player.mv) break;
+    if (k === 'a') { interact(); return; }
+    if (k === 'b') { runScript(fieldMenu); return; }
+  }
+  if (!player.mv) {
+    const d = held.up ? 'up' : held.down ? 'down' : held.left ? 'left' : held.right ? 'right' : null;
+    if (d) {
+      const [dx, dy] = DIRS[d], tx = player.x + dx, ty = player.y + dy, m = game.map;
+      if ((tx < 0 || ty < 0 || tx >= m.w || ty >= m.h) && m.onExit) { player.dir = d; runScript(m.onExit); return; }
+      player.speed = 2;
+      if (!startMove(player, d)) { if (game.frame % 14 === 0) sfx('bump'); } else followStep();
+    }
+  }
+}
+function onStepDone() {
+  const m = game.map, x = player.x, y = player.y, t = tileAt(m, x, y);
+  if (m.onStep) { const s = m.onStep(x, y, t); if (s) { runScript(s); return; } }
+  if (m.enc) {
+    game.steps++;
+    if (game.steps > 4 && chance(m.encRate || 1 / 16)) {
+      const list = m.enc(x, y);
+      if (list && list.length) { game.steps = 0; runScript(() => battle(list[rnd(0, list.length - 1)])); }
+    }
+  }
+}
+function interact() {
+  const [dx, dy] = DIRS[player.dir];
+  let tx = player.x + dx, ty = player.y + dy;
+  const m = game.map;
+  if (tileAt(m, tx, ty) === 'C') { tx += dx; ty += dy; }
+  const n = game.npcs.find(n => npcVisible(n) && n.x === tx && n.y === ty);
+  if (n && n.talk) {
+    if (!n.fixed) n.dir = OPP[player.dir];
+    runScript(async () => { await n.talk(n); });
+    return;
+  }
+  if (followerOn() && FOL.x === tx && FOL.y === ty && !FOL.mv) { runScript(kairiTalk); return; }
+  const c = m.chests.find(c => c.x === player.x + dx && c.y === player.y + dy);
+  if (c) { runScript(() => openChest(c)); return; }
+}
+async function openChest(c) {
+  if (flags.chests[c.id]) { await say('からっぽだ。'); return; }
+  flags.chests[c.id] = 1; sfx('door');
+  if (c.gold) { P.gold += c.gold; await say(`たからばこを あけた！\n${c.gold}円を てにいれた！`); return; }
+  for (const [t, key, list] of [['w', 'weapon', WEAPONS], ['a', 'armor', ARMORS]]) {
+    if (c[key] === undefined) continue;
+    await say(`たからばこを あけた！\n${list[c[key]].name}を てにいれた！`, { noWait: true }); await jingle('get'); playBgm(game.map.bgm);
+    if (gainGear(t, c[key])) await say(`アオ太は ${list[c[key]].name}を そうびした！`);
+    else await waitA();
+    return;
+  }
+  addItem(c.item, c.n || 1);
+  await say(`たからばこを あけた！\n${ITEMS[c.item].name}を てにいれた！`);
+}
+
+// ------------------------------------------------------------
+//  Field menu, status, items, skills
+// ------------------------------------------------------------
+function memberWin(m, x, y, showLv) {
+  const col = m.hp <= 0 ? '#e85050' : m.hp <= m.mhp / 4 ? '#f8a030' : '#fff';
+  drawWin(x, y, 72, showLv ? 72 : 56, col);
+  txt(m.name, x + 10, y + 7, col, 12, 54);
+  let yy = y + 23;
+  if (showLv) { txt('Lv' + String(P.lv).padStart(3), x + 10, yy); yy += 16; }
+  txt('HP' + String(m.hp).padStart(4), x + 10, yy);
+  txt('MP' + String(m.mp).padStart(4), x + 10, yy + 16);
+}
+const partyWins = (x = 8, y = 8) => () => { memberWin(HERO, x, y, true); if (flags.kairi) memberWin(KAIRI, x, y + 76, false); };
+const goldWin = (x = 176, y = 8) => () => { drawWin(x, y, 72, 28); txt(String(P.gold).padStart(5) + '円', x + 10, y + 8); };
+// choose one party member; filter decides who can be picked. Skips the menu when there is only one.
+async function pickMember(filter = () => true, o = {}) {
+  const ms = party();
+  if (ms.length === 1) return filter(ms[0]) ? ms[0] : null;
+  const items = ms.map(m => ({ label: m.name, right: `${m.hp}/${m.mhp}`, disabled: !filter(m) }));
+  const r = await pick({ items, x: o.x || 92, y: o.y || 40, w: 156, idx: Math.max(0, ms.findIndex(filter)) });
+  return r < 0 ? null : ms[r];
+}
+async function recordMenu() {
+  const saved = saveGame(true);
+  await say(saved ? '冒険を きろくしたよ。\nふっかつのじゅもんも メモしておけば\nどこでも つづきから あそべるよ。'
+    : 'この画面では セーブが できないよ。\nふっかつのじゅもんを メモしておけば\nつづきから あそべるよ。', { noWait: true });
+  await openCodePanel('show', makeCode());
+  closeMsg();
+}
+async function fieldMenu() {
+  sfx('ok');
+  const sw = partyWins(); extraWins.push(sw);
+  const items = ['つよさ', 'そうび', 'どうぐ', 'スキル', { label: 'カイリ', disabled: !flags.kairi }, 'きろく', 'とじる'];
+  const gw = goldWin(176, 136); extraWins.push(gw);
+  const m = openMenu({ items, x: 176, y: 8, w: 72 });
+  while (true) {
+    const r = await chooseMenu(m);
+    if (r === -1 || r === 6) break;
+    if (r === 0) await showStats();
+    if (r === 1) await equipMenu();
+    if (r === 2) await itemMenu(null);
+    if (r === 3) await skillMenu();
+    if (r === 4) { closeMenu(m); extraWins.length = 0; await kairiTalk(); closeMsg(); break; }
+    if (r === 5) await recordMenu();
+  }
+  closeMenu(m);
+}
+async function showStats() {
+  const nx = P.lv >= MAX_LV ? '-' : String(EXP_TABLE[P.lv + 1] - P.exp);
+  const pages = [() => {
+    const rows = [['レベル', P.lv], ['ちから', P.str], ['みのまもり', P.vit], ['すばやさ', P.agi], ['こうげき力', atkOf()], ['しゅび力', defOf()],
+      ['HP', P.hp + '/' + P.mhp], ['MP', P.mp + '/' + P.mmp], ['けいけんち', P.exp], ['つぎのLvまで', nx]];
+    drawWin(84, 8, 164, 208); txt(P.name, 96, 14, '#78d8f8');
+    rows.forEach(([k, v], i) => { txt(k, 96, 32 + i * 14); txt(String(v), 236 - textW(String(v)), 32 + i * 14); });
+    txt('ぶき ' + WEAPONS[P.w].name, 96, 176, '#78d8f8', 12, 144);
+    txt('ぼうぐ ' + ARMORS[P.a].name, 96, 194, '#78d8f8', 12, 144);
+  }];
+  if (flags.kairi) pages.push(() => {
+    const k = kStat();
+    const rows = [['レベル', P.lv], ['こうげき力', KAIRI.atk], ['しゅび力', k.def], ['HP', P.k.hp + '/' + k.mhp], ['MP', P.k.mp + '/' + k.mmp]];
+    drawWin(84, 8, 164, 208); txt('カイリ', 96, 14, '#78d8f8');
+    rows.forEach(([kk, v], i) => { txt(kk, 96, 32 + i * 14); txt(String(v), 236 - textW(String(v)), 32 + i * 14); });
+    txt('ギターの 弦', 96, 112);
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = i < strings() ? '#e4f6ff' : '#3a4458'; ctx.fillRect(100 + i * 22, 130, 14, 3); }
+    txt('歌声', 96, 146); txt(flags.voice ? 'もどった！' : 'うばわれた…', 236 - textW(flags.voice ? 'もどった！' : 'うばわれた…'), 146, flags.voice ? '#78d8f8' : '#9aa4b8');
+    txt('推しカラー 水色×ブルー', 96, 176, '#78d8f8', 12, 144);
+    txt('とくぎ ギター・うた', 96, 194, '#78d8f8', 12, 144);
+  });
+  const hidden = menus.splice(0);
+  let pg = 0; const win = () => { pages[pg](); if (pages.length > 1) txt(`${pg + 1}/${pages.length} ▶`, 206, 14, '#9aa4b8', 10); };
+  extraWins.push(win);
+  await new Promise(res => { modal = k => {
+    if ((k === 'left' || k === 'right' || k === 'a') && pages.length > 1 && !(k === 'a' && pg === pages.length - 1)) { pg = (pg + 1) % pages.length; sfx('cur'); return; }
+    if (k === 'a' || k === 'b') { modal = null; res(); }
+  }; });
+  extraWins.splice(extraWins.indexOf(win), 1);
+  menus.push(...hidden);
+}
+function itemList() { return Object.keys(P.items).filter(id => P.items[id] > 0); }
+// user: the member using it in battle (null on the field). Returns true if a turn was used.
+async function itemMenu(user) {
+  const inBattle = !!user;
+  const ids = itemList();
+  if (!ids.length) { await say('どうぐを なにも もっていない。', inBattle ? { auto: 40 } : {}); closeMsg(); return false; }
+  const items = ids.map(id => ({ label: ITEMS[id].name, right: '×' + P.items[id] }));
+  const r = await pick({ items, x: inBattle ? 92 : 84, y: inBattle ? 8 : 40, w: 156, info: i => itemInfo(ids[i]) });
+  if (r < 0) return false;
+  const id = ids[r], it = ITEMS[id];
+  const t = await pickMember(m => it.kind === 'revive' || m.hp > 0);
+  if (!t) return false;
+  useItemCount(id);
+  const who = user ? user.name : 'アオ太', o = inBattle ? { append: true, auto: 45 } : {};
+  if (it.kind === 'hp') {
+    const v = Math.min(t.mhp - t.hp, it.v); t.hp += v; sfx('heal');
+    await say(`${who}は ${it.name}を つかった！\n${t.name}の HPが ${v} かいふくした！`, o);
+  } else if (it.kind === 'mp') {
+    const v = Math.min(t.mmp - t.mp, it.v); t.mp += v; sfx('heal');
+    await say(`${who}は ${it.name}を つかった！\n${t.name}の MPが ${v} かいふくした！`, o);
+  } else if (it.kind === 'revive') {
+    sfx('heal');
+    if (t.hp <= 0) { t.hp = Math.ceil(t.mhp / 2); await say(`${who}は ${it.name}を わたした！\n${t.name}は 想いを うけとって\nふっかつした！`, o); }
+    else { const v = Math.min(t.mhp - t.hp, it.v); t.hp += v; await say(`${who}は ${it.name}を わたした！\n${t.name}の HPが ${v} かいふくした！`, o); }
+  }
+  if (!inBattle) closeMsg();
+  return true;
+}
+function learned(who) { return SKILLS.filter(s => s.who === who && (s.flag ? flags[s.flag] : (s.lv || 0) <= P.lv)); }
+const healKind = s => s.kind === 'heal' || s.kind === 'healAll';
+// battle: returns the chosen skill (or null)
+async function skillPick(m, inBattle) {
+  const list = learned(m.id);
+  const items = list.map(s => ({ label: s.name, right: 'MP' + s.mp, disabled: !inBattle && !healKind(s) }));
+  const r = await pick({ items, x: 92, y: 8, w: 156, info: i => skillInfo(list[i]) });
+  if (r < 0) return null;
+  const s = list[r];
+  if (m.mp < s.mp) { await say('MPが たりない！', inBattle ? { auto: 40 } : {}); closeMsg(); return null; }
+  return s;
+}
+// field: heal skills only
+async function skillMenu() {
+  const caster = flags.kairi ? await pickMember(() => true, { x: 84, y: 40 }) : HERO;
+  if (!caster) return;
+  if (caster.hp <= 0) { await say(`${caster.name}は たおれている。`); closeMsg(); return; }
+  const s = await skillPick(caster, false);
+  if (!s) return;
+  const targets = s.kind === 'heal' ? [await pickMember(m => m.hp > 0)] : alive();
+  if (!targets[0]) return;
+  caster.mp -= s.mp; sfx('heal');
+  await say(`${caster.name}は ${s.name}を ${caster === HERO ? 'となえた' : '演奏した'}！\n${s.text}`);
+  for (const t of targets) { const v = Math.min(t.mhp - t.hp, rnd(s.pow[0], s.pow[1]) + P.lv); t.hp += v; await say(`${t.name}の HPが ${v} かいふくした！`); }
+  closeMsg();
+}
+
+
+// ------------------------------------------------------------
+//  Battle (アオ太 + カイリ against one enemy)
+// ------------------------------------------------------------
+const battleS = { e: null, blink: 0, alpha: 1, bg: 'field', st: {} };
+const ST = id => battleS.st[id] || (battleS.st[id] = {});
+const A = { append: true };
+const au = n => ({ append: true, auto: n });
+function pickMove(e) {
+  const tot = e.moves.reduce((a, m) => a + m[0], 0); let r = Math.random() * tot;
+  for (const m of e.moves) { r -= m[0]; if (r < 0) return m; }
+  return e.moves[0];
+}
+function dmgTo(atk, def) { const b = atk - def / 2; return Math.max(0, Math.floor(b * (0.85 + Math.random() * 0.3))); }
+// 無断録音 lowers everyone's defence for the rest of the battle (30% per post, down to 40%)
+const memDef = m => m.def * Math.max(0.4, 1 - 0.3 * (battleS.pdown || 0));
+function pickTarget() { const a = alive(); if (a.length < 2) return a[0]; return chance(0.55) ? a[0] : a[1]; }
+async function hurt(m, d) {
+  if (ST(m.id).guard && d > 0) d = Math.max(1, Math.floor(d / 2));
+  m.hp = Math.max(0, m.hp - d);
+  if (d > 0) { sfx('hurt'); game.shake = 14; game.flash = 3; await say(`${m.name}は ${d}ポイントの\nダメージを うけた！`, au(34)); }
+  else { sfx('miss'); await say(`ミス！ ${m.name}は ダメージを うけない！`, au(34)); }
+  if (m.hp <= 0) await say(`${m.name}は たおれた！`, au(40));
+}
+async function enemyHurt(e, d) {
+  if (e.guard && d > 0) { d = Math.max(1, Math.floor(d / 2)); e.guard = 0; }
+  e.hp = Math.max(0, e.hp - d);
+  // ミュート cannot fall before カイリ's voice comes back
+  if (e.id === 'mute' && !flags.voice && e.hp <= 0) e.hp = 1;
+  if (d > 0) { battleS.blink = 16; await say(`${e.short || e.name}に ${d}ポイントの\nダメージを あたえた！`, au(34)); }
+  else { sfx('miss'); await say(`ミス！ ${e.short || e.name}に\nダメージを あたえられない！`, au(34)); }
+}
+async function memberAct(m, e, act) {
+  const nm = e.short || e.name;
+  if (act.type === 'attack') {
+    await say(m === HERO ? `${m.name}の こうげき！` : 'カイリは ギターを かき鳴らした！', au(22));
+    if (chance(1 / 20)) { sfx('crit'); await say('かいしんの いちげき！！', au(26)); await enemyHurt(e, Math.floor(m.atk * (1.8 + Math.random() * 0.4))); }
+    else if (chance(1 / 18)) { sfx('miss'); await say(`ミス！ ${nm}は ひらりと かわした！`, au(34)); }
+    else { sfx('hit'); await enemyHurt(e, Math.max(1, dmgTo(m.atk, e.def))); }
+  } else if (act.type === 'guard') {
+    await say(`${m.name}は 身を まもっている。`, au(30));
+  } else if (act.type === 'stunned') {
+    await say(`${m.name}は うごけない……`, au(36));
+  } else if (act.type === 'skill') await useSkill(m, e, act.skill, act.target);
+}
+async function useSkill(m, e, s, target) {
+  if (m.mp < s.mp) { await say(`${m.name}は ${s.name}を つかおうとした！\nしかし MPが たりない！`, au(40)); return; }
+  if ((battleS.hush || (m === KAIRI && battleS.silence > 0)) && s.kind !== 'taunt') { await say(`${m.name}は ${s.name}を つかおうとした！\nしかし 音が 封じられている！`, au(40)); return; }
+  m.mp -= s.mp; sfx('skill');
+  if (s.kind === 'taunt') { await taunt(e, s); return; }
+  if (s.kind === 'clap') {
+    await say(`${m.name}は ハンドクラップで\nリズムを きざんだ！`, au(30));
+    if (flags.kairi && KAIRI.hp > 0) { battleS.clap = 1.5; await say('カイリの つぎの 演奏が\nもりあがる！', au(30)); }
+    else await say('……しかし 合わせる 音が ない。', au(30));
+    return;
+  }
+  await say(`${m.name}は ${s.name}を ${m === HERO ? 'となえた' : '演奏した'}！`, au(22));
+  await say(s.text, au(26));
+  let boost = 1;
+  if (m === KAIRI && battleS.clap) { boost = battleS.clap; battleS.clap = 0; await say('手拍子に のって 音が はずむ！', au(26)); }
+  const heal = async (t, v) => { v = Math.min(t.mhp - t.hp, Math.round(v)); t.hp += v; sfx('heal'); await say(`${t.name}の HPが ${v} かいふくした！`, au(30)); };
+  const hit = mult => enemyHurt(e, Math.max(1, Math.floor(dmgTo(m.atk, e.def * 0.5) * mult * boost)));
+  if (s.kind === 'heal') await heal(target && target.hp > 0 ? target : m, (rnd(s.pow[0], s.pow[1]) + P.lv) * boost);
+  else if (s.kind === 'healAll') {
+    for (const t of alive()) await heal(t, (rnd(s.pow[0], s.pow[1]) + P.lv) * boost);
+    if (s.cure && (battleS.silence || battleS.pdown || (battleS.atkMul || 1) < 1)) { battleS.silence = 0; battleS.pdown = 0; battleS.atkMul = 1; await say('音の ちからで\nふしぎな 呪いが とけた！', au(34)); }
+  } else if (s.kind === 'multi') {
+    for (let i = 0; i < s.hits && e.hp > 0; i++) { sfx('hit'); await hit(s.mult); }
+  } else if (s.kind === 'melody') {
+    sfx('crit'); burst(168, 70, 'note', 10); await hit(s.mult);
+    for (const t of alive()) await heal(t, t.mhp / 2);
+  } else { sfx('hit'); await hit(s.mult); }
+}
+async function taunt(e, s) {
+  const nm = e.short || e.name;
+  // the first taunt of a battle always hits the enemy's pride; after that mix in the common lines
+  const own = [].concat(TAUNT_FOR[e.id] || []);
+  const pool = own.length && (!battleS.taunted || chance(0.6)) ? own : TAUNTS;
+  let fresh = pool.filter(l => l !== battleS.lastTaunt);
+  if (!fresh.length) fresh = TAUNTS.filter(l => l !== battleS.lastTaunt);
+  const line = fresh[rnd(0, fresh.length - 1)];
+  battleS.taunted = true; battleS.lastTaunt = line;
+  await say('アオ太は 煽った！', au(22));
+  await say(`「${line}」`, au(50));
+  await say(`${nm}の 心に ぐさっと 刺さった！`, au(26));
+  sfx('hit');
+  await enemyHurt(e, Math.max(1, Math.floor(dmgTo(atkOf(), e.def) * s.mult)));
+  if (e.hp <= 0) return;
+  if (chance(e.boss ? 0.25 : 0.5)) { e.stun = 1; await say(`${nm}は 心が折れて うごけない！`, au(40)); }
+  else await say(`${nm}は 聞こえないふりを した！`, au(36));
+}
+async function enemyAct(e) {
+  const nm = e.short || e.name;
+  if (e.stun) { e.stun = 0; await say(`${nm}は ショックで うごけない！`, au(36)); return; }
+  if (e.rest) { e.rest = 0; await say(`${nm}は ゼェゼェ… 息が あがっている！`, au(36)); return; }
+  if (!alive().length) return;
+  const [, type0, mult, text, hits] = pickMove(e);
+  // moves aimed at カイリ turn into plain attacks while she is not fighting
+  const solo = !flags.kairi || KAIRI.hp <= 0;
+  const type = solo && ['silence', 'mic'].includes(type0) ? 'atk' : type0;
+  const rage = e.rage ? 1.5 : 1, tg = pickTarget();
+  const strike = async (m, k) => hurt(m, dmgTo(e.atk * k * rage, memDef(m)));
+  if (type === 'atk') { await say(`${nm}の こうげき！`, au(22)); await strike(tg, 1); e.rage = 0; }
+  else if (type === 'mult' || type === 'lift') {
+    await say(`${nm}は ${text}`, au(30)); await strike(tg, mult); e.rage = 0;
+    if (type === 'lift') e.rest = 1;
+  } else if (type === 'multi') {
+    await say(`${nm}は ${text}`, au(30));
+    for (let i = 0; i < hits && alive().length; i++) await strike(pickTarget(), mult);
+    e.rage = 0;
+  } else if (type === 'all') {
+    await say(`${nm}は ${text}`, au(30));
+    for (const m of alive()) await strike(m, mult);
+    e.rage = 0;
+  } else if (type === 'heal') {
+    const v = Math.min(e.mhp - e.hp, mult); e.hp += v; sfx('heal');
+    await say(`${nm}は ${text}`, au(30));
+    await say(`${nm}の HPが ${v} かいふくした！`, au(30));
+  } else if (type === 'idle') await say(`${nm}は ${text}`, au(34));
+  else if (type === 'silence') {
+    await say(`${nm}は ${text}`, au(34));
+    battleS.silence = Math.max(battleS.silence || 0, mult + 1);
+    await say(`カイリの 演奏が かき消された！\n（${mult}ターン えんそうが できない）`, au(40));
+  } else if (type === 'hush') {
+    await say(`${nm}は ${text}`, au(40));
+    battleS.hush = 2;
+    await say('つぎの ターン、 だれも\nスキルが つかえない！', au(40));
+  } else if (type === 'stun' || type === 'lecture') {
+    await say(`${nm}は ${text}`, au(36));
+    if (chance(mult)) { ST(tg.id).stun = 1; await say(type === 'lecture' ? `${tg.name}は 話に 聞き入って\nつぎの ターン うごけない！` : `${tg.name}は つかまって\nつぎの ターン うごけない！`, au(40)); }
+    else await say(type === 'lecture' ? `${tg.name}は 聞き流した！` : `${tg.name}は ふりほどいた！`, au(32));
+  } else if (type === 'mic') {
+    await say(`${nm}は ${text}`, au(36));
+    ST('k').stun = 1;
+    await say('カイリは 順番を 待っている……\nつぎの ターン うごけない！', au(40));
+  } else if (type === 'judge') {
+    await say(`${nm}は ${text}`, au(36));
+    if ((battleS.atkMul || 1) > 0.75) { battleS.atkMul = Math.max(0.7, (battleS.atkMul || 1) * mult); await say('みんなの こうげき力が さがった！', au(34)); }
+    else await say('しかし もう 減点する ところが ない！', au(34));
+  } else if (type === 'expose') {
+    await say(`${nm}は ${text}`, au(40));
+    if ((battleS.pdown || 0) < 2) { battleS.pdown = (battleS.pdown || 0) + 1; await say('みんなの 守りが さがった！', au(34)); }
+    else await say('しかし もう これ以上は さがらない！', au(34));
+  } else if (type === 'copy') {
+    // 耳コピ / ハモり / 録音: replays whatever the party did last
+    const la = battleS.lastAct, sk = la && la.skill;
+    await say(`${nm}は さっきの 演奏を\nそっくり まねした！`, au(30));
+    if (!sk || sk.kind === 'atk' || sk.kind === 'multi' || sk.kind === 'melody') await strike(tg, sk ? Math.min(sk.mult * (sk.hits || 1), 2.4) * 0.6 : 0.9);
+    else if (healKind(sk)) { const v = Math.min(e.mhp - e.hp, 40); e.hp += v; sfx('heal'); await say(`${sk.name}を まねして\nHPが ${v} かいふくした！`, au(34)); }
+    else if (sk.kind === 'taunt') {
+      await say('「その 煽り、 録音して\n拡散しといたわ」', au(40));
+      if (chance(0.4)) { ST('h').stun = 1; await say('アオ太の 心が 折れた！\nつぎの ターン うごけない！', au(40)); }
+      else await say('アオ太は 聞き流した！', au(30));
+    } else await say('手拍子を まねした…… が、\nリズムが ずれている！', au(34));
+  } else if (type === 'drain') {
+    const amt = Math.min(tg.mp, mult);
+    await say(`${nm}は ${text}`, au(26));
+    if (amt > 0) { tg.mp -= amt; e.hp = Math.min(e.mhp, e.hp + amt * 2); await say(`${tg.name}の MPを ${amt} すいとった！`, au(34)); }
+    else await say(`しかし ${tg.name}の MPは 0だった！`, au(30));
+  } else if (type === 'flee') { await say(`${nm}は ${text}`, au(44)); e.fled = 1; }
+  else if (type === 'fortify') {
+    if ((e.fort || 0) < 2) { e.fort = (e.fort || 0) + 1; e.def = Math.round(e.def * mult); await say(`${nm}は ${text}`, au(36)); }
+    else { await say(`${nm}の こうげき！`, au(22)); await strike(tg, 1); }
+  } else if (type === 'steal') {
+    const amt = Math.min(P.gold, mult ? rnd(mult, mult * 2) : rnd(5, 15));
+    await say(`${nm}は ${text}`, au(30));
+    if (amt > 0) { P.gold -= amt; e.stolen = (e.stolen || 0) + amt; await say(`${amt}円 とられた！`, au(36)); }
+    else await say('しかし お金を もっていなかった！', au(36));
+  } else if (type === 'guard') { e.guard = 1; await say(`${nm}は ${text}`, au(34)); }
+  else if (type === 'rage') { e.rage = 1; await say(`${nm}は ${text}`, au(34)); }
+}
+async function chooseFor(m, e, backable) {
+  const label = () => { drawWin(92, 144, 156, 76); txt(`${m.name}の ばん`, 104, 154, '#78d8f8'); txt(e.short || e.name, 104, 178); };
+  extraWins.push(label);
+  const sealed = battleS.hush || (m === KAIRI && battleS.silence > 0);
+  const names = m === HERO ? ['たたかう', 'スキル', 'どうぐ', 'にげる'] : ['ギター', 'えんそう', 'どうぐ', 'ぼうぎょ'];
+  const mm = openMenu({ items: names.map((l, i) => ({ label: l, disabled: i === 1 && sealed })), x: 8, y: 144, w: 80, h: 76, cancel: backable });
+  const off = () => { closeMenu(mm); const i = extraWins.indexOf(label); if (i >= 0) extraWins.splice(i, 1); };
+  let act = null;
+  while (!act) {
+    const r = await chooseMenu(mm);
+    if (r === -1) act = { type: 'back' };
+    else if (r === 0) act = { type: 'attack' };
+    else if (r === 1) {
+      const s = await skillPick(m, true);
+      if (s && s.kind === 'heal') { const t = await pickMember(x => x.hp > 0); if (t) act = { type: 'skill', skill: s, target: t }; }
+      else if (s) act = { type: 'skill', skill: s };
+      closeMsg();
+    } else if (r === 2) {
+      off();
+      if (await itemMenu(m)) return { type: 'item' };
+      closeMsg(); menus.push(mm); extraWins.push(label);
+    } else if (r === 3) act = m === HERO ? { type: 'run' } : { type: 'guard' };
+  }
+  off();
+  return act;
+}
+async function levelUps() {
+  while (P.lv < MAX_LV && P.exp >= EXP_TABLE[P.lv + 1]) {
+    const k0 = kStat();
+    P.lv++;
+    const g = { mhp: rnd(6, 8), mmp: rnd(2, 4), str: rnd(2, 3), vit: rnd(1, 3), agi: rnd(1, 3) };
+    P.mhp += g.mhp; P.mmp += g.mmp; P.str += g.str; P.vit += g.vit; P.agi += g.agi;
+    P.hp = Math.min(P.mhp, P.hp + g.mhp); P.mp = Math.min(P.mmp, P.mp + g.mmp);
+    const k1 = kStat(); P.k.hp = Math.min(k1.mhp, P.k.hp + (k1.mhp - k0.mhp)); P.k.mp = Math.min(k1.mmp, P.k.mp + (k1.mmp - k0.mmp));
+    await say('レベルが あがった！', { noWait: true }); await jingle('lvup');
+    await say(`ちからが ${g.str} あがった！\nみのまもりが ${g.vit} あがった！\nすばやさが ${g.agi} あがった！`);
+    await say(`さいだいHPが ${g.mhp} あがった！\nさいだいMPが ${g.mmp} あがった！`);
+    if (flags.kairi) await say(`カイリも つよくなった！\n（HP +${k1.mhp - k0.mhp}・MP +${k1.mmp - k0.mmp}・こうげき +${k1.atk - k0.atk}）`);
+    const s = SKILLS.find(s => s.who === 'h' && s.lv === P.lv);
+    if (s) await say(`アオ太は 「${s.name}」を おぼえた！`);
+  }
+}
+// returns 'win' | 'run' | 'lose' | 'fled'
+async function battle(id, opt = {}) {
+  const base = ENEMIES[id];
+  // 強くてニューゲーム: each extra playthrough makes enemies 50% tougher (and more rewarding)
+  const k = (1 + 0.5 * (flags.cycle || 0)) * (base.boss ? 1 : (game.map.encScale || 1)), up = v => Math.round(v * k);
+  const e = { ...base, id, hp: up(base.hp), mhp: up(base.hp), atk: up(base.atk), def: up(base.def), exp: up(base.exp), gold: up(base.gold) };
+  const prevMode = game.mode;
+  sfx('enc');
+  for (let i = 0; i < 6; i++) { game.flash = 4; await framesWait(6); }
+  Object.assign(battleS, { e, st: {}, atkMul: 1, pdown: 0, silence: 0, hush: 0, clap: 0, lastAct: null, taunted: false, lastTaunt: null, blink: 0, alpha: 1, bg: opt.bg || game.map.bg || 'field' });
+  game.mode = 'battle';
+  playBgm(opt.bgm || (base.boss ? 'boss' : 'battle'));
+  const sw = partyWins(); extraWins.push(sw);
+  await say(opt.intro || `${e.name}が あらわれた！`, { auto: 50 });
+  let turn = 0, result = null;
+  // surprise attack: the enemy gets a free action before the first command
+  if (!base.boss && chance(0.1)) {
+    await say(`しかし ${e.short || e.name}は\nいきなり おそいかかってきた！`, au(40));
+    await enemyAct(e);
+    if (!alive().length) result = 'lose';
+    else if (e.fled) result = 'fled';
+  }
+  while (!result) {
+    turn++;
+    closeMsg();
+    const acts = {}, order = alive();
+    for (let i = 0; i < order.length; i++) {
+      const m = order[i];
+      if (acts[m.id]) continue;
+      if (ST(m.id).stun) { ST(m.id).stun = 0; acts[m.id] = { type: 'stunned' }; continue; }
+      const a = await chooseFor(m, e, i > 0);
+      if (a.type === 'back') {
+        // step back to the previous member, unless their choice can't be undone
+        const j = i - 1;
+        if (j >= 0 && !['stunned', 'item'].includes(acts[order[j].id].type)) { delete acts[order[j].id]; i = j - 1; }
+        else i--;
+        continue;
+      }
+      acts[m.id] = a;
+      if (a.type === 'run') break;
+    }
+    for (const m of party()) ST(m.id).guard = acts[m.id] && acts[m.id].type === 'guard' ? 1 : 0;
+    msg.lines = []; msg.visible = true;
+    if (acts.h && acts.h.type === 'run') {
+      await say(`${P.name}は にげだした！`, au(24));
+      if (base.boss) await say('しかし にげられない！', au(40));
+      else if (chance(clamp(0.5 + (P.agi - e.agi) * 0.05, 0.25, 0.92))) { sfx('run'); await framesWait(20); result = 'run'; break; }
+      else await say('しかし まわりこまれて しまった！', au(40));
+      await enemyAct(e);
+    } else {
+      // the enemy moves first about a third of the time, more often when it is quicker
+      const enemyFirst = !e.last && chance(clamp(0.35 + (e.agi - P.agi) * 0.02, 0.15, 0.6));
+      if (enemyFirst) await enemyAct(e);
+      for (const m of party()) {
+        const a = acts[m.id];
+        if (!a || a.type === 'item' || m.hp <= 0 || e.hp <= 0 || e.fled) continue;
+        await memberAct(m, e, a);
+        if (a.type === 'skill') battleS.lastAct = a;
+      }
+      if (!enemyFirst && e.hp > 0 && !e.fled && alive().length) await enemyAct(e);
+    }
+    if (battleS.hush) battleS.hush--;
+    if (battleS.silence > 0 && --battleS.silence === 0 && flags.kairi && e.hp > 0) await say('カイリの 演奏が もどった！', au(30));
+    if (e.hp <= 0) result = 'win';
+    else if (!alive().length) result = 'lose';
+    else if (e.fled) { for (let i = 20; i >= 0; i--) { battleS.alpha = i / 20; await framesWait(1); } await waitA(); result = 'fled'; }
+    else if (opt.onTurn) await opt.onTurn(e, turn);
+  }
+  if (result === 'win') {
+    for (let i = 20; i >= 0; i--) { battleS.alpha = i / 20; await framesWait(1); }
+    await say(`${e.short || e.name}を たおした！`, { append: true, noWait: true });
+    if (!opt.noJingle) await jingle('win');
+    msg.lines = [];
+    if (e.exp) { P.exp += e.exp; await say(`${e.exp}ポイントの けいけんちを かくとく！`, au(40)); }
+    if (e.gold) { P.gold += e.gold; await say(`${e.gold}円を てにいれた！`, au(40)); }
+    if (e.stolen) { P.gold += e.stolen; await say(`とられた ${e.stolen}円を とりかえした！`, au(40)); }
+    if (e.drop && chance(e.drop[1]) && (P.items[e.drop[0]] || 0) < 9) { addItem(e.drop[0]); await say(`${e.short || e.name}は ${ITEMS[e.drop[0]].name}を おとしていった！`, au(50)); }
+    await waitA();
+    await levelUps();
+  } else if (result === 'lose') {
+    await say(flags.kairi ? 'アオ太たちは ちからつきた……' : 'アオ太は ちからつきた……', { append: true, noWait: true });
+    await jingle('lose');
+    await waitA();
+  }
+  closeMsg(); extraWins.splice(extraWins.indexOf(sw), 1);
+  battleS.st = {};
+  if (result === 'lose') { await gameOver(); return 'lose'; }
+  for (const m of party()) if (m.hp <= 0) m.hp = 1;
+  await fadeOut(8);
+  game.mode = prevMode === 'battle' ? 'map' : prevMode;
+  battleS.e = null;
+  playBgm(game.map.bgm);
+  await fadeIn(8);
+  return result;
+}
+async function gameOver() {
+  await fadeOut(30);
+  battleS.e = null; game.mode = 'map';
+  P.gold = Math.floor(P.gold / 2); fullHeal();
+  setMap('town', 4, 4, 'down');
+  await fadeIn(30);
+  await say(flags.kairi ? '大家さん「まったく、 無茶 するんじゃ\nないよ。 カイリちゃんまで\nぼろぼろじゃないか。」' : '大家さん「まったく、 無茶 するんじゃ\nないよ。 ごはん 食べて\n元気 だしな。」');
+  await say('（お金が 半分に なってしまった…）');
+}
+
+
+// ------------------------------------------------------------
+//  Story scripts
+// ------------------------------------------------------------
+const nextGoal = () => !flags.s1 ? '西の オチャノミズ楽器街' : !flags.s2 ? '南の ライブハウス街 シモキタ' : !flags.s3 ? '北の カラオケタワー'
+  : !flags.s4 ? '東の 海辺フェス会場' : !flags.barrierOpen ? '北東の 島へ わたる 橋' : '北東の 島の 沈黙の城';
+async function restAndSave(who) {
+  await fadeOut(16); fullHeal(); await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
+  await say(flags.kairi ? 'みんなの HPと MPが ぜんかいした！' : 'HPと MPが ぜんかいした！');
+  if (await yesno(`${who}「冒険の きろくを つけておく？」`)) {
+    if (saveGame(true)) await say('きろくを つけた。'); else await say('この画面では きろくが のこせないよ。\n「きろく」で ふっかつのじゅもんを\nメモしてね。');
+  }
+}
+async function talkOya() {
+  if (!flags.show) await say('大家さん「劇場は 町の 北東よ。\nカイリちゃんの 弾き語り、\n楽しんでおいで。」');
+  else if (!flags.voice) await say('大家さん「街から 音が 消えちゃって、\nラジオも 鳴らないのよ。\n……カイリちゃんを たのんだよ。」');
+  else { await say('大家さん「最近 街が にぎやかで\nいいねえ。 あんたの おかげだよ。」'); return; }
+  if (await yesno('大家さん「すこし 休んでいく？」')) await restAndSave('大家さん');
+}
+async function talkCafe() {
+  await say('店員「ネットカフェ アキバへ ようこそ。\nフラットシートで ひと休み 10円です。」', { noWait: true });
+  extraWins.push(goldWin());
+  const ok = await pick({ items: ['はい', 'いいえ'], x: 184, y: 92, w: 64 }) === 0;
+  if (ok) {
+    if (P.gold < 10) { await say('店員「お金が たりない ようですね…」'); return; }
+    P.gold -= 10;
+    await fadeOut(16); fullHeal(); await jingle('inn'); playBgm(game.map.bgm); await fadeIn(16);
+    await say('店員「おはようございます。\nみなさんの HPと MPが\nぜんかいしましたよ。」');
+  }
+  if (await yesno('店員「冒険の きろくを のこしますか？」')) {
+    if (saveGame(true)) await say('きろくを のこした。'); else await say('この画面では きろくが のこせないよ。\n「きろく」で ふっかつのじゅもんを\nメモしてね。');
+  }
+  await say('店員「またの ご利用を。」');
+}
+async function talkShop() {
+  const goods = ['drink', 'drink2', 'lemon', 'letter'];
+  const weapons = flags.s3 ? [2, 3, 4] : flags.s1 ? [1, 2, 3] : [1, 2], armors = flags.s3 ? [2, 3, 4] : flags.s1 ? [1, 2, 3] : [1, 2];
+  await say('店員「いらっしゃい！ グッズ屋だよ。\nどうぐ・ぶき・ぼうぐ、\nどれを みていく？」', { noWait: true });
+  extraWins.push(goldWin());
+  const cat = openMenu({ items: ['どうぐ', 'ぶき', 'ぼうぐ', 'やめる'], x: 176, y: 40, w: 72 });
+  while (true) {
+    const c = await chooseMenu(cat);
+    if (c < 0 || c === 3) break;
+    const gear = c === 1 ? weapons.map(id => ['w', id]) : armors.map(id => ['a', id]);
+    let idx = 0;
+    while (true) {
+      const list = c === 0
+        ? goods.map(id => ({ label: ITEMS[id].name, right: ITEMS[id].price + '円' }))
+        : gear.map(([t, id]) => { const g = t === 'w' ? WEAPONS[id] : ARMORS[id]; ensureOwned(); return { label: g.name, right: (t === 'w' ? P.w : P.a) === id ? 'E' : (t === 'w' ? P.ownW : P.ownA).includes(id) ? 'もってる' : g.price + '円' }; });
+      const info = c === 0 ? i => itemInfo(goods[i]) : i => gearInfo(...gear[i]);
+      const r = await pick({ items: list, x: 8, y: 8, w: 160, idx, info });
+      if (r < 0) break;
+      idx = r;
+      if (c === 0) {
+        const id = goods[r], it = ITEMS[id];
+        if (P.gold < it.price) { await say('店員「お金が たりないみたいだね…」'); continue; }
+        if ((P.items[id] || 0) >= 9) { await say('店員「それ以上は もてないよ！」'); continue; }
+        P.gold -= it.price; addItem(id); sfx('ok');
+        await say(`店員「まいど！ ${it.name}だね。」\n（${it.name} ×${P.items[id]} になった）`);
+      } else {
+        const [t, id] = gear[r], g = t === 'w' ? WEAPONS[id] : ARMORS[id];
+        const cur = t === 'w' ? WEAPONS[P.w].atk : ARMORS[P.a].def, nv = t === 'w' ? g.atk : g.def;
+        ensureOwned();
+        if ((t === 'w' ? P.ownW : P.ownA).includes(id)) { await say('店員「それは もう もってるよ。」'); continue; }
+        if (P.gold < g.price) { await say('店員「お金が たりないみたいだね…」'); continue; }
+        P.gold -= g.price; sfx('ok');
+        if (gainGear(t, id)) await say(`店員「まいど！」\nアオ太は ${g.name}を そうびした！`);
+        else await say(`店員「まいど！」\n${g.name}を「そうび」に しまった。\n（いまの そうびの ほうが つよい）`);
+      }
+    }
+    await say('店員「ほかに みていく？」', { noWait: true });
+  }
+  closeMenu(cat);
+  await say('店員「推し活 がんばってね！」');
+}
+// one string comes back: カイリ restrings, the world gets a layer of music (and colour) back
+async function gainString(label, skill, desc) {
+  sfx('door');
+  await say(`カイリは ${label}を 張りなおした！\nポロン……♪`, { noWait: true }); await jingle('get');
+  playBgm(game.map.bgm, true);
+  await say(`カイリは 「${skill}」を おぼえた！\n（${desc}）`);
+  await say('（世界に すこし 音と 色が もどった！）');
+}
+async function kairiTalk() {
+  const where = {
+    gakki: 'カイリ「楽器屋さんって、 わくわく\nするよね。 でも 今日は\n試奏してる 場合じゃないか。」',
+    shimo: 'カイリ「ライブハウスの においって\nなんか 落ちつくんだよね。」',
+    kara1: 'カイリ「カラオケ、 いつもは\n何時間でも いられるのに……\n今は 歌えないのが くやしい。」',
+    kara2: 'カイリ「この上に ピッチが いる。\n音程…… 気に しすぎてた 時期、\nわたしにも あったな。」',
+    fes: 'カイリ「フェスの ステージ、\nいつか 立ってみたいな。\n……歌声が もどったらね。」',
+    castle1: 'カイリ「……足音しか 聞こえない。\nアオ太くん、 はぐれないでね。」',
+    castle2: 'カイリ「この 先に ミュートが いる。\n……わたしの 歌、 返してもらう。」',
+  }[game.mapId];
+  if (where) { await say(where); return; }
+  if (!flags.s4) await say(`カイリ「つぎは ${nextGoal()}。\n弦の 気配が するの。」`);
+  else if (!flags.barrierOpen) await say('カイリ「北東の 島へ わたる 橋の\n結界…… ギターで 破れるかも。\n橋で Aボタンを おしてね。」');
+  else await say('カイリ「沈黙の城へ 行こう。\nわたしの 歌声を 取りもどす！」');
+  const chat = [
+    'カイリ「ギターの チューニングは\n毎朝 してるんだ。\n弦が 増えるのが 楽しみ！」',
+    'カイリ「歌えない 間も、 頭の 中では\nずっと 歌ってるの。」',
+    'カイリ「アオ太くんの 手拍子、\nけっこう リズム いいよ！」',
+    'カイリ「町の マイクスタンドで\n路上ライブ すると、\nお金も かせげるよ！」',
+  ];
+  if (flags.s1) chat.push('カイリ「つかれたら メニューの\n『スキル』で アルペジオ 弾くね。」');
+  await say(chat[rnd(0, chat.length - 1)]);
+}
+// sepia memory scene in the theater: who: sprite shown as the one remembering, cast: extra actors, body: the scene itself
+async function flashback({ title, who = 'hero', at = [19, 7], cast = [], body }) {
+  const back = { id: game.mapId, x: player.x, y: player.y, dir: player.dir }, bgm = game.map.bgm;
+  await fadeOut(20);
+  game.flashback = true; game.heroSpr = who;
+  setMap('town', at[0], at[1], 'up');
+  cast.forEach(([id, x, y, spr, dir]) => game.npcs.push({ id, x, y, px: x * TS, py: y * TS, hx: x, hy: y, spr, fixed: 1, fb: 1, dir: dir || 'down', mv: null, wt: 999 }));
+  playBgm('title', true); game.lights = true;
+  try {
+    await fadeIn(20);
+    await say(`── ${title} ──`);
+    await body();
+    await fadeOut(20);
+  } finally {
+    game.flashback = false; game.heroSpr = null; game.lights = false;
+    setMap(back.id, back.x, back.y, back.dir); playBgm(bgm);
+  }
+  await fadeIn(20);
+}
+async function prologue() {
+  playBgm(null);
+  game.mode = 'map';
+  setMap('town', 4, 4, 'down');
+  game.fade = 1;
+  await caption(['百花クエストの 物語から', '1年後──']);
+  await caption(['ここは 電気の街 アキハバラ。']);
+  await caption(['ひとりの 新米ヲタクが いた。', 'その名は アオ太。']);
+  await caption(['アオ太の 推しは', 'ギターを 弾きながら 歌う アイドル', '『奥本カイリ』。', '推しカラーは 水色×ブルー。']);
+  await caption(['これは うばわれた 歌声を', 'とりもどす 物語である──']);
+  await flashback({ title: '半年前', at: [20, 7], cast: [['fbKairi', 19, 3, 'kairiG'], ['fbFan1', 17, 5, 'otaku1', 'up'], ['fbFan2', 22, 5, 'otaku3', 'up']], body: async () => {
+    await say('その日、 アオ太は 友だちに\nさそわれて、 はじめて\n劇場に 来た。');
+    await say('ステージの まんなかで、\nひとりの 女の子が\nギターを かかえた。');
+    burst(19 * TS + 8, 3 * TS, 'note', 8);
+    await say('まっすぐな 歌声が、\nいちばん うしろの 席まで\nとどいた。');
+    await say('その日から、 アオ太の 推しは\n奥本カイリに なった。');
+  } });
+  playBgm('town');
+  await fadeIn(30);
+  await runScript(async () => {
+    await say('（今日は カイリちゃんの\n弾き語り公演の 日だ！）');
+    await say('（いつも 一番 うしろの 席から\nブルーの ペンラを 振ってるけど……\n気づいて もらえてるのかな。）');
+    face(player, 'right');
+    await say('大家さん「アオ太くん、 起きてる？\n今日は 推しの 公演でしょ！」');
+    await say('大家さん「劇場は 町の 北東よ。\nほら、 差し入れ。」', { noWait: true });
+    addItem('drink', 3); await jingle('get'); playBgm('town');
+    await say('エナドリを 3本 もらった！');
+    await say('（Bボタン / Xキーで メニュー。\nAボタン / Zキーで はなす・しらべる）');
+  });
+  toast('アキハバラ');
+  await warnNoSave();
+}
+async function showEvent() {
+  flags.show = true; flags.scene = 'show';
+  face(player, 'up');
+  game.lights = true; playBgm(null);
+  await say('（客席が 暗くなった。\nステージに 青い スポットライトが\n灯る──）');
+  await say('カイリ「みなさーん！\n今日は 来てくれて\nありがとうございます！」');
+  await say('カイリ「今日は ギター 1本で\n弾き語り します。\n聞いてください！」');
+  closeMsg();
+  const song = jingle('aoi1');
+  for (let i = 0; i < 5; i++) { burst(19 * TS + 8, 3 * TS, 'note', 4); await framesWait(30); }
+  await say('（会場が 水色と ブルーの\nペンライトで 染まっていく……）');
+  await song;
+  stopBgm(); game.lights = false; game.flash = 6; game.shake = 20; sfx('hurt');
+  await say('……とつぜん、 すべての 音が\n消えた。');
+  game.muteOn = true;
+  const mu = npcById('muteT');
+  await say('？？？「……うるさい。」');
+  await say('？？？「歌も、 ギターも、 声援も。\nこの世の 音は ぜんぶ\nうるさい。」');
+  await walk(mu, 'U');
+  await say('ミュート「わたしは 無音魔王 ミュート。\n世界を 静寂で 満たす 者。」');
+  await say('ミュート「まずは…… その 歌声を\nいただこう。」');
+  game.flash = 8; sfx('crit'); burst(19 * TS + 8, 3 * TS, 'note', 12);
+  await say('カイリの 胸から 青い 光が\nぬきとられた！');
+  await say('カイリ「……っ！ ……あ、 あれ……？\n……♪ ……歌が…… 出ない……！」');
+  await say('ミュート「ついでに、 その 弦も。」');
+  for (let i = 0; i < 4; i++) { sfx('hit'); game.shake = 8; await framesWait(12); }
+  await say('ミュートは ギターの 弦を\n4本 引きちぎった！');
+  await say('ミュート「弦は 四天王に あずけておく。\nこれで 二度と 鳴らせまい。」');
+  await say('ミュート「静かな 世界で……\nおやすみ。」');
+  game.flash = 8; game.muteOn = false; flags.stolen = true; sfx('run');
+  playBgm('town', true);
+  await say('……ミュートは 消えた。\n街から、 音と 色が\nぬけていく……');
+  const kai = npcById('kairiStage');
+  await walk(kai, 'DD');
+  face(kai, 'down');
+  await say('カイリ「……そこの、 ブルーの\nペンラの 人。」');
+  await say('カイリ「いつも 一番 うしろで\n振ってくれてる 人、 だよね？」');
+  await say('（認知…… されてた……！）');
+  await say('カイリ「話す 声は 出るの。\nでも 歌おうとすると、\n声が 出ないの。」');
+  await say('カイリ「ギターも、 のこった 弦は\n2本だけ。 ……でも、\nあきらめたくない。」');
+  await say('カイリ「お願い！ わたしの 弦と\n歌声を、 一緒に\n取りもどして くれる？」');
+  const r = await ask('アオ太は……', ['もちろん！', '推しの ためなら どこまでも！'], { x: 40, y: 92, w: 208, cancel: false });
+  await say(r === 0 ? 'カイリ「ありがとう！\nよろしくね、 アオ太くん！」' : 'カイリ「ふふっ、 たのもしい！\nよろしくね、 アオ太くん！」', { noWait: true });
+  flags.kairi = true; fixKairi(); fullHeal();
+  await jingle('get'); playBgm('town', true);
+  await say('カイリが なかまに くわわった！');
+  await say('ザザ…… ザザザ……');
+  await say('カイリ「……！ ミュートの\n置いていった ノイズが いる！」');
+  await say('カイリ「わたしは ギターで たたかうね！\n『えんそう』で 技も つかえるよ。」');
+  await battle('noise', { intro: 'ノイズが あらわれた！' });
+  flags.tut = true;
+  await say('？？？「おーい！ だいじょうぶか！」');
+  await say('百花「カイリちゃん！\nケガは ない！？」');
+  await say('カイリ「百花ちゃん！ ……うん、\nわたしは だいじょうぶ。\nでも、 歌が……」');
+  await say('伝説のヲタク「おれは 去年、 魔王から\n推しを 取りもどした……\nまあ、 ただの ヲタクだ。」');
+  await say('伝説のヲタク「ミュートの 四天王は\n街の まわりに 散ったらしい。」');
+  await say('伝説のヲタク「西の 楽器街、 南の シモキタ、\n北の カラオケタワー、\n東の 海辺フェス。」');
+  await say('伝説のヲタク「弦が もどるたびに、 世界に\n音が もどるはずだ。 まずは\n西の 楽器街へ 行け！」');
+  await say('百花「わたしも ここで 応援してる！\nこれ、 持っていって！」', { noWait: true });
+  addItem('lemon', 3); await jingle('get'); playBgm('town');
+  await say('はちみつレモンを 3こ もらった！');
+  await say('（カイリは うしろを ついてくる。\nメニューの『カイリ』で\nいつでも 話せるよ）');
+  flags.scene = null;
+  FOL.x = player.x; FOL.y = player.y; FOL.px = player.px; FOL.py = player.py; FOL.mv = null;
+}
+async function talkLegend() {
+  await say(`伝説のヲタク「つぎは ${nextGoal()}だ。」`);
+  if (!flags.legendTip) { flags.legendTip = true; await say('伝説のヲタク「推しを 推すのに\n理由なんて いらない。\nでも、 守る 覚悟は いる。」'); return; }
+  const tips = ['伝説のヲタク「ハンドクラップで カイリちゃんの\n演奏を 盛り上げれば、 技の\n威力が あがるぞ。」',
+    '伝説のヲタク「ヲタクを 煽るのは、\nあいてが 一番 ほこりに\nしてる ところを つくんだ。」',
+    '伝説のヲタク「ファンレターは、 たおれた\n仲間に 届けると 立ち上がらせる\nちからが ある。」'];
+  await say(tips[rnd(0, tips.length - 1)]);
+}
+async function talkMomoka() {
+  await say(flags.voice ? '百花「カイリちゃんの 歌、\nもどって ほんとに よかった！」' : '百花「カイリちゃんの 歌、\nわたしも 大好きなの。\n……ぜったい 取りもどしてね！」');
+  if (await yesno('百花「つかれてない？\nすこし 休んでいく？」')) await restAndSave('百花');
+}
+// 路上ライブ / 結界セッション: a one-button rhythm game. Notes come from the right; press A as they reach the ring.
+const RHY = { on: false };
+const rclock = () => (RHY.ctx ? RHY.ctx.currentTime - (RHY.ctx.outputLatency || RHY.ctx.baseLatency || 0) : performance.now() / 1000);
+function chartOf(song) {
+  const s = SONGS[song], step = 60 / s.bpm / 2; let t = 0; const out = [];
+  for (const [f, l] of s.tr[0].notes) { if (f && l >= 2) out.push({ t, hit: null }); t += step * l; }
+  return { notes: out, len: t, beat: step * 2 };
+}
+async function rhythm(song, title) {
+  closeMsg(); stopBgm();
+  Object.assign(RHY, chartOf(song), { on: true, title, combo: 0, maxC: 0, judge: null, jt: 0, ctx: SND.ctx, t0: Infinity, count: 0 });
+  const prevMode = game.mode;
+  game.mode = 'rhythm';
+  for (let i = 3; i >= 1; i--) { RHY.count = i; sfx('cur'); await framesWait(36); }
+  RHY.count = 0;
+  RHY.t0 = rclock() + 0.06; playBgm(song, true);
+  modal = k => {
+    if (k !== 'a') return;
+    const now = rclock() - RHY.t0;
+    let best = null;
+    for (const n of RHY.notes) if (!n.hit && (!best || Math.abs(n.t - now) < Math.abs(best.t - now))) best = n;
+    if (!best || Math.abs(best.t - now) > 0.2) { sfx('tick'); return; }
+    const d = Math.abs(best.t - now);
+    best.hit = d <= 0.08 ? 'perfect' : 'good';
+    RHY.combo++; RHY.maxC = Math.max(RHY.maxC, RHY.combo);
+    RHY.judge = best.hit; RHY.jt = 30; sfx('clap');
+    burst(40, 150, 'note', 2);
+  };
+  await until(() => rclock() - RHY.t0 > RHY.len + 0.8);
+  modal = null;
+  const c = { perfect: 0, good: 0, miss: 0 };
+  for (const n of RHY.notes) c[n.hit || 'miss']++;
+  const score = Math.round((c.perfect + c.good * 0.6) / RHY.notes.length * 100);
+  const rank = score >= 95 ? 'S' : score >= 80 ? 'A' : score >= 60 ? 'B' : 'C';
+  Object.assign(RHY, { result: { ...c, score, rank } });
+  await say(`けっか： ${rank}ランク（スコア ${score}）\nPERFECT ${c.perfect}  GOOD ${c.good}  MISS ${c.miss}\nさいだいコンボ ${RHY.maxC}`);
+  RHY.on = false;
+  game.mode = prevMode === 'rhythm' ? 'map' : prevMode;
+  playBgm(game.map.bgm, true);
+  return RHY.result;
+}
+async function busk() {
+  await say('マイクスタンドが 立っている。\n路上ライブの スポットだ。');
+  if (!await yesno(flags.s4 ? 'カイリ「ここで 路上ライブ しよっか？\n今日は 6本 そろった ギターで！」' : 'カイリ「ここで 路上ライブ しよっか？\n弦が 少なくても 弾ける 曲、\nあるんだから！」')) return;
+  await say('（ノーツが 左の わくに\n重なった ときに A / Zキーで\n手拍子しよう！）');
+  const res = await rhythm(flags.s4 ? 'aoiS' : 'busk', '路上ライブ');
+  const gold = Math.round(res.score * (3 + P.lv) / 5);
+  if (!gold) { await say('カイリ「……今日は お客さん\n少なかったね。 また やろう！」'); return; }
+  P.gold += gold; sfx('ok');
+  await say(`通りすがりの 人たちが\n足を 止めてくれた！\n投げ銭 ${gold}円を もらった！`);
+  if (res.rank === 'S' && (P.items.lemon || 0) < 9) { addItem('lemon'); await say('ファンから はちみつレモンの\n差し入れを もらった！'); }
+  await say(res.rank === 'S' ? 'カイリ「さいこうの 手拍子だった！\nアオ太くん、 天才！」' : 'カイリ「楽しかった〜！\nまた 一緒に やろうね。」');
+}
+// --- chapter 1: オチャノミズ楽器街
+async function unchikuEvent() {
+  if (flags.s1) return;
+  face(npcById('unchiku'), 'down');
+  await say('ウンチク「おや、 弦を 取り返しに\n来たのかい？」');
+  await say('ウンチク「その前に、 この 3弦の\n歴史から 話そうか。\nざっと 3時間ほど。」');
+  await say('カイリ「すみません！ わたし、\n語るより 弾く方が\n好きなんです！」');
+  await say('ウンチク「ほう？ 弦 2本で\n何が 弾けると いうんだい？」');
+  if (await battle('unchiku') !== 'win') return;
+  await say('ウンチク「……たった 2本の 弦で、\nあんなに 楽しそうに……」');
+  await say('ウンチク「ギターは 語る ものじゃなく、\n弾く もの、 だったな。」');
+  await say('ウンチク「この 弦は 返すよ。\n……いい 音を 聞かせてくれ。」');
+  flags.s1 = true;
+  await gainString('3弦', 'アルペジオ', 'みんなの HPを まとめて かいふく');
+  await say('カイリ「つぎは 南の シモキタ！\nライブハウスの 入り口の\nノイズも 消えてる はず！」');
+}
+// --- chapter 2: シモキタ
+async function bandTalk() {
+  if (flags.s2) { await say('バンドマン「ありがとう！\n今度 カイリちゃんと\n対バン したいな！」'); return; }
+  flags.band = true;
+  await say('バンドマン「今日 ここで ライブ\nだったのに、 ガナリって やつに\n全部の 曲に コールを 被せられて……」');
+  await say('バンドマン「バラードも 台無し。\nお客さんも 帰っちゃったよ。\nあいつは 奥の ステージだ。」');
+}
+async function ganariEvent() {
+  if (flags.s2) return;
+  face(npcById('ganari'), 'down');
+  await say('ガナリ「おうおう！ ここは\nおれの ステージだ！」');
+  await say('ガナリ「コールは でかい声で\n被せて ナンボだろ！\nバラードでも 関係ねえ！」');
+  await say('カイリ「コールは うれしいよ。\nでも、 静かに 聞いてほしい\n曲も あるの。」');
+  await say('ガナリ「うるせえ！ おれの 声より\nでかい 音なんて ねえんだよ！」');
+  if (await battle('ganari') !== 'win') return;
+  await say('ガナリ「……お前の ギター、\n声が なくても ちゃんと\n聞こえた。」');
+  await say('ガナリ「おれ、 ずっと 自分の 声しか\n聞いてなかったんだな。」');
+  await say('ガナリ「弦は 返す。\n……次は 静かに 聞きに 行くぜ。」');
+  flags.s2 = true;
+  await gainString('4弦', 'パワーコード', 'つよい いちげきで こうげき');
+  await say('カイリ「つぎは 北の カラオケタワー！」');
+}
+// --- chapter 3: カラオケタワー
+async function pitchEvent() {
+  if (flags.s3) return;
+  face(npcById('pitch'), 'down');
+  await say('ピッチ「止まりなさい！\n音程警察です！」');
+  await say('ピッチ「音程が 1ミリでも ずれたら\n違反です！ 採点 98点 未満は\n歌う 資格 なし！」');
+  await say('カイリ「点数は 大事かも しれない。\nでも、 点数じゃ はかれない\n気持ちも あると 思う。」');
+  await say('ピッチ「そんな もの、\nデータに ありません！」');
+  if (await battle('pitch') !== 'win') return;
+  await say('ピッチ「……わたし、 昔は ただ\n歌うのが 好きだったのに。」');
+  await say('ピッチ「いつから 点数ばかり\n見るように なったんだろう。」');
+  await say('ピッチ「この 弦、 お返しします。\n……今度、 点数なしで\n一緒に 歌ってください。」');
+  flags.s3 = true;
+  await gainString('5弦', 'カッティング', '4回 れんぞくで こうげき');
+  await say('カイリ「のこりは 1本！\n東の 海辺フェスだよ！\n川の 橋を わたった 先！」');
+}
+// --- chapter 4: 海辺フェス
+async function rokuonEvent() {
+  if (flags.s4) return;
+  face(npcById('rokuon'), 'down');
+  await say('ロクオン「おっと、 カメラの 前に\n立たないで くれる？」');
+  await say('ロクオン「ライブは 録って、 切り抜いて、\n拡散してこそ だろ？\n許可？ 知らないね！」');
+  await say('カイリ「その日、 その場所で しか\n聞けない 音が あるの。\nわたしは それを 守りたい！」');
+  await say('ロクオン「じゃあ その音も\n録らせて もらうよ！」');
+  if (await battle('rokuon') !== 'win') return;
+  await say('ロクオン「……録れなかった。\n夢中で 聞いてて、 ボタンを\n押すの 忘れてた。」');
+  await say('ロクオン「……これが、 生の ライブか。」');
+  await say('ロクオン「最後の 弦だ。\n持っていけ。」');
+  flags.s4 = true;
+  await gainString('6弦', 'バラード', 'みんなを 大きく かいふく');
+  sfx('skill'); burst(player.px + 8, player.py, 'note', 10);
+  await say('カイリの ギターが\n元通りに なった！');
+  await say('カイリ「……6本、 そろった。\nあとは、 歌声だけ。」');
+  await say('カイリ「北東の 島に、 黒い お城が\n見えたの。 ミュートは きっと\nあそこに いる。」');
+  await say('カイリ「島への 橋には 結界が ある。\n……でも、 今の ギターなら\n破れるかも！」');
+}
+// --- the barrier on the bridge to the island
+async function barrierTalk() {
+  if (!flags.kairi || !flags.s4) {
+    await say('音の しない 壁が 橋を\nふさいでいる。\nさわっても、 何も 感じない……');
+    if (flags.kairi) await say('カイリ「まだ ギターの 弦が\nそろってない。 先に\nのこりの 弦を 集めよう。」');
+    return;
+  }
+  await say('カイリ「この 結界、 音を\n吸いこんでる。 なら、 吸いきれない\nくらいの 音を ぶつけよう！」');
+  if (!await yesno('カイリ「アオ太くん、 手拍子で\n合わせて くれる？」')) { await say('カイリ「準備が できたら\n声を かけてね。」'); return; }
+  await say('（スコア 60 以上で 結界を\n破れそうだ。 ノーツに 合わせて\nA / Zキーで 手拍子！）');
+  const res = await rhythm('aoiS', '結界ブレイク・セッション');
+  if (res.score < 60) { await say('結界が ゆらいだ…… が、\nまだ 破れない！'); await say('カイリ「おしい！ もう一回\nやって みよう！」'); return; }
+  game.flash = 10; game.shake = 24; sfx('crit');
+  await say('結界に ひびが 入った！\n……パリーーン！！');
+  flags.barrierOpen = true;
+  await say('カイリ「やった！\n……行こう、 沈黙の城へ。」');
+}
+// --- chapter 5: 沈黙の城
+async function muteEvent() {
+  if (flags.mute) return;
+  face(npcById('mute'), 'down');
+  await say('ミュート「……来たか。 歌えない\n歌姫と、 声の 大きい ヲタク。」');
+  await say('カイリ「わたしの 歌声、 返して！」');
+  await say('ミュート「返して どうする？\n歌は いつか だれかに\n『うるさい』と 言われるだけだ。」');
+  await say('ミュート「傷つく 前に、 すべてを\n静かに してやろう。」');
+  const r = await battle('mute', { bgm: 'final', noJingle: true, onTurn: voiceCheck });
+  if (r !== 'win') return;
+  flags.mute = true;
+  await muteAfter();
+}
+async function voiceCheck(e) {
+  if (flags.voice || e.hp > e.mhp * 0.35) return;
+  closeMsg();
+  await say('ミュート「……なぜだ。 なぜ まだ\n立って いられる。」');
+  await say('……どこか 遠くから、\n声が 聞こえる。');
+  await say('アキハバラの ヲタクたち\n「カイリーーーーっ！！」');
+  await say('百花「カイリちゃーん！\nがんばってーーっ！」');
+  await say('ウンチク・ガナリ・ピッチ・ロクオン\n「いけーーーっ！！」');
+  await say('……世界中の 声援が、\n城の 静寂を ふるわせている！');
+  await ask('アオ太も……', ['「カイリーーーっ！！」と さけんだ', 'ブルーの ペンラを 高く かかげた'], { x: 8, y: 92, w: 240, cancel: false });
+  game.flash = 10; sfx('crit');
+  await say('ミュートの 手の 青い 光が\nふるえだした！');
+  flags.voice = true;
+  burst(168, 70, 'note', 14);
+  await say('光は カイリの もとへ\n帰っていく……！');
+  playBgm('aoi', true);
+  await say('カイリ「……あ…… ♪……\n声が…… 出る！」');
+  await say('カイリ「アオ太くん、 みんな……\nありがとう。 ちゃんと\n届いたよ！」');
+  await jingle('lvup'); playBgm('aoi', true);
+  await say('カイリは 「蒼のメロディ」を\nおぼえた！');
+  fullHeal();
+  await say('みんなの HPと MPが ぜんかいした！');
+  e.atk = Math.round(e.atk * 0.8);
+  await say('ミュートの ちからが よわまった！');
+  closeMsg();
+}
+async function muteAfter() {
+  playBgm(null);
+  await say('ミュート「……音が…… あたたかい……」');
+  await say('ミュート「……むかし、 駅前で 歌う\n女の子を 応援していた。」');
+  await say('ミュート「でも ある日、 その子は\n『うるさい』と 言われて、\n二度と 歌わなくなった。」');
+  await say('ミュート「それから 思ったんだ。\n音なんて、 人を 傷つける\nだけだと。」');
+  await say('カイリ「……その子の 歌、\n大好きだったんですね。」');
+  await say('カイリ「じゃあ、 今日は わたしが\n歌います。 あなたの ために。」');
+  playBgm('aoi', true); game.lights = true;
+  for (let i = 0; i < 4; i++) { burst(player.px + 8, player.py - 8, 'note', 4); await framesWait(24); }
+  await say('カイリは ギターを 鳴らし、\nやさしく 歌いはじめた──');
+  await say('（城の 窓から、\n光が さしこんでいく……）');
+  await say('ミュート「……ああ。 そうだ。\nわたしは、 この音が\n好きだったんだ……」');
+  game.flash = 8;
+  await say('ミュートの マントが ほどけて……\nひとりの ヲタクに もどった。');
+  game.lights = false;
+  await ending();
+}
+async function ending() {
+  await fadeOut(30);
+  flags.scene = 'concert';
+  setMap('town', 19, 7, 'up');
+  game.lights = true; playBgm('aoi', true);
+  await caption(['それから 一週間後──', 'アキハバラの 劇場'], 120);
+  await fadeIn(30);
+  await say('カイリ「みなさーん！\nただいまーーっ！」');
+  burst(19 * TS + 8, 3 * TS, 'heart', 10);
+  await say('（会場が 水色と ブルーの\n光で うめつくされた！）');
+  await say('カイリ「ギターの 弦も、 歌声も、\nみんなが 取りもどして\nくれました。」');
+  await say('カイリ「それから…… 一番うしろの、\nブルーの ペンラの 人。」');
+  await say('カイリ「最初から ずっと、\n見えてたよ。 ありがとう。」');
+  await say('（……ペンライトを 振る 手が\nふるえた。）');
+  await say('カイリ「それでは 聞いてください。\n『蒼のメロディ』！」');
+  for (let i = 0; i < 5; i++) { burst(19 * TS + 8, 3 * TS, 'note', 5); await framesWait(28); }
+  const r = await ask('カイリ「これからも、 わたしの 歌、\n聞いてくれる？」', ['もちろん！', 'ずっと 一番うしろから！'], { cancel: false });
+  await say(r === 0 ? 'カイリ「えへへ、 うれしい！\nこれからも よろしくね！」' : 'カイリ「ふふっ。 じゃあ 次は\nもっと 前の 席で 聞いてね！」');
+  closeMsg();
+  await fadeOut(40);
+  flags.cleared = true;
+  const clearState = { P: { ...P, hp: P.mhp, mp: P.mmp, k: { hp: KAIRI.mhp, mp: KAIRI.mmp } }, flags: { chests: {}, cleared: true, cycle: flags.cycle || 0 }, map: 'town', x: 4, y: 4, dir: 'down' };
+  saveGame(true, clearState);
+  game.lights = false; flags.scene = null;
+  game.mode = 'end'; game.endT = 0; game.fade = 0;
+  await new Promise(res => { modal = k => { if (k === 'a' && game.endT > 120) { modal = null; res(); } }; });
+  await fadeOut(20);
+  // let the surrounding runScript finish its cleanup before the title opens its menu
+  setTimeout(titleScreen, 0);
+}
+
+
+// --- map wiring ---
+const go = (id, x, y, dir, name) => async () => { sfx('door'); await fadeOut(8); setMap(id, x, y, dir); if (name) toast(name); await fadeIn(8); };
+// stepping onto a closed entrance puts the player back on the tile they came from
+function bounce(x, y) { player.x = x; player.y = y; player.px = x * TS; player.py = y * TS; FOL.x = x; FOL.y = y; FOL.px = player.px; FOL.py = player.py; FOL.mv = null; }
+const concert = () => flags.scene === 'concert';
+const normal = () => !flags.scene;
+const T = MAPS.town;
+T.npcs = [
+  { id: 'oya', x: 6, y: 5, spr: 'oya', talk: talkOya, show: normal },
+  { id: 'shop', x: 5, y: 13, spr: 'clerk', talk: () => talkShop() },
+  { id: 'cafe', x: 16, y: 13, spr: 'cafe', talk: talkCafe },
+  { id: 'kairiStage', x: 19, y: 3, spr: 'kairiG', fixed: 1, show: () => !flags.kairi,
+    talk: async () => { await say('カイリ「♪〜」\n（カイリが ギターの\nチューニングを している）'); } },
+  { id: 'muteT', x: 19, y: 6, spr: 'mute', fixed: 1, dir: 'up', show: () => !!game.muteOn },
+  { id: 'kairiC', x: 19, y: 3, spr: 'kairiG', fixed: 1, show: concert, talk: async () => { await say('カイリ「♪〜！」'); } },
+  { id: 'legend', x: 16, y: 6, spr: 'legend', fixed: 1, show: () => !!flags.tut, talk: async () => { if (concert()) await say('伝説のヲタク「いい 推しを 見つけたな。」'); else await talkLegend(); } },
+  { id: 'momoka', x: 24, y: 6, spr: 'momoka', fixed: 1, show: () => !!flags.tut, talk: async () => { if (concert()) await say('百花「カイリちゃん、 さいこう！」'); else await talkMomoka(); } },
+  ...[['unC', 17, 5, 'unchiku'], ['gaC', 18, 5, 'ganari'], ['piC', 21, 5, 'pitch'], ['roC', 22, 5, 'rokuon'], ['exC', 23, 7, 'exmute']]
+    .map(([id, x, y, spr]) => ({ id, x, y, spr, fixed: 1, dir: 'up', show: concert })),
+  { id: 'fan1', x: 17, y: 5, spr: 'otaku1', show: () => normal() || flags.scene === 'show', talk: async () => {
+    if (!flags.stolen) await say('ヲタク「カイリちゃんの 推しカラーは\n水色×ブルー！ 今日は 両手に\nペンラ 2本だ！」');
+    else if (!flags.voice) await say('ヲタク「カイリちゃんの 歌が\n聞けないなんて……\nたのんだぞ！」');
+    else await say('ヲタク「おかえり、 カイリちゃんの 歌！」');
+  } },
+  { id: 'fan2', x: 23, y: 5, spr: 'otaku3', show: () => normal() || flags.scene === 'show', talk: async () => {
+    if (!flags.stolen) await say('ヲタク「カイリちゃんは ギターも\n弾けるし、 歌も うまいんだ。\n弾き語りは 最高だぞ！」');
+    else await say('ヲタク「音が 消えて、 街の\n色まで うすく なってきた……」');
+  } },
+  { id: 'fan3', x: 22, y: 7, spr: 'girl2', show: () => normal() || flags.scene === 'show', talk: async () => {
+    if (!flags.stolen) await say('女の子「わたしも ギター はじめたの！\nカイリちゃんみたいに\n弾き語り したいな！」');
+    else if (!flags.voice) await say('女の子「ギター…… 弾いても\n音が うすく 聞こえるの……」');
+    else await say('女の子「コード 3つ 弾けるように\nなったよ！ カイリちゃんの おかげ！」');
+  } },
+  { id: 'mic', x: 8, y: 10, spr: 'mic', fixed: 1, show: () => !!flags.kairi && normal(), talk: busk },
+  { id: 'w1', x: 14, y: 10, spr: 'otaku2', wander: 1, show: normal, talk: async () => {
+    if (!flags.show) await say('ヲタク「劇場は 町の 北東の 建物だよ。\n今日の 弾き語り、 楽しみだな〜！」');
+    else if (!flags.voice) await say(`ヲタク「町の 外は ノイズだらけだ。\nカイリちゃんと 一緒に\n${nextGoal()}を めざすんだろ？」`);
+    else await say('ヲタク「街に 色が もどったな！\n空が 水色で きれいだ。」');
+  } },
+  { id: 'w2', x: 22, y: 11, spr: 'otaku4', wander: 1, show: normal, talk: async () => {
+    await say('ヲタク「Bボタン（Xキー）で メニュー。\n「スキル」の 推しコールで\nHPを かいふくできるぞ。」');
+  } },
+  { id: 'maid', x: 19, y: 11, spr: 'maid', fixed: 1, show: normal, talk: async () => {
+    if (flags.voice) await say('メイド「カイリちゃん 復活記念！\n水色の クリームソーダ\nはじめました♪」');
+    else if (flags.stolen) await say('メイド「お店の BGMが 鳴らなくて……\nご主人様たちも 元気が\nないんです……」');
+    else await say('メイド「おかえりなさいませ、\nご主人様♪ 劇場は\nすぐ 上ですよ！」');
+  } },
+  { id: 'gacha', x: 26, y: 11, spr: 'otaku2', fixed: 1, dir: 'up', show: normal, talk: async () => {
+    if (flags.s4) await say('ヲタク「カイリちゃんの ギターピック型\nキーホルダー、 やっと 出た！\n水色だ！」');
+    else await say('ヲタク「カイリちゃんの キーホルダー、\nもう 30回 回してるのに\n出ない……」');
+  } },
+  { id: 'tourist', x: 4, y: 19, spr: 'tourist', wander: 1, show: normal, talk: async () => {
+    await say(flags.voice ? '観光客「アキハバラ、 オト イッパイ！\nカイリ、 ウタ、 サイコー！」' : '観光客「アキハバラ、 シズカ……\nオト、 ドコ イッタ？」');
+  } },
+  { id: 'w4', x: 6, y: 15, spr: 'girl', wander: 1, show: normal, talk: async () => {
+    await say('女の子「冒険は 自動で きろくされるの。\nやめても タイトルの『つづきから』で\n再開 できるんだって！」');
+  } },
+  { id: 'unT', x: 3, y: 15, spr: 'unchiku', fixed: 1, show: () => !!flags.s1 && normal(), talk: async () => { await say('ウンチク「グッズ屋で 弦の 張り方\n教室を はじめたよ。\n……話は 短めに してる。」'); } },
+  { id: 'gaT', x: 21, y: 10, spr: 'ganari', fixed: 1, show: () => !!flags.s2 && normal(), talk: async () => { await say('ガナリ「最近は バラードの 時、\nペンラだけ 振ってる。\n……案外 いいもんだな。」'); } },
+  { id: 'piT', x: 13, y: 17, spr: 'pitch', fixed: 1, show: () => !!flags.s3 && normal(), talk: async () => { await say('ピッチ「カラオケで 採点を\nオフに してみたの。\n……すごく 楽しかった！」'); } },
+  { id: 'roT', x: 25, y: 18, spr: 'rokuon', fixed: 1, show: () => !!flags.s4 && normal(), talk: async () => { await say('ロクオン「スマホは 置いてきた。\n目に 焼きつける ことに\nしたんだ。」'); } },
+];
+T.onExit = go('field', 5, 10, 'down', 'フィールド');
+T.onStep = (x, y) => (!flags.show && y === 7 && (x === 19 || x === 20)) ? showEvent : null;
+
+const F = MAPS.field;
+F.npcs = [
+  { id: 'barrier', x: 33, y: 6, spr: 'barrier', fixed: 1, show: () => !flags.barrierOpen, talk: barrierTalk },
+];
+F.enc = (x, y) => {
+  if (!flags.stolen) return ['hanauta', 'archive'];
+  if (x >= 30) return y < 8 ? ['bignoise', 'resale', 'rokuota'] : ['resale', 'sheet', 'rokuota', 'noise'];
+  if (y < 8 && x >= 10) return ['archive', 'saiten', 'harmo', 'kabuse'];
+  if (y >= 13) return ['kabuse', 'archive', 'mosh', 'noise'];
+  if (x < 10 && y < 8) return ['hanauta', 'noise', 'kabuse', 'pickthief'];
+  return ['hanauta', 'noise', 'kabuse', 'archive'];
+};
+// entrances stay sealed by noise walls until the strings before them are back
+const gate = (need, x, y, place) => async () => {
+  bounce(x, y);
+  await say('入り口が ザラザラした\nノイズの 壁で ふさがれている……');
+  if (flags.kairi) await say(`カイリ「まだ 音が 足りないみたい。\n先に ${place}へ 行こう。」`);
+};
+F.onStep = (x, y, t) => {
+  if (t === 'A') return go('town', 11, 19, 'up', 'アキハバラ');
+  if (t === 'G') return flags.tut ? async () => { await go('gakki', 9, 12, 'up', 'オチャノミズ楽器街')(); } : async () => { bounce(3, 3); await say('楽器屋さんが 並んでいる。\n……今は 用が ない。'); };
+  if (t === 'L') return !flags.s1 ? gate('s1', 11, 16, nextGoal()) : async () => {
+    await go('shimo', 9, 13, 'up', 'ライブハウス街シモキタ')();
+    if (!flags.shimoSeen) { flags.shimoSeen = true; await say('……どの ライブハウスからも\n音が しない。'); }
+  };
+  if (t === 'K') return !flags.s2 ? gate('s2', 22, 3, nextGoal()) : go('kara1', 7, 12, 'up', 'カラオケタワー');
+  if (t === 'E') return !flags.s3 ? gate('s3', 34, 14, nextGoal()) : async () => {
+    await go('fes', 11, 12, 'up', '海辺フェス会場')();
+    if (!flags.fesSeen) {
+      flags.fesSeen = true;
+      await say('フェス客「ロクオンの 手下が 録音しまくって、\nアーティストが みんな\n演奏を やめちゃったんだ……」');
+      await say('フェス客「ロクオンは メインステージだ。\nたのむ、 フェスを 取りもどしてくれ！」');
+    }
+  };
+  if (t === 'Z') return async () => {
+    await go('castle1', 9, 12, 'up', '沈黙の城')();
+    if (!flags.castleSeen) { flags.castleSeen = true; await say('……城の 中は、 足音すら\nしない。'); await say('カイリ「……こわい くらい 静か。\nでも、 歌声の 気配が する。」'); }
+  };
+  return null;
+};
+
+const GK = MAPS.gakki;
+GK.npcs = [
+  { id: 'unchiku', x: 10, y: 1, spr: 'unchiku', show: () => !flags.s1, talk: unchikuEvent },
+  { id: 'gclerk', x: 9, y: 11, spr: 'clerk', fixed: 1, dir: 'up', talk: async () => {
+    if (flags.s1) await say('店員「ウンチクさん、 最近は\n弾く 練習ばっかり してるよ。」');
+    else await say('店員「奥の 部屋に 講釈おじさんが\n居座ってて…… お客さんが\nみんな 帰っちゃうんだ。」');
+  } },
+];
+GK.chests = [{ id: 'g1', x: 1, y: 1, item: 'lemon' }, { id: 'g2', x: 18, y: 1, gold: 120 }, { id: 'g3', x: 18, y: 9, item: 'letter' }];
+GK.enc = () => ['kizai', 'mimicopy', 'pickthief', 'hanauta'];
+GK.encRate = 1 / 13;
+GK.onExit = go('field', 3, 3, 'down');
+GK.onStep = (x, y) => (!flags.s1 && y === 2 && x >= 7 && x <= 13) ? unchikuEvent : null;
+
+const SM = MAPS.shimo;
+SM.npcs = [
+  { id: 'ganari', x: 9, y: 2, spr: 'ganari', show: () => !flags.s2, talk: ganariEvent },
+  { id: 'band', x: 2, y: 12, spr: 'band', talk: bandTalk },
+];
+SM.chests = [{ id: 'm1', x: 1, y: 2, item: 'drink2' }, { id: 'm2', x: 18, y: 2, weapon: 2 }, { id: 'm3', x: 18, y: 12, gold: 200 }];
+SM.enc = () => ['mosh', 'dive', 'uchiage', 'kabuse'];
+SM.encRate = 1 / 13;
+SM.onExit = go('field', 11, 18, 'down');
+SM.onStep = (x, y) => (!flags.s2 && y === 3 && x >= 6 && x <= 13) ? ganariEvent : null;
+
+const K1 = MAPS.kara1;
+K1.npcs = [
+  { id: 'kstaff', x: 8, y: 11, spr: 'staff', fixed: 1, talk: async () => {
+    if (flags.s3) await say('店員「採点機能、 オフの お客さんが\n増えました。 みなさん 楽しそうです。」');
+    else if (!flags.karaSeen) { flags.karaSeen = true; await say('店員「最上階の パーティールームに\n音程警察が 立てこもってて……」'); await say('店員「採点で 98点 取れない お客さんを\nみんな 追い出しちゃうんです！」'); }
+    else await say('店員「階段は 1Fの 右上です。\nお気を つけて！」');
+  } },
+];
+K1.chests = [{ id: 'k1', x: 1, y: 1, armor: 2 }, { id: 'k3', x: 5, y: 3, item: 'lemon' }];
+K1.enc = () => ['saiten', 'micman', 'harmo', 'dive'];
+K1.encRate = 1 / 13;
+K1.onExit = go('field', 22, 3, 'down');
+K1.onStep = (x, y, t) => t === 'U' ? go('kara2', 2, 10, 'right', '最上階') : null;
+const K2 = MAPS.kara2;
+K2.npcs = [{ id: 'pitch', x: 7, y: 1, spr: 'pitch', show: () => !flags.s3, talk: pitchEvent }];
+K2.chests = [{ id: 'k2', x: 14, y: 9, weapon: 3 }];
+K2.enc = K1.enc; K2.encRate = 1 / 14;
+K2.onStep = (x, y, t) => t === 'd' ? go('kara1', 14, 2, 'down', '1F') : (!flags.s3 && y === 2) ? pitchEvent : null;
+
+const FS = MAPS.fes;
+FS.npcs = [
+  { id: 'rokuon', x: 11, y: 2, spr: 'rokuon', show: () => !flags.s4, talk: rokuonEvent },
+  { id: 'fesfan', x: 13, y: 11, spr: 'fesfan', fixed: 1, talk: async () => {
+    await say(flags.s4 ? 'フェス客「ステージが 再開したぞ！\nスマホを しまって\nみんな 聞き入ってる！」' : 'フェス客「ロクオンは 奥の\nメインステージだ。」');
+  } },
+];
+FS.chests = [{ id: 'f1', x: 1, y: 2, gold: 300 }, { id: 'f2', x: 22, y: 2, armor: 4 }, { id: 'f3', x: 1, y: 9, item: 'drink2', n: 2 }];
+FS.enc = () => ['rokuota', 'resale', 'sheet', 'uchiage'];
+FS.encRate = 1 / 13;
+FS.onExit = go('field', 34, 16, 'down');
+FS.onStep = (x, y) => (!flags.s4 && y === 3 && x >= 7 && x <= 16) ? rokuonEvent : null;
+
+const C1 = MAPS.castle1;
+C1.chests = [{ id: 'c3', x: 1, y: 1, item: 'drink2', n: 2 }, { id: 'c4', x: 1, y: 11, item: 'letter', n: 2 }];
+C1.enc = () => ['shizuka', 'mutek', 'bignoise'];
+C1.encRate = 1 / 14;
+C1.onExit = go('field', 33, 4, 'down');
+C1.onStep = (x, y, t) => t === 'U' ? go('castle2', 2, 9, 'right', '玉座') : null;
+const C2 = MAPS.castle2;
+C2.npcs = [{ id: 'mute', x: 7, y: 1, spr: 'mute', show: () => !flags.mute, talk: muteEvent }];
+C2.chests = [{ id: 'c1', x: 1, y: 3, weapon: 5 }, { id: 'c2', x: 14, y: 3, armor: 5 }];
+C2.enc = C1.enc; C2.encRate = 1 / 16;
+C2.onStep = (x, y, t) => t === 'd' ? go('castle1', 17, 1, 'left', '沈黙の城') : (!flags.mute && y === 2) ? muteEvent : null;
+
+
+// ------------------------------------------------------------
+//  Name entry (DQ-style kana grid + keyboard field)
+// ------------------------------------------------------------
+const NAME_MAX = 6;
+const KANA_ROWS = ['あいうえおかきくけこ', 'さしすせそたちつてと', 'なにぬねのはひふへほ', 'まみむめもやゆよわを',
+  'らりるれろんぁぃぅぇ', 'がぎぐげござじずぜぞ', 'だぢづでどばびぶべぼ', 'ぱぴぷぺぽぉゃゅょっ'];
+const NAME_CMDS = [{ label: 'カナ', act: 'kana' }, { label: 'ー', act: 'ー' }, { label: 'けす', act: 'del' }, { label: 'おわる', act: 'ok' }];
+const toKata = t => t.replace(/[ぁ-ゖ]/g, c => String.fromCharCode(c.charCodeAt(0) + 0x60));
+const ne = { name: '', kata: false, r: 0, c: 0 };
+const nameField = document.getElementById('name-field');
+const nameInput = document.getElementById('hero-name');
+const clipName = v => Array.from(v.replace(/\s+/g, ' ').trim()).slice(0, NAME_MAX).join('');
+nameInput.addEventListener('input', () => { ne.name = Array.from(nameInput.value).slice(0, NAME_MAX).join(''); });
+function nameEntry() {
+  ne.name = ''; ne.kata = false; ne.r = 0; ne.c = 0;
+  nameInput.value = ''; nameField.hidden = false;
+  game.mode = 'name';
+  return new Promise(res => {
+    const finish = () => {
+      sfx('ok'); nameField.hidden = true; modal = null;
+      nameInput.blur(); cv.focus();
+      res(clipName(ne.name) || 'アオ太');
+    };
+    const sync = () => { nameInput.value = ne.name; };
+    const rowLen = r => r < KANA_ROWS.length ? 10 : NAME_CMDS.length;
+    nameInput.onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); finish(); } };
+    document.getElementById('name-ok').onclick = finish;
+    modal = k => {
+      const rows = KANA_ROWS.length + 1;
+      if (k === 'up' || k === 'down') {
+        const or = ne.r; ne.r = (ne.r + (k === 'up' ? -1 : 1) + rows) % rows;
+        if (rowLen(or) !== rowLen(ne.r)) ne.c = Math.round(ne.c * (rowLen(ne.r) - 1) / (rowLen(or) - 1));
+        sfx('cur');
+      } else if (k === 'left' || k === 'right') {
+        ne.c = (ne.c + (k === 'left' ? -1 : 1) + rowLen(ne.r)) % rowLen(ne.r); sfx('cur');
+      } else if (k === 'b') {
+        ne.name = Array.from(ne.name).slice(0, -1).join(''); sync(); sfx('cur');
+      } else if (k === 'a') {
+        let add = null;
+        if (ne.r < KANA_ROWS.length) add = KANA_ROWS[ne.r][ne.c];
+        else {
+          const act = NAME_CMDS[ne.c].act;
+          if (act === 'kana') { ne.kata = !ne.kata; sfx('ok'); return; }
+          if (act === 'del') { ne.name = Array.from(ne.name).slice(0, -1).join(''); sync(); sfx('cur'); return; }
+          if (act === 'ok') { finish(); return; }
+          add = act;
+        }
+        if (Array.from(ne.name).length >= NAME_MAX) { sfx('ng'); return; }
+        ne.name += ne.kata ? toKata(add) : add; sync(); sfx('cur');
+      }
+    };
+  });
+}
+function drawName() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  drawWin(8, 6, 240, 48);
+  txt('主人公の なまえを きめてください', 20, 13);
+  const chars = Array.from(ne.name);
+  for (let i = 0; i < NAME_MAX; i++) {
+    const x = 74 + i * 18;
+    ctx.fillStyle = '#7a7488'; ctx.fillRect(x, 47, 14, 1);
+    if (chars[i]) txt(chars[i], x + 1, 32, '#fff', 12, 14);
+    else if (i === chars.length && (game.frame >> 4) % 2 === 0) { ctx.fillStyle = '#78d8f8'; ctx.fillRect(x, 45, 14, 2); }
+  }
+  drawWin(8, 58, 240, 160);
+  const blink = (game.frame >> 4) % 2 === 0;
+  const arrow = (x, y) => { ctx.fillStyle = '#fff'; for (let k = 0; k < 4; k++) ctx.fillRect(x + k, y + k, 1, 8 - k * 2); };
+  KANA_ROWS.forEach((row, r) => {
+    Array.from(ne.kata ? toKata(row) : row).forEach((ch, c) => {
+      const x = 26 + c * 21 + (c >= 5 ? 6 : 0), y = 66 + r * 16;
+      txt(ch, x, y);
+      if (r === ne.r && c === ne.c && blink) arrow(x - 8, y + 2);
+    });
+  });
+  NAME_CMDS.forEach((cmd, c) => {
+    const x = 26 + c * 56, y = 198;
+    const label = cmd.act === 'kana' ? (ne.kata ? 'ひら' : 'カナ') : cmd.label;
+    txt(label, x, y, cmd.act === 'ok' ? '#78d8f8' : '#fff');
+    if (ne.r === KANA_ROWS.length && ne.c === c && blink) arrow(x - 8, y + 2);
+  });
+}
+const STARS = Array.from({ length: 60 }, () => [rnd(0, W - 1), rnd(0, 150), rnd(0, 3)]);
+async function titleScreen() {
+  game.mode = 'title'; game.busy = true; game.fx = [];
+  playBgm('title', true);
+  game.fade = 0;
+  // after clearing, the second item becomes 強くてニューゲーム
+  const label2 = sv => sv && sv.flags && sv.flags.cleared ? '強くてニューゲーム' : 'つづきから';
+  const items = [{ label: 'はじめから' }, { label: label2(loadSave()), disabled: !loadSave() }, { label: 'じゅもんで さいかい' }];
+  const m = openMenu({ items, x: 56, y: 140, w: 144, cancel: false, idx: loadSave() ? 1 : 0 });
+  // the account save arrives a moment after the title appears
+  STORE.onChange = () => { const had = !items[1].disabled, sv = loadSave(); items[1].disabled = !sv; items[1].label = label2(sv); if (!had && !items[1].disabled && m.idx === 0) m.idx = 1; };
+  const r = await chooseMenu(m); closeMenu(m);
+  STORE.onChange = null;
+  if (r === 2) {
+    const text = await openCodePanel('input');
+    const save = text && parseCode(text);
+    if (!save) {
+      await say(text ? 'じゅもんが ちがいます。\nもういちど たしかめてね。' : 'タイトルに もどります。');
+      closeMsg();
+      return titleScreen();
+    }
+    return resume(save);
+  }
+  await fadeOut(20);
+  const save = loadSave();
+  if (r === 1 && save) return resume(save);
+  newGame();
+  game.fade = 0;
+  while (true) {
+    P.name = await nameEntry();
+    game.mode = 'title';
+    if (await yesno(`「${P.name}」で よろしいですか？`)) break;
+  }
+  closeMsg();
+  await fadeOut(20);
+  await prologue();
+}
+async function newGamePlus(save) {
+  if (game.fade < 1) await fadeOut(20);
+  newGame();
+  Object.assign(P, save.P); fixKairi(); P.hp = P.mhp; P.mp = P.mmp; ensureOwned();
+  for (const id in P.items) if (!ITEMS[id]) delete P.items[id];
+  const cycle = (save.flags.cycle || 0) + 1;
+  Object.assign(flags, { cycle });
+  await caption([`強くてニューゲーム（${cycle + 1}周目）`, '敵も 強くなっているぞ！'], 120);
+  await prologue();
+}
+// never leave the player on a black screen: if loading the save fails, restart at home with the same stats
+async function resume(save) {
+  try { await resumeRaw(save); }
+  catch (e) {
+    reportError(e);
+    try {
+      if (save && save.P) { newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags || {}); flags.chests = flags.chests || {}; }
+      flags.scene = null; game.flashback = false; game.heroSpr = null; cv.style.filter = '';
+      game.mode = 'map'; setMap('town', 4, 4, 'down');
+    } catch (e2) { reportError(e2); newGame(); game.mode = 'map'; setMap('town', 4, 4, 'down'); }
+    game.fade = 0; game.busy = false;
+  }
+}
+async function resumeRaw(save) {
+  if (save.flags && save.flags.cleared) return newGamePlus(save);
+  if (game.fade < 1) await fadeOut(20);
+  newGame(); Object.assign(P, save.P); Object.assign(flags, save.flags); flags.chests = flags.chests || {};
+  if (!MAPS[save.map]) { save.map = 'town'; save.x = 4; save.y = 4; }
+  game.flashback = false; game.heroSpr = null; flags.scene = null; game.muteOn = false;
+  fixKairi(); ensureOwned();
+  game.mode = 'map';
+  setMap(save.map, save.x, save.y, save.dir);
+  toast(game.map.name);
+  await fadeIn(20);
+  game.busy = false;
+  saveGame(true);
+  await warnNoSave();
+}
+// tell the player once when nothing can be kept, so progress isn't silently lost
+async function warnNoSave() {
+  if (STORE.local || STORE.cloudState !== 'off' || STORE.warned) return;
+  STORE.warned = true;
+  await runScript(async () => {
+    await say('※ この画面では セーブが できません。\nやめる前に メニューの「きろく」で\nふっかつのじゅもんを メモしてね。');
+  });
+}
+
+// ------------------------------------------------------------
+//  Rendering
+// ------------------------------------------------------------
+function drawWin(x, y, w, h, border = '#fff') {
+  ctx.fillStyle = '#000'; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = border;
+  ctx.fillRect(x + 3, y + 1, w - 6, 2); ctx.fillRect(x + 3, y + h - 3, w - 6, 2);
+  ctx.fillRect(x + 1, y + 3, 2, h - 6); ctx.fillRect(x + w - 3, y + 3, 2, h - 6);
+  ctx.fillRect(x + 2, y + 2, 2, 2); ctx.fillRect(x + w - 4, y + 2, 2, 2); ctx.fillRect(x + 2, y + h - 4, 2, 2); ctx.fillRect(x + w - 4, y + h - 4, 2, 2);
+}
+function txt(s, x, y, col = '#fff', size = 12, maxW) {
+  ctx.font = size + 'px ' + FONT; ctx.textBaseline = 'top'; ctx.fillStyle = col;
+  if (maxW) ctx.fillText(s, x, y, maxW); else ctx.fillText(s, x, y);
+}
+function drawUI() {
+  for (const w of extraWins) w();
+  if (msg.visible) {
+    drawWin(msg.x, msg.y, msg.w, msg.h);
+    msg.lines.forEach((L, i) => txt(L.t.slice(0, Math.floor(L.n)), msg.x + 12, msg.y + 10 + i * 20));
+    if (msg.arrow && (game.frame >> 4) % 2 === 0) { ctx.fillStyle = '#fff'; const ax = msg.x + msg.w / 2 - 3, ay = msg.y + msg.h - 11; ctx.fillRect(ax, ay, 7, 1); ctx.fillRect(ax + 1, ay + 1, 5, 1); ctx.fillRect(ax + 2, ay + 2, 3, 1); ctx.fillRect(ax + 3, ay + 3, 1, 1); }
+  }
+  for (const m of menus) {
+    drawWin(m.x, m.y, m.w, m.h);
+    const top = m.top || 0, rows = m.rows || m.items.length;
+    m.items.slice(top, top + rows).forEach((it, j) => {
+      const i = top + j;
+      const label = typeof it === 'string' ? it : it.label;
+      const col = it.disabled ? '#7a7488' : '#fff';
+      txt(label, m.x + 20, m.y + 8 + j * m.lh, col);
+      if (it.right) txt(it.right, m.x + m.w - 10 - textW(it.right), m.y + 8 + j * m.lh, col);
+      if (i === m.idx && (!m.active || (game.frame >> 4) % 2 === 0)) {
+        const cx = m.x + 9, cy = m.y + 10 + j * m.lh; ctx.fillStyle = '#fff';
+        for (let k = 0; k < 4; k++) ctx.fillRect(cx + k, cy + k, 1, 8 - k * 2);
+      }
+    });
+    // more above / below
+    ctx.fillStyle = '#fff';
+    const mx = m.x + m.w / 2;
+    if (top > 0) for (let k = 0; k < 3; k++) ctx.fillRect(mx - k, m.y + 2 + k, 1 + k * 2, 1);
+    if (top + rows < m.items.length) for (let k = 0; k < 3; k++) ctx.fillRect(mx - k, m.y + m.h - 2 - k, 1 + k * 2, 1);
+    if (m.info && m.active) {
+      drawWin(8, 144, 240, 76);
+      String(m.info(m.idx)).split('\n').forEach((l, i) => txt(l, 20, 154 + i * 20, l.startsWith('【') ? '#78d8f8' : '#fff', 12, 216));
+    }
+  }
+}
+function heartAt(x, y, col) {
+  const pat = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+  ctx.fillStyle = col;
+  pat.forEach((r, j) => { for (let i = 0; i < 7; i++) if (r[i] === '#') ctx.fillRect(x + i, y + j, 1, 1); });
+}
+function noteAt(x, y, col) { ctx.fillStyle = col; ctx.fillRect(x + 3, y, 1, 6); ctx.fillRect(x + 4, y, 2, 1); ctx.fillRect(x + 5, y + 1, 1, 1); ctx.fillRect(x, y + 5, 4, 2); }
+function camera() {
+  const m = game.map;
+  let cx = Math.round(player.px - (W / 2 - 8)), cy = Math.round(player.py - (H / 2 - 16));
+  if (m.w * TS <= W) cx = Math.round((m.w * TS - W) / 2);
+  if (m.h * TS <= H) cy = -12;
+  return [cx, cy];
+}
+function drawActor(a, sprName, cx, cy) {
+  const set = SPR[sprName]; if (!set) return;
+  const f = (game.frame >> 4) % 2;
+  ctx.drawImage(set[a.dir][f], Math.round(a.px) - cx, Math.round(a.py) - cy);
+}
+function drawTownMood(cx, cy) {
+  if (flags.scene !== 'concert') return;
+  ctx.fillStyle = 'rgba(120,200,248,0.16)'; ctx.fillRect(0, 0, W, H);
+  // pennant strings across the main street, in the oshi colours
+  for (const row of [1, 9, 17]) {
+    const y = row * TS - cy - 4;
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(TS - cx, y, 26 * TS, 1);
+    for (let x = TS; x < 27 * TS; x += 8) { ctx.fillStyle = (x >> 3) % 2 ? '#78d8f8' : '#3a78d8'; ctx.beginPath(); ctx.moveTo(x - cx, y + 1); ctx.lineTo(x - cx + 6, y + 1); ctx.lineTo(x - cx + 3, y + 6); ctx.fill(); }
+  }
+}
+function drawMap() {
+  const m = game.map; const [cx, cy] = camera();
+  const tf = (game.frame >> 5) % 2;
+  const tx0 = Math.floor(cx / TS), ty0 = Math.floor(cy / TS);
+  for (let ty = ty0; ty <= ty0 + Math.ceil(H / TS); ty++) for (let tx = tx0; tx <= tx0 + Math.ceil(W / TS); tx++) {
+    const ch = tileAt(m, tx, ty); let im = (m.theme && themeImg[m.theme][ch]) || tileImg[ch] || tileImg[' '];
+    const deco = m.theme && themeDeco[m.theme][ch];
+    if (deco && (THEMES[m.theme].block || (tx >= -1 && ty >= -1 && tx <= m.w && ty <= m.h))) {
+      // decorate roughly one tile in seven; wall decorations only where the wall faces a walkable tile
+      const hsh = ((tx * 73856093) ^ (ty * 19349663)) >>> 0;
+      const rate = (THEMES[m.theme].rate || {})[ch] || 7;
+      const below = tileAt(m, tx, ty + 1), face = rate === 1 || !TILES[ch].solid || (TILES[below] && !TILES[below].solid);
+      const bk = THEMES[m.theme].block;
+      if (bk) {
+        // whole blocks share a colour so the street reads as buildings, not noise
+        const bh = ((Math.floor(tx / bk) * 73856093) ^ (Math.floor(ty / bk) * 19349663)) >>> 0;
+        im = deco[(bh >>> 3) % deco.length];
+        const acc = themeDeco[m.theme].accent, below2 = TILES[tileAt(m, tx, ty + 1)];
+        if (acc && below2 && !below2.solid && hsh % 5 === 0) im = acc[0];
+      } else if (face && hsh % rate === 0) im = deco[(hsh >>> 3) % deco.length];
+    }
+    ctx.drawImage((tf && im[1]) ? im[1] : im[0], tx * TS - cx, ty * TS - cy);
+  }
+  for (const c of m.chests) ctx.drawImage(flags.chests[c.id] ? SPR.chestOpen : SPR.chest, c.x * TS - cx, c.y * TS - cy);
+  const actors = game.npcs.filter(npcVisible).map(n => [n, n.spr]);
+  if (followerOn()) actors.push([FOL, 'kairi']);
+  actors.push([player, game.heroSpr || 'hero']);
+  // stable sort: カイリ stays under アオ太 when they share a tile
+  actors.sort((a, b) => a[0].py - b[0].py);
+  for (const [a, s] of actors) drawActor(a, s, cx, cy);
+  if (game.mapId === 'town') drawTownMood(cx, cy);
+  if (game.lights) {
+    ctx.save(); ctx.globalAlpha = 0.18 + 0.06 * Math.sin(game.frame / 8);
+    const sx = (game.mapId === 'town' ? 19 * TS : player.px) - cx + 8, sy = (game.mapId === 'town' ? 2 * TS : player.py - 3 * TS) - cy;
+    [['#78d8f8', -40], ['#e4f6ff', 0], ['#3a78d8', 40]].forEach(([c, o], i) => {
+      ctx.fillStyle = c; ctx.beginPath(); const sw = Math.sin(game.frame / 20 + i) * 20;
+      ctx.moveTo(sx + o, sy - 20); ctx.lineTo(sx + sw - 18, sy + 80); ctx.lineTo(sx + sw + 18, sy + 80); ctx.closePath(); ctx.fill();
+    });
+    ctx.restore();
+  }
+  drawFx(cx, cy);
+}
+function drawFx(cx, cy) {
+  for (let i = game.fx.length - 1; i >= 0; i--) {
+    const f = game.fx[i]; f.x += f.vx; f.y += f.vy; f.life--;
+    if (f.life <= 0) { game.fx.splice(i, 1); continue; }
+    if (f.kind === 'heart') heartAt(Math.round(f.x - cx), Math.round(f.y - cy), f.col); else noteAt(Math.round(f.x - cx), Math.round(f.y - cy), f.col);
+  }
+}
+function drawBattleBg(x, y, w, h, kind) {
+  const band = (cols) => { const bh = Math.ceil(h / cols.length); cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(x, y + i * bh, w, Math.min(bh, h - i * bh)); }); };
+  const on = (game.frame >> 4) % 2;
+  if (kind === 'field') {
+    band(['#3c7ce0', '#4c8ce8', '#5c9cf0', '#78b4f8', '#98ccf8', '#48b03c', '#3aa034', '#2f8a2c']);
+    ctx.fillStyle = '#2a7a30'; for (let i = 0; i < w; i += 24) { ctx.fillRect(x + i, y + h * 0.58, 16, 6); ctx.fillRect(x + i + 4, y + h * 0.55, 8, 4); }
+  } else if (kind === 'gakki') {
+    band(['#e8dcc4', '#e0d2b8', '#d8c8ac', '#c8b494', '#9a6a3a', '#8a5a30', '#7a4a20', '#6a3a18']);
+    [[10, '#3a78d8'], [38, '#d83838'], [66, '#f8d838'], [94, '#78d8f8'], [122, '#c87a30']].forEach(([dx, c]) => { ctx.fillStyle = '#5a3418'; ctx.fillRect(x + dx + 5, y + 8, 2, 22); ctx.fillStyle = c; ctx.fillRect(x + dx, y + 30, 12, 16); ctx.fillStyle = '#120c18'; ctx.fillRect(x + dx + 4, y + 36, 4, 4); });
+  } else if (kind === 'live') {
+    band(['#0a0a10', '#101018', '#16161e', '#1c1c26', '#22222c', '#3a3a44', '#30303a', '#262630']);
+    ctx.save(); ctx.globalAlpha = 0.22; [['#f83848', 0.25], ['#78d8f8', 0.5], ['#f8d838', 0.75]].forEach(([c, k]) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(x + w * k - 4, y); ctx.lineTo(x + w * k + 4, y); ctx.lineTo(x + w * k + 24, y + h * 0.75); ctx.lineTo(x + w * k - 24, y + h * 0.75); ctx.fill(); }); ctx.restore();
+  } else if (kind === 'karaoke') {
+    band(['#1a0a2a', '#22103a', '#2a1448', '#341a56', '#3a1c5a', '#4a2470', '#3a1c5a', '#2a1448']);
+    for (let i = 0; i < 12; i++) { ctx.fillStyle = ['#f890b8', '#78d8f8', '#f8d838'][(i + on) % 3]; ctx.fillRect(x + 8 + i * 13, y + 8 + (i % 3) * 9, 2, 2); }
+    ctx.fillStyle = '#c8c8d8'; ctx.beginPath(); ctx.arc(x + w / 2, y + 8, 7, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'fes') {
+    band(['#f8a868', '#f8b878', '#f8c888', '#f8d8a0', '#a8d8f0', '#3a78d8', '#7ab84a', '#5a9a3a']);
+    ctx.fillStyle = '#f8f0c8'; ctx.beginPath(); ctx.arc(x + w - 30, y + 20, 10, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'castle') {
+    band(['#16161e', '#1c1c26', '#22222c', '#2a2a34', '#32323c', '#4a4a56', '#3a3a46', '#4a4a56']);
+    for (let i = 8; i < w; i += 36) { ctx.fillStyle = '#3a3a52'; ctx.fillRect(x + i, y + 6, 14, 34); ctx.fillStyle = '#e8e8f0'; ctx.fillRect(x + i + 5, y + 16, 4, 4); }
+  } else {
+    band(['#1c142c', '#24183a', '#2c1c46', '#3a2452', '#4a2a5a', '#3a2a52', '#2e2244', '#221a36']);
+  }
+}
+function drawBattle() {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+  const e = battleS.e; if (!e) return;
+  drawBattleBg(88, 16, 160, 120, battleS.bg);
+  ctx.fillStyle = '#fff'; ctx.fillRect(88, 15, 160, 1); ctx.fillRect(88, 136, 160, 1); ctx.fillRect(87, 16, 1, 120); ctx.fillRect(248, 16, 1, 120);
+  const img = (e.id === 'mute' && flags.voice ? SPR.e.mute2 : SPR.e[e.id]) || SPR.e.noise;
+  // 16px portraits are blown up (bosses 4x); a detailed 32px portrait is drawn at 3x
+  const sz = img.width > 16 ? img.width * 3 : 16 * (e.boss ? 4 : 3);
+  const visible = battleS.blink <= 0 || (battleS.blink >> 1) % 2 === 0;
+  if (battleS.blink > 0) battleS.blink--;
+  if (visible && battleS.alpha > 0) {
+    ctx.save(); ctx.globalAlpha = battleS.alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(168 - sz / 2 + 6, 128, sz - 12, 4);
+    ctx.drawImage(img, 168 - sz / 2, 132 - sz, sz, sz);
+    ctx.restore();
+  }
+  // status marks: silenced カイリ, hushed party, lowered stats
+  const tags = [];
+  if (battleS.silence > 0) tags.push('カイリ 封印');
+  if (battleS.hush) tags.push('スキル封印');
+  if ((battleS.atkMul || 1) < 1) tags.push('攻撃↓');
+  if (battleS.pdown) tags.push('守り↓');
+  if (battleS.clap) tags.push('クラップ♪');
+  tags.forEach((t, i) => txt(t, 92, 20 + i * 12, t === 'クラップ♪' ? '#78d8f8' : '#f8a030', 10));
+  drawFx(0, 0);
+}
+// 路上ライブ / セッション screen: a stage on top, the note lane below
+function drawRhythm() {
+  ctx.fillStyle = '#060a14'; ctx.fillRect(0, 0, W, H);
+  const now = RHY.t0 === Infinity ? -1 : rclock() - RHY.t0;
+  const beat = now > 0 ? (now / RHY.beat) % 1 : 0;
+  // spotlights
+  ctx.save(); ctx.globalAlpha = 0.16 + 0.08 * (1 - beat);
+  [['#78d8f8', 80], ['#3a78d8', 128], ['#78d8f8', 176]].forEach(([c, sx], i) => { ctx.fillStyle = c; ctx.beginPath(); const sw = Math.sin(game.frame / 24 + i) * 16; ctx.moveTo(sx - 4, 0); ctx.lineTo(sx + 4, 0); ctx.lineTo(sx + sw + 22, 112); ctx.lineTo(sx + sw - 22, 112); ctx.fill(); });
+  ctx.restore();
+  ctx.fillStyle = '#1a2a4a'; ctx.fillRect(0, 100, W, 30); ctx.fillStyle = '#78d8f8'; ctx.fillRect(0, 100, W, 1);
+  const f = (game.frame >> 3) % 2, bob = beat < 0.2 && now > 0 ? -2 : 0;
+  ctx.drawImage(SPR.kairiG.down[f], 104, 52 + bob, 48, 48);
+  // crowd with blue penlights waving on the beat
+  for (let i = 0; i < 9; i++) {
+    const x = 8 + i * 28, sp = ['otaku1', 'otaku3', 'girl2', 'otaku2'][i % 4], sw = Math.round(Math.sin((now > 0 ? now / RHY.beat : game.frame / 30) * Math.PI + i) * 3);
+    ctx.fillStyle = i % 2 ? '#78d8f8' : '#3a78d8'; ctx.fillRect(x + 6 + sw, 112, 2, 10);
+    ctx.drawImage(SPR[sp].up[0], x, 120);
+  }
+  // lane
+  const LY = 166, HX = 40;
+  ctx.fillStyle = '#0e1626'; ctx.fillRect(8, LY - 14, 240, 28); ctx.fillStyle = '#24365a'; ctx.fillRect(8, LY - 14, 240, 1); ctx.fillRect(8, LY + 13, 240, 1);
+  ctx.strokeStyle = RHY.jt > 0 ? '#e4f6ff' : '#78d8f8'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(HX, LY, 10, 0, Math.PI * 2); ctx.stroke();
+  for (const n of RHY.notes) {
+    if (!n.hit && now - n.t > 0.2) { n.hit = 'miss'; RHY.combo = 0; RHY.judge = 'miss'; RHY.jt = 30; }
+    if (n.hit) continue;
+    const x = HX + (n.t - now) * 120;
+    if (x > 260 || x < 0) continue;
+    ctx.fillStyle = '#3a78d8'; ctx.beginPath(); ctx.arc(x, LY, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e4f6ff'; ctx.beginPath(); ctx.arc(x, LY, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  if (RHY.jt > 0) { RHY.jt--; const J = { perfect: ['PERFECT', '#78d8f8'], good: ['GOOD', '#f8f8f8'], miss: ['MISS', '#8a94a8'] }[RHY.judge]; ctx.textAlign = 'center'; txt(J[0], HX + 4, LY - 34, J[1], 12); ctx.textAlign = 'left'; }
+  txt(RHY.title || '', 10, 8, '#e4f6ff', 12);
+  txt(`COMBO ${RHY.combo}`, 168, 8, '#78d8f8', 12);
+  const prog = now > 0 ? clamp(now / RHY.len, 0, 1) : 0;
+  ctx.fillStyle = '#24365a'; ctx.fillRect(10, 26, 236, 2); ctx.fillStyle = '#78d8f8'; ctx.fillRect(10, 26, Math.round(236 * prog), 2);
+  if (RHY.count) { ctx.textAlign = 'center'; txt(String(RHY.count), W / 2, 30, '#fff', 30); ctx.textAlign = 'left'; }
+  if (now < 3 && !msg.visible) { ctx.textAlign = 'center'; txt('A / Z で 手拍子！', W / 2, 196, '#9aa4b8', 10); ctx.textAlign = 'left'; }
+  drawFx(0, 0);
+}
+function drawTitle() {
+  ctx.fillStyle = '#060a16'; ctx.fillRect(0, 0, W, H);
+  for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#cdeefc' : '#fff'; ctx.fillRect(x, y, 1, 1); } }
+  // stage floor
+  ctx.fillStyle = '#122244'; ctx.fillRect(0, 128, W, 96); ctx.fillStyle = '#3a78d8'; ctx.fillRect(0, 128, W, 2);
+  ctx.save(); ctx.globalAlpha = 0.16; ctx.fillStyle = '#78d8f8';
+  ctx.beginPath(); ctx.moveTo(120, 0); ctx.lineTo(136, 0); ctx.lineTo(176, 140); ctx.lineTo(80, 140); ctx.fill(); ctx.restore();
+  ctx.textAlign = 'center';
+  txt('百花クエストⅡ ・ 非公式ファンゲーム', W / 2, 8, '#8fa3c4', 10);
+  txt('KAIRI QUEST', W / 2 + 2, 28, '#2f6cc0', 28);
+  txt('KAIRI QUEST', W / 2, 26, '#fff', 28);
+  txt('カイリクエスト', W / 2, 60, '#78d8f8', 14);
+  txt('〜蒼のメロディ〜', W / 2, 78, '#e4f6ff', 10);
+  ctx.textAlign = 'left';
+  const f = (game.frame >> 4) % 2;
+  ctx.drawImage(SPR.hero.right[f], 92, 92, 32, 32);
+  ctx.drawImage(SPR.kairiG.down[f], 132, 92, 32, 32);
+  noteAt(124, 86 + Math.round(Math.sin(game.frame / 15) * 2), '#78d8f8');
+  // which save is in use, so a missing save is never a surprise
+  ctx.textAlign = 'center';
+  txt('セーブ：' + saveMode(), W / 2, 208, STORE.local || STORE.cloudState !== 'off' ? '#8fa3c4' : '#f8a030', 10);
+  ctx.textAlign = 'left';
+  drawFx(0, 0);
+}
+function drawEnd() {
+  game.endT++;
+  ctx.fillStyle = '#060a16'; ctx.fillRect(0, 0, W, H);
+  for (const [x, y, t] of STARS) { if ((game.frame + t * 20) % 80 < 60) { ctx.fillStyle = t ? '#78d8f8' : '#fff'; ctx.fillRect(x, y + 20, 1, 1); } }
+  ctx.textAlign = 'center';
+  txt('THE END', W / 2, 36, '#fff', 30);
+  txt('KAIRI QUEST 〜蒼のメロディ〜', W / 2, 72, '#cdeefc', 12);
+  const f = (game.frame >> 4) % 2;
+  ctx.drawImage(SPR.hero.right[f], 92, 100, 32, 32);
+  ctx.drawImage(SPR.kairiG.down[f], 132, 100, 32, 32);
+  noteAt(124, 94 + Math.round(Math.sin(game.frame / 15) * 2), '#78d8f8');
+  txt(`${P.name} Lv${P.lv}` + (flags.cycle ? `（${flags.cycle + 1}周目）` : ''), W / 2, 146, '#fff', 12);
+  txt('推し活 おつかれさまでした！', W / 2, 164, '#fff', 12);
+  if (game.endT > 120 && (game.frame >> 5) % 2 === 0) txt('A / Z で タイトルへ', W / 2, 190, '#8fa3c4', 10);
+  ctx.textAlign = 'left';
+}
+// the world loses its colour with its music, and gets it back string by string
+function screenFilter() {
+  if (game.flashback) return 'sepia(0.85) brightness(0.95)';
+  if (game.mode !== 'map' && game.mode !== 'battle') return '';
+  if (!flags || !flags.stolen || flags.voice) return '';
+  return `saturate(${(0.2 + 0.18 * (strings() - 2)).toFixed(2)})`;
+}
+function draw() {
+  resetT();
+  const fl = screenFilter(); if (cv.style.filter !== fl) cv.style.filter = fl;
+  let sx = 0, sy = 0;
+  if (game.shake > 0) { game.shake--; sx = rnd(-2, 2); sy = rnd(-1, 1); }
+  ctx.save(); ctx.translate(sx, sy);
+  if (game.mode === 'title') drawTitle();
+  else if (game.mode === 'battle') drawBattle();
+  else if (game.mode === 'rhythm') drawRhythm();
+  else if (game.mode === 'end') drawEnd();
+  else if (game.mode === 'name') drawName();
+  else if (game.map) drawMap();
+  else { ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+  ctx.restore();
+  if (game.toast && game.mode === 'map') {
+    game.toast.t--; const tw = textW(game.toast.text) + 24;
+    if (game.toast.t > 0) drawWin(Math.round((W - tw) / 2), 8, tw, 28), txt(game.toast.text, Math.round((W - tw) / 2) + 12, 16);
+    else game.toast = null;
+  }
+  if (game.fade > 0) { ctx.fillStyle = `rgba(0,0,0,${game.fade})`; ctx.fillRect(0, 0, W, H); }
+  if (game.caption) {
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalAlpha = game.caption.a; ctx.textAlign = 'center';
+    const ls = game.caption.lines, y0 = H / 2 - ls.length * 11;
+    ls.forEach((l, i) => txt(l, W / 2, y0 + i * 22, '#fff', 12));
+    ctx.restore();
+    if (game.caption.arrow && (game.frame >> 4) % 2 === 0) { ctx.fillStyle = '#fff'; ctx.fillRect(W / 2 - 3, H - 30, 7, 1); ctx.fillRect(W / 2 - 2, H - 29, 5, 1); ctx.fillRect(W / 2 - 1, H - 28, 3, 1); ctx.fillRect(W / 2, H - 27, 1, 1); }
+  }
+  if (game.flash > 0) { game.flash--; ctx.fillStyle = game.mode === 'battle' ? 'rgba(216,56,56,0.35)' : 'rgba(255,255,255,0.85)'; ctx.fillRect(0, 0, W, H); }
+  drawUI();
+}
+
+// ------------------------------------------------------------
+//  Main loop
+// ------------------------------------------------------------
+function update() {
+  game.frame++;
+  const keys = keyQ.splice(0);
+  const free = [];
+  for (const k of keys) { if (modal) modal(k); else free.push(k); }
+  if (game.mode === 'map' && game.map) { updateMap(); freeInput(free); if (game.frame - lastAuto > 300) autosave(); }
+  for (let i = waiters.length - 1; i >= 0; i--) {
+    const w = waiters[i];
+    if (w.fn()) { waiters.splice(i, 1); w.res(); }
+  }
+}
+let last = 0, acc = 0;
+function loop(t) {
+  // schedule the next frame first, so one error can never stop the game
+  requestAnimationFrame(loop);
+  if (!last) last = t;
+  acc += Math.min(100, t - last); last = t;
+  let n = 0;
+  try { while (acc >= 1000 / 60 && n < 4) { update(); acc -= 1000 / 60; n++; } } catch (e) { acc = 0; reportError(e); }
+  try { if (n) draw(); } catch (e) { reportError(e); }
+}
+async function boot() {
+  initSprites(); initTiles();
+  STORE.local = probeLocal();
+  initCloud();
+  try { await Promise.race([document.fonts.load('12px "DotGothic16"'), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
+  newGame();
+  requestAnimationFrame(loop);
+  cv.focus();
+  titleScreen();
+}
+window.__kq = { game, MAPS, get P() { return P; }, get flags() { return flags; }, setMap, battle, runScript, player, RHY, rhythm, ending, voiceCheck, menus, msg, battleS, ev: { unchikuEvent, ganariEvent, pitchEvent, rokuonEvent, muteEvent, barrierTalk, busk, fieldMenu } };
+boot();
+</script>
+<!--/BODY-->
+</body>
+</html>
+
