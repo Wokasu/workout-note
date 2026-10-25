@@ -2372,7 +2372,14 @@ const BARRIER_KEYS = ['shoMinato', 'shoHaishin', 'shoSeitan'];
 const NEXT_HINT = { shoMinato: '（南西の 港町で 遠征王ゼンツウを\n倒して 証を 手に入れよう）', shoHaishin: '（北の 配信スタジオで ツイ廃王\nバズリを 倒して 証を 手に入れよう）', shoSeitan: '（東の 生誕祭の 準備会場で\n委員長シキリを 倒して 証を 手に入れよう）' };
 const PROOF_OF = { zentsu: 'shoMinato', buzzri: 'shoHaishin', shikiri: 'shoSeitan' };
 // a beaten 四天王 always leaves its proof behind (repairs saves that lost one)
-function repairProofs() { for (const b in PROOF_OF) if (flags[b] && !P.items[PROOF_OF[b]]) addItem(PROOF_OF[b]); }
+function repairProofs() {
+  for (const b in PROOF_OF) {
+    if (flags[b] && !P.items[PROOF_OF[b]]) addItem(PROOF_OF[b]);
+    // a key item without its story beat (carried into 強くてニューゲーム) would skip that chapter
+    if (!flags[b] && P.items[PROOF_OF[b]]) delete P.items[PROOF_OF[b]];
+  }
+  if (!flags.gou && P.items.pass) delete P.items.pass;
+}
 const barrierOpen = () => { repairProofs(); return BARRIER_KEYS.every(k => P.items[k]); };
 async function towerGate() {
   if (barrierOpen()) {
@@ -3373,6 +3380,8 @@ async function newGamePlus(save) {
   if (game.fade < 1) await fadeOut(20);
   newGame();
   Object.assign(P, save.P); P.hp = P.mhp; P.mp = P.mmp; ensureOwned();
+  // だいじなもの are story progress, not loot: they stay behind in the cleared game
+  for (const id in P.items) if (ITEMS[id] && ITEMS[id].kind === 'key') delete P.items[id];
   const cycle = (save.flags.cycle || 0) + 1;
   Object.assign(flags, { cycle, skMatome: !!save.flags.skMatome, skGundan: !!save.flags.skGundan });
   await caption([`強くてニューゲーム（${cycle + 1}周目）`, '敵も 強くなっているぞ！'], 120);
