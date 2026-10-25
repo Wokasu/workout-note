@@ -1279,13 +1279,16 @@ function waitA() {
   msg.arrow = true;
   return new Promise(res => { modal = k => { if (k === 'a' || k === 'b') { modal = null; msg.arrow = false; res(); } }; });
 }
+// battle lines used to scroll on by themselves; now they wait for a tap like any other line,
+// and holding A (or B) fast-forwards through them
 function waitAuto(n) {
+  msg.arrow = true;
   return new Promise(res => {
-    let done = false, c = 0;
-    const fin = () => { if (done) return; done = true; if (modal === h) modal = null; res(); };
-    const h = k => { if (k === 'a') fin(); };
+    let done = false, hold = 0;
+    const fin = () => { if (done) return; done = true; msg.arrow = false; if (modal === h) modal = null; res(); };
+    const h = k => { if (k === 'a' || k === 'b') fin(); };
     modal = h;
-    waiters.push({ fn: () => done || ++c >= n, res: fin });
+    waiters.push({ fn: () => { hold = held.a || held.b ? hold + 1 : 0; return done || hold >= 12; }, res: fin });
   });
 }
 // say(text, {append, auto, noWait})
@@ -2276,20 +2279,19 @@ async function talkShop(stock) {
       idx = r;
       if (c === 0) {
         const id = goods[r], it = ITEMS[id];
-        if (P.gold < it.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
-        if ((P.items[id] || 0) >= 9) { await say('店員「それ以上は もてないよ！」', { noWait: true }); await framesWait(50); continue; }
+        if (P.gold < it.price) { await say('店員「お金が たりないみたいだね…」'); continue; }
+        if ((P.items[id] || 0) >= 9) { await say('店員「それ以上は もてないよ！」'); continue; }
         P.gold -= it.price; addItem(id); sfx('ok');
-        await say(`店員「まいど！ ${it.name}だね。」\n（${it.name} ×${P.items[id]} になった）`, { noWait: true }); await framesWait(40);
+        await say(`店員「まいど！ ${it.name}だね。」\n（${it.name} ×${P.items[id]} になった）`);
       } else {
         const [t, id] = gear[r], g = t === 'w' ? WEAPONS[id] : ARMORS[id];
         const cur = t === 'w' ? WEAPONS[P.w].atk : ARMORS[P.a].def, nv = t === 'w' ? g.atk : g.def;
         ensureOwned();
-        if ((t === 'w' ? P.ownW : P.ownA).includes(id)) { await say('店員「それは もう もってるよ。」', { noWait: true }); await framesWait(50); continue; }
-        if (P.gold < g.price) { await say('店員「お金が たりないみたいだね…」', { noWait: true }); await framesWait(50); continue; }
+        if ((t === 'w' ? P.ownW : P.ownA).includes(id)) { await say('店員「それは もう もってるよ。」'); continue; }
+        if (P.gold < g.price) { await say('店員「お金が たりないみたいだね…」'); continue; }
         P.gold -= g.price; sfx('ok');
-        if (gainGear(t, id)) await say(`店員「まいど！」\nヲタ太は ${g.name}を そうびした！`, { noWait: true });
-        else await say(`店員「まいど！」\n${g.name}を「そうび」に しまった。\n（いまの そうびの ほうが つよい）`, { noWait: true });
-        await framesWait(60);
+        if (gainGear(t, id)) await say(`店員「まいど！」\nヲタ太は ${g.name}を そうびした！`);
+        else await say(`店員「まいど！」\n${g.name}を「そうび」に しまった。\n（いまの そうびの ほうが つよい）`);
       }
     }
     await say('店員「ほかに みていく？」', { noWait: true });
@@ -2598,7 +2600,7 @@ async function venueEnter() {
   await say('スタッフ「会場も キョヒールの 手下に\n占拠されちまった。 奥にいる ボス\n『TOのゴウ』が 通行証を もってる！」');
   await say('ヲタ太は ポケットの\n握手券の 束を 見つめた。');
   await say('今日の ために 積んだ 握手券 50枚。\n握手会は 中止……\n50枚 ぜんぶ 死券に なった。');
-  await say('（……いや。 使えなかった お金も\n想いも、 ぜんぶ ぶつけてやる！）', { noWait: true });
+  await say('（……いや。 使えなかった お金も\n想いも、 ぜんぶ ぶつけてやる！）', { noWait: !flags.skMatome });
   if (flags.skMatome) await say('（まとめ出しの 決意を あらたにした！）');
   else { flags.skMatome = true; await jingle('lvup'); playBgm(game.map.bgm); await say('ヲタ太は 「まとめ出し」を おぼえた！\n（所持金を ぜんぶ 使って こうげき）'); }
   await say('ヲタ太は 百花を 救うことを\nちかった！');
