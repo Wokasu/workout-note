@@ -2559,7 +2559,6 @@ async function hashiraEvent() {
   await say('ハシラ「最前に いれば、 推しに\n一番 近いと 思ってた。」');
   await say('ハシラ「でも 百花ちゃんの 目線は、\nいつも おれの 後ろを\n見ていた 気がする。」');
   await say('ハシラ「行け。 最上階で キョヒールが\n待っている。」');
-  const h = npcById('hashira'); await walk(h, 'L', 1); face(h, 'down');
   await flashback({ title: 'ハシラの 記憶', who: 'hashira', at: [19, 4], cast: STAGE(), body: async () => {
     await say('ハシラが はじめて 最前に 立った 日。');
     await say('百花「わあ、 近い！\nいつも 応援 ありがとう！」');
@@ -3070,9 +3069,10 @@ TB.onStep = (x, y, t) => {
 };
 const TC = MAPS.towerC;
 TC.npcs = [
-  { id: 'hashira', x: 7, y: 2, spr: 'hashira', fixed: 1, talk: async () => {
-    if (!flags.hashira) await hashiraEvent();
-    else await say('ハシラ「最上階へ 行け。\n百花ちゃんが 待っている。」');
+  { id: 'hashira', x: 7, y: 2, spr: 'hashira', fixed: 1, show: () => !flags.hashira, talk: hashiraEvent },
+  // after the fight he stands aside, so the stairs stay open even when the floor is reloaded
+  { id: 'hashiraAside', x: 6, y: 2, spr: 'hashira', fixed: 1, show: () => !!flags.hashira, talk: async () => {
+    await say('ハシラ「最上階へ 行け。\n百花ちゃんが 待っている。」');
   } },
   { id: 'zentsuAlly', x: 2, y: 9, spr: 'zentsu', fixed: 1, show: () => !!flags.allies, talk: allyHeal('ゼンツウ') },
   { id: 'memo3', x: 13, y: 9, spr: 'memo', fixed: 1, talk: async () => {
