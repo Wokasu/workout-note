@@ -279,7 +279,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/ja/e/k2026-1029-1830",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 22,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 24,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
@@ -337,7 +354,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026a-nov2-1830",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 26,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 28,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": "長友彩海 生誕祭"
     },
     {
@@ -370,7 +404,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026k-1103-1300",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 27,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 29,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
@@ -403,7 +454,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/kokokara-1103-1730",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 27,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 29,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
@@ -437,7 +505,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026ko-nov5-1830",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 29,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 31,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
@@ -463,7 +548,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026e-1106-1830",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 10,
+          "day": 30,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 1,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
@@ -496,7 +598,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
       "applyUrl": "https://akb48.zaiko.io/e/2026ra-nov8-1300",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 1,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 3,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
@@ -529,7 +648,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
       "applyUrl": "https://akb48.zaiko.io/e/2026kk-1108-1730",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 1,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 3,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": "女性限定公演"
     },
     {
@@ -562,7 +698,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
       "applyUrl": "https://akb48.zaiko.io/e/2026d-1109-1830",
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 2,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 4,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "tag": null
     },
     {
