@@ -10,7 +10,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT6H
 X-PUBLISHED-TTL:PT6H
 BEGIN:VEVENT
 UID:20261018-1100--e383ade3838ae383abe38389@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261018T020000Z
 DTEND:20261018T040000Z
 SUMMARY:ロナルド・マクドナルド・ハウス 支援募金活動(
@@ -30,225 +30,283 @@ URL:https://www.mcdonalds.co.jp/sustainability/local/aoimc/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261019-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261019T093000Z
 DTEND:20261019T113000Z
-SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/s2
- 026-1019-1830\n出典: https://www.akb48.co.jp/\n※出演メンバーは
- 変更になる場合があります
+SUMMARY:「ここからだ」公演【坂川陽香 生誕祭】（奥本カ
+ イリ）
+DESCRIPTION:出演: 奥本カイリ\n出演メンバー: 新井彩永・奥
+ 本カイリ・小栗有以・行天優莉奈・久保姫菜乃・坂川
+ 陽香・迫由芽実・佐藤綺星・徳永羚海・永野芹佳・平
+ 田侑希・正鋳真優・水島美結・山口結愛・山根涼羽・
+ 丸山ひなた\n申込: https://akb48.zaiko.io/ja/e/s2026-1019-1830\n出
+ 典: https://www.akb48.co.jp/\n※出演メンバーは変更になる場
+ 合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/s2026-1019-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261021-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261021T093000Z
 DTEND:20261021T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
- aiko.io/ja/e/2026w-1021-1830\n出典: https://www.akb48.co.jp/\n※出演
- メンバーは変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 奥
+ 本カイリ・大賀彩姫・近藤沙樹・丸山ひなた・髙橋舞
+ 桜・田中沙友利・牧戸愛茉・渡邉葵心\n申込: https://akb48
+ .zaiko.io/ja/e/2026w-1021-1830\n出典: https://www.akb48.co.jp/\n※出
+ 演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/2026w-1021-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261025-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261025T040000Z
 DTEND:20261025T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
- aiko.io/ja/e/te2026-1025-1300\n出典: https://www.akb48.co.jp/\n※出演
- メンバーは変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 奥
+ 本カイリ・大賀彩姫・近藤沙樹・髙橋舞桜・田中沙友
+ 利・牧戸愛茉・森川優・渡邉葵心\n申込: https://akb48.zaiko
+ .io/ja/e/te2026-1025-1300\n出典: https://www.akb48.co.jp/\n※出演メ
+ ンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/te2026-1025-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261025-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261025T083000Z
 DTEND:20261025T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
- aiko.io/ja/e/te2026-1025-1730\n出典: https://www.akb48.co.jp/\n※出演
- メンバーは変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 奥
+ 本カイリ・大賀彩姫・近藤沙樹・髙橋舞桜・田中沙友
+ 利・牧戸愛茉・森川優・渡邉葵心\n申込: https://akb48.zaiko
+ .io/ja/e/te2026-1025-1730\n出典: https://www.akb48.co.jp/\n※出演メ
+ ンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/te2026-1025-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261027-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261027T093000Z
 DTEND:20261027T113000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
-DESCRIPTION:出演: 渡邉葵心\n申込: https://akb48.zaiko.io/ja/e/ko202
- 6-1027-1830\n出典: https://www.akb48.co.jp/\n※出演メンバーは変
- 更になる場合があります
+DESCRIPTION:出演: 渡邉葵心\n出演メンバー: 秋山由奈・新井
+ 彩永・太田有紀・倉野尾成美・佐藤綺星・下尾みう・
+ 髙橋彩音・永野芹佳・平田侑希・正鋳真優・八木愛月
+ ・山内瑞葵・丸山ひなた・牧戸愛茉・森川優・渡邉葵
+ 心\n申込: https://akb48.zaiko.io/ja/e/ko2026-1027-1830\n出典: https:/
+ /www.akb48.co.jp/\n※出演メンバーは変更になる場合があり
+ ます
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/ko2026-1027-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261029-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261029T093000Z
 DTEND:20261029T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/ja/e/k2
- 026-1029-1830\n出典: https://www.akb48.co.jp/\n※出演メンバーは
- 変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ\n出演メンバー: 奥本カイリ・
+ 小栗有以・川村結衣・行天優莉奈・工藤華純・倉野尾
+ 成美・坂川陽香・徳永羚海・長友彩海・永野芹佳・橋
+ 本陽菜・福岡聖菜・布袋百椛・武藤小麟・山根涼羽・
+ 近藤沙樹\n申込: https://akb48.zaiko.io/ja/e/k2026-1029-1830\n出典:
+  https://www.akb48.co.jp/\n※出演メンバーは変更になる場合
+ があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/ja/e/k2026-1029-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261102-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261102T093000Z
 DTEND:20261102T113000Z
-SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/e/2026a
- -nov2-1830\n出典: https://www.akb48.co.jp/\n※出演メンバーは変
- 更になる場合があります
+SUMMARY:「ここからだ」公演【長友彩海 生誕祭】（奥本カ
+ イリ）
+DESCRIPTION:出演: 奥本カイリ\n出演メンバー: 奥本カイリ・
+ 小栗有以・行天優莉奈・工藤華純・倉野尾成美・黒須
+ 遥香・徳永羚海・長友彩海・成田香姫奈・平田侑希・
+ 水島美結・武藤小麟・山内瑞葵・山根涼羽・大賀彩姫
+ ・丸山ひなた\n申込: https://akb48.zaiko.io/e/2026a-nov2-1830\n出
+ 典: https://www.akb48.co.jp/\n※出演メンバーは変更になる場
+ 合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/2026a-nov2-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261103T040000Z
 DTEND:20261103T060000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
-DESCRIPTION:出演: 渡邉葵心\n申込: https://akb48.zaiko.io/e/2026k-11
- 03-1300\n出典: https://www.akb48.co.jp/\n※出演メンバーは変更
- になる場合があります
+DESCRIPTION:出演: 渡邉葵心\n出演メンバー: 秋山由奈・新井
+ 彩永・太田有紀・久保姫菜乃・坂川陽香・下尾みう・
+ 千葉恵里・永野芹佳・橋本恵理子・畠山希美・正鋳真
+ 優・近藤沙樹・髙橋舞桜・田中沙友利・森川優・渡邉
+ 葵心\n申込: https://akb48.zaiko.io/e/2026k-1103-1300\n出典: https://
+ www.akb48.co.jp/\n※出演メンバーは変更になる場合があり
+ ます
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/2026k-1103-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261103T083000Z
 DTEND:20261103T103000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
-DESCRIPTION:出演: 渡邉葵心\n申込: https://akb48.zaiko.io/e/kokokara
- -1103-1730\n出典: https://www.akb48.co.jp/\n※出演メンバーは変
- 更になる場合があります
+DESCRIPTION:出演: 渡邉葵心\n出演メンバー: 秋山由奈・新井
+ 彩永・太田有紀・久保姫菜乃・坂川陽香・下尾みう・
+ 千葉恵里・永野芹佳・橋本恵理子・畠山希美・正鋳真
+ 優・近藤沙樹・髙橋舞桜・田中沙友利・森川優・渡邉
+ 葵心\n申込: https://akb48.zaiko.io/e/kokokara-1103-1730\n出典: https
+ ://www.akb48.co.jp/\n※出演メンバーは変更になる場合があ
+ ります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/kokokara-1103-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261105-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261105T093000Z
 DTEND:20261105T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ・渡邉葵心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
- aiko.io/e/2026ko-nov5-1830\n出典: https://www.akb48.co.jp/news/detailpag
- e/490264702\n※出演メンバーは変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 岩
+ 立沙穂・奥本カイリ・迫由芽実・髙橋彩音・徳永羚海
+ ・長友彩海・平田侑希・福岡聖菜・布袋百椛・正鋳真
+ 優・山内瑞葵・山口結愛・山根涼羽・大賀彩姫・丸山
+ ひなた・渡邉葵心\n申込: https://akb48.zaiko.io/e/2026ko-nov5-183
+ 0\n出典: https://www.akb48.co.jp/\n※出演メンバーは変更にな
+ る場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/2026ko-nov5-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261106-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261106T093000Z
 DTEND:20261106T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n申込: https://akb48.z
- aiko.io/e/2026e-1106-1830\n出典: https://www.akb48.co.jp/news/detailpage
- /490264702\n※出演メンバーは変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 岩
+ 立沙穂・奥本カイリ・大賀彩姫・近藤沙樹・丸山ひな
+ た・田中沙友利・牧戸愛茉・渡邉葵心\n申込: https://akb48
+ .zaiko.io/e/2026e-1106-1830\n出典: https://www.akb48.co.jp/\n※出演
+ メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/2026e-1106-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261108T040000Z
 DTEND:20261108T060000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/e/2026r
- a-nov8-1300\n出典: https://www.akb48.co.jp/news/detailpage/490264702\n
- ※出演メンバーは変更になる場合があります
+DESCRIPTION:出演: 奥本カイリ\n出演メンバー: 岩立沙穂・奥
+ 本カイリ・川村結衣・工藤華純・下尾みう・長友彩海
+ ・成田香姫奈・橋本恵理子・橋本陽菜・平田侑希・正
+ 鋳真優・八木愛月・山根涼羽・大賀彩姫・田中沙友利
+ ・森川優\n申込: https://akb48.zaiko.io/e/2026ra-nov8-1300\n出典: h
+ ttps://www.akb48.co.jp/news/detailpage/490264702/\n※出演メンバー
+ は変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/2026ra-nov8-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261108T083000Z
 DTEND:20261108T103000Z
-SUMMARY:「ここからだ」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n申込: https://akb48.zaiko.io/e/2026k
- k-1108-1730\n出典: https://www.akb48.co.jp/news/detailpage/490264702\n
- ※出演メンバーは変更になる場合があります
+SUMMARY:「ここからだ」公演【女性限定公演】（奥本カイ
+ リ）
+DESCRIPTION:出演: 奥本カイリ\n出演メンバー: 岩立沙穂・奥
+ 本カイリ・川村結衣・工藤華純・下尾みう・長友彩海
+ ・成田香姫奈・橋本恵理子・橋本陽菜・平田侑希・正
+ 鋳真優・八木愛月・山根涼羽・大賀彩姫・田中沙友利
+ ・森川優\n申込: https://akb48.zaiko.io/e/2026kk-1108-1730\n出典: h
+ ttps://www.akb48.co.jp/news/detailpage/490264702/\n※出演メンバー
+ は変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
 URL:https://akb48.zaiko.io/e/2026kk-1108-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1400--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261115T050000Z
 DTEND:20261115T070000Z
 SUMMARY:柱の会限定イベント（渡邉葵心）
-DESCRIPTION:出演: 渡邉葵心\n出典: https://www.akb48.co.jp/news/deta
- ilpage/489596266\n※出演メンバーは変更になる場合があり
- ます
+DESCRIPTION:出演: 渡邉葵心\n出演メンバー: 秋山由奈・新井
+ 彩永・小栗有以・行天優莉奈・工藤華純・倉野尾成美
+ ・迫由芽実・佐藤綺星・下尾みう・永野芹佳・畠山希
+ 美・山口結愛・山根涼羽・大賀彩姫・近藤沙樹・渡邉
+ 葵心\n出典: https://www.akb48.co.jp/news/detailpage/489596266/\n※出
+ 演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261123T040000Z
 DTEND:20261123T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 奥
+ 本カイリ・正鋳真優・大賀彩姫・丸山ひなた・髙橋舞
+ 桜・田中沙友利・森川優・渡邉葵心\n出典: https://www.akb4
+ 8.co.jp/news/detailpage/489596266/\n※出演メンバーは変更にな
  る場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261123T083000Z
 DTEND:20261123T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 奥
+ 本カイリ・正鋳真優・大賀彩姫・丸山ひなた・髙橋舞
+ 桜・田中沙友利・森川優・渡邉葵心\n出典: https://www.akb4
+ 8.co.jp/news/detailpage/489596266/\n※出演メンバーは変更にな
  る場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261126-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261126T093000Z
 DTEND:20261126T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
  心）
-DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出典: https://www.akb
- 48.co.jp/news/detailpage/489596266\n※出演メンバーは変更にな
+DESCRIPTION:出演: 奥本カイリ、渡邉葵心\n出演メンバー: 奥
+ 本カイリ・正鋳真優・大賀彩姫・丸山ひなた・髙橋舞
+ 桜・田中沙友利・森川優・渡邉葵心\n出典: https://www.akb4
+ 8.co.jp/news/detailpage/489596266/\n※出演メンバーは変更にな
  る場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261130-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261021T094527Z
+DTSTAMP:20261026T095515Z
 DTSTART:20261130T093000Z
 DTEND:20261130T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ）
-DESCRIPTION:出演: 奥本カイリ\n出典: https://www.akb48.co.jp/news/d
- etailpage/489596266\n※出演メンバーは変更になる場合があ
+DESCRIPTION:出演: 奥本カイリ\n出演メンバー: 奥本カイリ・
+ 黒須遥香・迫由芽実・正鋳真優・丸山ひなた・髙橋舞
+ 桜・田中沙友利・森川優\n出典: https://www.akb48.co.jp/news/de
+ tailpage/489596266/\n※出演メンバーは変更になる場合があ
  ります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266
+URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 END:VCALENDAR

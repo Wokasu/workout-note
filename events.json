@@ -30,6 +30,24 @@
       "members": [
         "奥本カイリ"
       ],
+      "cast": [
+        "新井彩永",
+        "奥本カイリ",
+        "小栗有以",
+        "行天優莉奈",
+        "久保姫菜乃",
+        "坂川陽香",
+        "迫由芽実",
+        "佐藤綺星",
+        "徳永羚海",
+        "永野芹佳",
+        "平田侑希",
+        "正鋳真優",
+        "水島美結",
+        "山口結愛",
+        "山根涼羽",
+        "丸山ひなた"
+      ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/ja/e/s2026-1019-1830",
       "deadlines": [
@@ -49,7 +67,8 @@
           "hour": 16,
           "minute": 0
         }
-      ]
+      ],
+      "tag": "坂川陽香 生誕祭"
     },
     {
       "year": 2026,
@@ -60,6 +79,16 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "cast": [
+        "奥本カイリ",
+        "大賀彩姫",
+        "近藤沙樹",
+        "丸山ひなた",
+        "髙橋舞桜",
+        "田中沙友利",
+        "牧戸愛茉",
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
@@ -81,7 +110,8 @@
           "hour": 16,
           "minute": 0
         }
-      ]
+      ],
+      "tag": null
     },
     {
       "year": 2026,
@@ -92,6 +122,16 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "cast": [
+        "奥本カイリ",
+        "大賀彩姫",
+        "近藤沙樹",
+        "髙橋舞桜",
+        "田中沙友利",
+        "牧戸愛茉",
+        "森川優",
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
@@ -113,7 +153,8 @@
           "hour": 16,
           "minute": 0
         }
-      ]
+      ],
+      "tag": null
     },
     {
       "year": 2026,
@@ -124,6 +165,16 @@
       "title": "「手をつなぎながら」公演",
       "members": [
         "奥本カイリ",
+        "渡邉葵心"
+      ],
+      "cast": [
+        "奥本カイリ",
+        "大賀彩姫",
+        "近藤沙樹",
+        "髙橋舞桜",
+        "田中沙友利",
+        "牧戸愛茉",
+        "森川優",
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
@@ -145,7 +196,8 @@
           "hour": 16,
           "minute": 0
         }
-      ]
+      ],
+      "tag": null
     },
     {
       "year": 2026,
@@ -155,6 +207,24 @@
       "minute": 30,
       "title": "「ここからだ」公演",
       "members": [
+        "渡邉葵心"
+      ],
+      "cast": [
+        "秋山由奈",
+        "新井彩永",
+        "太田有紀",
+        "倉野尾成美",
+        "佐藤綺星",
+        "下尾みう",
+        "髙橋彩音",
+        "永野芹佳",
+        "平田侑希",
+        "正鋳真優",
+        "八木愛月",
+        "山内瑞葵",
+        "丸山ひなた",
+        "牧戸愛茉",
+        "森川優",
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
@@ -176,7 +246,8 @@
           "hour": 16,
           "minute": 0
         }
-      ]
+      ],
+      "tag": null
     },
     {
       "year": 2026,
@@ -188,9 +259,28 @@
       "members": [
         "奥本カイリ"
       ],
+      "cast": [
+        "奥本カイリ",
+        "小栗有以",
+        "川村結衣",
+        "行天優莉奈",
+        "工藤華純",
+        "倉野尾成美",
+        "坂川陽香",
+        "徳永羚海",
+        "長友彩海",
+        "永野芹佳",
+        "橋本陽菜",
+        "福岡聖菜",
+        "布袋百椛",
+        "武藤小麟",
+        "山根涼羽",
+        "近藤沙樹"
+      ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/ja/e/k2026-1029-1830",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -202,9 +292,20 @@
       "members": [
         "伊藤百花"
       ],
+      "cast": [
+        "秋山由奈",
+        "伊藤百花",
+        "小栗有以",
+        "倉野尾成美",
+        "坂川陽香",
+        "髙橋彩音",
+        "山口結愛",
+        "山﨑空"
+      ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/ja/e/p2026-1031",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -216,9 +317,28 @@
       "members": [
         "奥本カイリ"
       ],
+      "cast": [
+        "奥本カイリ",
+        "小栗有以",
+        "行天優莉奈",
+        "工藤華純",
+        "倉野尾成美",
+        "黒須遥香",
+        "徳永羚海",
+        "長友彩海",
+        "成田香姫奈",
+        "平田侑希",
+        "水島美結",
+        "武藤小麟",
+        "山内瑞葵",
+        "山根涼羽",
+        "大賀彩姫",
+        "丸山ひなた"
+      ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026a-nov2-1830",
-      "deadlines": []
+      "deadlines": [],
+      "tag": "長友彩海 生誕祭"
     },
     {
       "year": 2026,
@@ -230,9 +350,28 @@
       "members": [
         "渡邉葵心"
       ],
+      "cast": [
+        "秋山由奈",
+        "新井彩永",
+        "太田有紀",
+        "久保姫菜乃",
+        "坂川陽香",
+        "下尾みう",
+        "千葉恵里",
+        "永野芹佳",
+        "橋本恵理子",
+        "畠山希美",
+        "正鋳真優",
+        "近藤沙樹",
+        "髙橋舞桜",
+        "田中沙友利",
+        "森川優",
+        "渡邉葵心"
+      ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026k-1103-1300",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -244,9 +383,28 @@
       "members": [
         "渡邉葵心"
       ],
+      "cast": [
+        "秋山由奈",
+        "新井彩永",
+        "太田有紀",
+        "久保姫菜乃",
+        "坂川陽香",
+        "下尾みう",
+        "千葉恵里",
+        "永野芹佳",
+        "橋本恵理子",
+        "畠山希美",
+        "正鋳真優",
+        "近藤沙樹",
+        "髙橋舞桜",
+        "田中沙友利",
+        "森川優",
+        "渡邉葵心"
+      ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/kokokara-1103-1730",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -259,9 +417,28 @@
         "奥本カイリ",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702",
+      "cast": [
+        "岩立沙穂",
+        "奥本カイリ",
+        "迫由芽実",
+        "髙橋彩音",
+        "徳永羚海",
+        "長友彩海",
+        "平田侑希",
+        "福岡聖菜",
+        "布袋百椛",
+        "正鋳真優",
+        "山内瑞葵",
+        "山口結愛",
+        "山根涼羽",
+        "大賀彩姫",
+        "丸山ひなた",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026ko-nov5-1830",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -274,9 +451,20 @@
         "奥本カイリ",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702",
+      "cast": [
+        "岩立沙穂",
+        "奥本カイリ",
+        "大賀彩姫",
+        "近藤沙樹",
+        "丸山ひなた",
+        "田中沙友利",
+        "牧戸愛茉",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/e/2026e-1106-1830",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -288,9 +476,28 @@
       "members": [
         "奥本カイリ"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702",
+      "cast": [
+        "岩立沙穂",
+        "奥本カイリ",
+        "川村結衣",
+        "工藤華純",
+        "下尾みう",
+        "長友彩海",
+        "成田香姫奈",
+        "橋本恵理子",
+        "橋本陽菜",
+        "平田侑希",
+        "正鋳真優",
+        "八木愛月",
+        "山根涼羽",
+        "大賀彩姫",
+        "田中沙友利",
+        "森川優"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
       "applyUrl": "https://akb48.zaiko.io/e/2026ra-nov8-1300",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -302,9 +509,28 @@
       "members": [
         "奥本カイリ"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702",
+      "cast": [
+        "岩立沙穂",
+        "奥本カイリ",
+        "川村結衣",
+        "工藤華純",
+        "下尾みう",
+        "長友彩海",
+        "成田香姫奈",
+        "橋本恵理子",
+        "橋本陽菜",
+        "平田侑希",
+        "正鋳真優",
+        "八木愛月",
+        "山根涼羽",
+        "大賀彩姫",
+        "田中沙友利",
+        "森川優"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
       "applyUrl": "https://akb48.zaiko.io/e/2026kk-1108-1730",
-      "deadlines": []
+      "deadlines": [],
+      "tag": "女性限定公演"
     },
     {
       "year": 2026,
@@ -316,9 +542,28 @@
       "members": [
         "伊藤百花"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702",
+      "cast": [
+        "伊藤百花",
+        "小栗有以",
+        "行天優莉奈",
+        "坂川陽香",
+        "佐藤綺星",
+        "千葉恵里",
+        "徳永羚海",
+        "永野芹佳",
+        "橋本陽菜",
+        "畠山希美",
+        "布袋百椛",
+        "正鋳真優",
+        "水島美結",
+        "武藤小麟",
+        "近藤沙樹",
+        "髙橋舞桜"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
       "applyUrl": "https://akb48.zaiko.io/e/2026d-1109-1830",
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -331,9 +576,20 @@
         "伊藤百花",
         "奥本カイリ"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "伊藤百花",
+        "奥本カイリ",
+        "小栗有以",
+        "倉野尾成美",
+        "黒須遥香",
+        "佐藤綺星",
+        "髙橋彩音",
+        "近藤沙樹"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -345,9 +601,28 @@
       "members": [
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "秋山由奈",
+        "新井彩永",
+        "小栗有以",
+        "行天優莉奈",
+        "工藤華純",
+        "倉野尾成美",
+        "迫由芽実",
+        "佐藤綺星",
+        "下尾みう",
+        "永野芹佳",
+        "畠山希美",
+        "山口結愛",
+        "山根涼羽",
+        "大賀彩姫",
+        "近藤沙樹",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -360,9 +635,28 @@
         "伊藤百花",
         "奥本カイリ"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "伊藤百花",
+        "太田有紀",
+        "奥本カイリ",
+        "川村結衣",
+        "久保姫菜乃",
+        "黒須遥香",
+        "坂川陽香",
+        "髙橋彩音",
+        "長友彩海",
+        "成田香姫奈",
+        "平田侑希",
+        "布袋百椛",
+        "八木愛月",
+        "山内瑞葵",
+        "丸山ひなた",
+        "森川優"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -417,9 +711,20 @@
         "奥本カイリ",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "奥本カイリ",
+        "正鋳真優",
+        "大賀彩姫",
+        "丸山ひなた",
+        "髙橋舞桜",
+        "田中沙友利",
+        "森川優",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -432,9 +737,20 @@
         "奥本カイリ",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "奥本カイリ",
+        "正鋳真優",
+        "大賀彩姫",
+        "丸山ひなた",
+        "髙橋舞桜",
+        "田中沙友利",
+        "森川優",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -447,9 +763,20 @@
         "奥本カイリ",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "奥本カイリ",
+        "正鋳真優",
+        "大賀彩姫",
+        "丸山ひなた",
+        "髙橋舞桜",
+        "田中沙友利",
+        "森川優",
+        "渡邉葵心"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -480,9 +807,28 @@
       "members": [
         "伊藤百花"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "秋山由奈",
+        "新井彩永",
+        "伊藤百花",
+        "小栗有以",
+        "行天優莉奈",
+        "倉野尾成美",
+        "坂川陽香",
+        "佐藤綺星",
+        "下尾みう",
+        "長友彩海",
+        "成田香姫奈",
+        "福岡聖菜",
+        "八木愛月",
+        "山内瑞葵",
+        "山﨑空",
+        "近藤沙樹"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
@@ -494,9 +840,20 @@
       "members": [
         "奥本カイリ"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266",
+      "cast": [
+        "奥本カイリ",
+        "黒須遥香",
+        "迫由芽実",
+        "正鋳真優",
+        "丸山ひなた",
+        "髙橋舞桜",
+        "田中沙友利",
+        "森川優"
+      ],
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": []
+      "deadlines": [],
+      "tag": null
     },
     {
       "year": 2026,
