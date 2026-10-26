@@ -262,7 +262,7 @@ const pad = (n) => String(n).padStart(2, '0');
 const links = events
   .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
   .filter((s) => s.kind !== 'event' && !(config.launcherExclude ?? []).includes(s.title))
-  .filter((s) => !applicationClosed(s, today) && !s.tag?.includes('女性限定'))
+  .filter((s) => !applicationClosed(s, today, config.generalDeadline) && !s.tag?.includes('女性限定'))
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,

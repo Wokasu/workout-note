@@ -672,9 +672,13 @@ export function onlyFrame(shows, frame) {
  * これから horizonMs 以内に「締切の24時間前」を迎える、まだ送っていない通知（1公演・1応募枠につき1通）。
  * 自動チェックが遅れて24時間前を過ぎていても、締切前ならすぐ送る。
  */
-/** 申込受付が終わった公演か（どの応募枠の締切も過ぎている）。締切が分からない公演は終わっていない扱い */
-export function applicationClosed(show, now) {
+/**
+ * 申込受付（座席）が終わった公演か。どの応募枠の締切も過ぎていたら終わり（ロビー観覧チケットは数えない）。
+ * 締切が分からない公演は、公式の決まり（一般枠は公演日の fallback.daysBefore 日前の fallback.hour 時）で判断する
+ */
+export function applicationClosed(show, now, fallback = null) {
   const ends = (show.deadlines ?? []).map((d) => jstToUtc(d.year, d.month, d.day, d.hour, d.minute).getTime());
+  if (!ends.length && fallback) ends.push(jstToUtc(show.year, show.month, show.day - fallback.daysBefore, fallback.hour, 0).getTime());
   return ends.length > 0 && Math.max(...ends) <= now.getTime();
 }
 
