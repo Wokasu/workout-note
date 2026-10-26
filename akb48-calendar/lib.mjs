@@ -485,7 +485,7 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
   for (const s of shows) {
     const uid = `${showKey(s).replace(/[^\w-]/g, '')}-${Buffer.from(s.title).toString('hex').slice(0, 24)}@akb48-calendar`;
     const desc = [
-      s.memberUnknown ? '出演: 出演メンバー未発表' : `出演: ${s.members.join('、')}`,
+      s.memberUnknown ? '出演メンバー: 未発表' : `推しメン: ${s.members.join('、')}`,
       // 劇場公演は、推しメン以外も含めた出演メンバー全員を公式の並び順で書く
       s.cast?.length ? `出演メンバー: ${s.cast.join('・')}` : '',
       s.applyUrl ? `申込: ${s.applyUrl}` : '',
