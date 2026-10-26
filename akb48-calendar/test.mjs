@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -381,4 +381,38 @@ test('カレンダーの説明に推しメン以外も含む出演メンバー�
   assert.deepEqual(s.cast, ['岩立沙穂', '奥本カイリ', '大賀彩姫', '近藤沙樹', '丸山ひなた', '田中沙友利', '牧戸愛茉', '渡邉葵心']);
   const ics = buildIcs({ name: 'x', color: '#000000' }, [s], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
   assert.match(ics, /DESCRIPTION:推しメン: 奥本カイリ、渡邉葵心\\n出演メンバー: 岩立沙穂・奥本カイリ・大賀彩姫・近藤沙樹・丸山ひなた・田中沙友利・牧戸愛茉・渡邉葵心\\n/);
+});
+
+test('申込受付が終わったか: どの応募枠の締切も過ぎていたら終わり', () => {
+  const show = { deadlines: [
+    { label: '(1)〜(3)枠', year: 2026, month: 10, day: 18, hour: 16, minute: 0 },
+    { label: '(4)〜(6)枠', year: 2026, month: 10, day: 20, hour: 16, minute: 0 },
+  ] };
+  assert.equal(applicationClosed(show, new Date('2026-10-19T00:00:00+09:00')), false);
+  assert.equal(applicationClosed(show, new Date('2026-10-20T16:00:00+09:00')), true);
+  assert.equal(applicationClosed({ deadlines: [] }, new Date('2030-01-01T00:00:00Z')), false);
+});
+
+test('受付開始のお知らせ: 「会員枠が各公演日の7日前の16時、一般枠が5日前の16時」から公演ごとの締切を作る', () => {
+  const casts = extractCasts(fixture('open-notice-1101.txt'), { today });
+  const nov9 = casts.find((c) => c.month === 11 && c.day === 9);
+  assert.deepEqual(nov9.deadlines, [
+    { label: '(1)〜(3)枠', year: 2026, month: 11, day: 2, hour: 16, minute: 0 },
+    { label: '(4)〜(6)枠', year: 2026, month: 11, day: 4, hour: 16, minute: 0 },
+  ]);
+  assert.equal(nov9.applyUrl, 'https://akb48.zaiko.io/e/2026d-1109-1830');
+  const nov1 = casts.find((c) => c.month === 11 && c.day === 1 && c.hour === 13);
+  assert.deepEqual(nov1.deadlines[0], { label: '(1)〜(3)枠', year: 2026, month: 10, day: 25, hour: 16, minute: 0 });
+  assert.equal(casts.find((c) => c.month === 11 && c.day === 8 && c.hour === 17).tag, '女性限定公演');
+  // 柱の会会員枠の締切として通知・カレンダーに使える
+  const { shows } = buildShows(casts, [], members);
+  const framed = onlyFrame(shows, config.targetFrame).find((s) => s.month === 11 && s.day === 9);
+  assert.deepEqual(framed.deadlines.map((d) => `${d.label} ${d.month}/${d.day} ${d.hour}`), ['柱の会会員枠 11/2 16']);
+});
+
+test('公演のご案内: 見出しと違う日付（曜日は合う）が書かれていたら、見出しの日付を使う', () => {
+  const casts = extractCasts(fixture('single-notice-1029.txt'), { today });
+  assert.equal(casts.length, 1);
+  assert.equal(`${casts[0].month}/${casts[0].day} ${casts[0].hour}`, '10/29 18');
+  assert.deepEqual(casts[0].deadlines.map((d) => `${d.label} ${d.month}/${d.day}`), ['(1)〜(3)枠 10/22', '(4)〜(6)枠 10/24']);
 });
