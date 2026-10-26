@@ -29,6 +29,10 @@
     "number": 2,
     "name": "柱の会会員枠"
   },
+  "generalDeadline": {
+    "daysBefore": 5,
+    "hour": 16
+  },
   "deadlineCalendar": {
     "id": "deadlines",
     "name": "AKB48 申込締切",

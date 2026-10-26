@@ -416,3 +416,11 @@ test('公演のご案内: 見出しと違う日付（曜日は合う）が書か
   assert.equal(`${casts[0].month}/${casts[0].day} ${casts[0].hour}`, '10/29 18');
   assert.deepEqual(casts[0].deadlines.map((d) => `${d.label} ${d.month}/${d.day}`), ['(1)〜(3)枠 10/22', '(4)〜(6)枠 10/24']);
 });
+
+test('申込受付が終わったか: 締切が分からない公演は、一般枠の決まり（5日前の16時）で判断する', () => {
+  const show = { year: 2026, month: 10, day: 31, deadlines: [] };
+  const rule = { daysBefore: 5, hour: 16 };
+  assert.equal(applicationClosed(show, new Date('2026-10-26T15:59:00+09:00'), rule), false);
+  assert.equal(applicationClosed(show, new Date('2026-10-26T16:00:00+09:00'), rule), true);
+  assert.equal(applicationClosed({ year: 2026, month: 11, day: 3, deadlines: [] }, new Date('2026-10-27T09:00:00+09:00'), rule), false);
+});
