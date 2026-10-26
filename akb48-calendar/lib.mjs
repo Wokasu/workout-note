@@ -93,6 +93,18 @@ function readNote(line) {
 }
 const noteFor = (notes, t) => notes.find((n) => n.hour == null || (n.hour === t.hour && n.minute === t.minute))?.text ?? null;
 
+// 「各公演、応募締め切りは、会員枠が各公演日の7日前の16時、一般枠が5日前の16時となります。」
+// 会員枠は (1)〜(3)枠（100発98中権利・柱の会会員枠・映像倉庫会員枠）、一般枠は (4)〜(6)枠として扱う
+const RELATIVE_DEADLINE_RE = /会員枠が各公演日の\d+日前/;
+function readRelativeDeadlines(line) {
+  const out = [];
+  const member = line.match(/会員枠が各公演日の(\d+)日前の(\d{1,2})時/);
+  const general = line.match(/一般枠が(?:各公演日の)?(\d+)日前の(\d{1,2})時/);
+  if (member) out.push({ label: '(1)〜(3)枠', days: Number(member[1]), hour: Number(member[2]) });
+  if (general) out.push({ label: '(4)〜(6)枠', days: Number(general[1]), hour: Number(general[2]) });
+  return out;
+}
+
 const SCHEDULE_DAY_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S*(?: (\d{1,2}):(\d{2}) ?[~～])?$/;
 
 /**
@@ -183,6 +195,7 @@ function readMembers(lines, start) {
 export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {}) {
   const out = [];
   let cur = null; // { year, month, day, title, times, kind }
+  let relative = []; // 公演日から数えた締切（受付開始のお知らせ）
   const push = (times, names) => {
     for (const t of times.length ? times : [{ hour: null, minute: null }]) {
       const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, tag: noteFor(cur.notes, t), kind: cur.kind, sourceUrl };
@@ -194,22 +207,32 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
     const line = lines[i];
     let m;
     if (cur && line.startsWith('【')) cur.header = false;
-    if ((m = line.match(MONTHLY_RE))) {
+    if (RELATIVE_DEADLINE_RE.test(line)) {
+      // 「受付開始のお知らせ」: 公演ごとの締切は書かれず、「会員枠が各公演日の7日前の16時、一般枠が5日前の16時」とだけある
+      relative = readRelativeDeadlines(line);
+    } else if ((m = line.match(MONTHLY_RE))) {
       const month = Number(m[1]);
       const day = Number(m[2]);
-      cur = { year: resolveYear(month, day, today), month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines: [], label: null, notes: [], header: true };
+      const year = resolveYear(month, day, today);
+      const deadlines = relative.map((r) => {
+        const d = new Date(Date.UTC(year, month - 1, day - r.days));
+        return { label: r.label, year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate(), hour: r.hour, minute: 0 };
+      });
+      cur = { year, month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines, label: null, notes: [], header: true };
     } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
       const next = lines[i + 1];
       const year = Number(m[1]);
       let [month, day] = [Number(m[2]), Number(m[3])];
-      // 公式の記事には日付の書き間違いがある（例: 10月27日の公演の記事に「2026年10月28日(火)」）。
-      // 曜日が日付と合わないときは、記事の見出しや本文にある「10月27日」のうち曜日が合う日付を使う
-      if (weekdayOf(year, month, day) !== m[4]) {
-        const fixed = lines
-          .slice(0, i)
-          .flatMap((l) => [...l.matchAll(/(\d{1,2})月(\d{1,2})日/g)])
-          .map((x) => [Number(x[1]), Number(x[2])])
-          .find(([mo, d]) => weekdayOf(year, mo, d) === m[4]);
+      // 公式の記事には日付の書き間違いがある（例: 10月27日の公演の記事に「2026年10月28日(火)」、
+      // 10月29日の公演の記事に「2026年10月15日(木)」）。記事の見出しや本文にある「10月29日」と合わないとき、
+      // または曜日が日付と合わないときは、見出しや本文の日付のうち曜日が合うものを使う
+      const mentioned = lines
+        .slice(0, i)
+        .flatMap((l) => [...l.matchAll(/(\d{1,2})月(\d{1,2})日/g)])
+        .map((x) => [Number(x[1]), Number(x[2])]);
+      const agrees = !mentioned.length || mentioned.some(([mo, d]) => mo === month && d === day);
+      if (!agrees || weekdayOf(year, month, day) !== m[4]) {
+        const fixed = mentioned.find(([mo, d]) => weekdayOf(year, mo, d) === m[4]);
         if (!fixed) {
           cur = null;
           continue;
@@ -649,6 +672,12 @@ export function onlyFrame(shows, frame) {
  * これから horizonMs 以内に「締切の24時間前」を迎える、まだ送っていない通知（1公演・1応募枠につき1通）。
  * 自動チェックが遅れて24時間前を過ぎていても、締切前ならすぐ送る。
  */
+/** 申込受付が終わった公演か（どの応募枠の締切も過ぎている）。締切が分からない公演は終わっていない扱い */
+export function applicationClosed(show, now) {
+  const ends = (show.deadlines ?? []).map((d) => jstToUtc(d.year, d.month, d.day, d.hour, d.minute).getTime());
+  return ends.length > 0 && Math.max(...ends) <= now.getTime();
+}
+
 export function dueDeadlineReminders(shows, sent, now, horizonMs = 4 * 3600_000) {
   const pad = (n) => String(n).padStart(2, '0');
   const out = [];

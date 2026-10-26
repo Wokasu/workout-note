@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { applicationClosed, buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -256,12 +256,13 @@ if (process.env.NTFY_TOPIC) {
   }
 }
 
-// 申込ランチャー（Windows）が読む一覧: 今日以降の公演（launcherExclude の公演は除く）
+// 申込ランチャー（Windows）が読む一覧: 今日以降の公演。launcherExclude の公演、申込受付が終わった公演、女性限定公演は除く
 const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).replace(/-/g, ''));
 const pad = (n) => String(n).padStart(2, '0');
 const links = events
   .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
   .filter((s) => s.kind !== 'event' && !(config.launcherExclude ?? []).includes(s.title))
+  .filter((s) => !applicationClosed(s, today) && !s.tag?.includes('女性限定'))
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,
