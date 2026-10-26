@@ -380,5 +380,5 @@ test('カレンダーの説明に推しメン以外も含む出演メンバー�
   const s = shows.find((x) => x.month === 11 && x.day === 6);
   assert.deepEqual(s.cast, ['岩立沙穂', '奥本カイリ', '大賀彩姫', '近藤沙樹', '丸山ひなた', '田中沙友利', '牧戸愛茉', '渡邉葵心']);
   const ics = buildIcs({ name: 'x', color: '#000000' }, [s], { durationMinutes: 120, location: '', now: today }).replace(/\r\n /g, '');
-  assert.match(ics, /DESCRIPTION:出演: 奥本カイリ、渡邉葵心\\n出演メンバー: 岩立沙穂・奥本カイリ・大賀彩姫・近藤沙樹・丸山ひなた・田中沙友利・牧戸愛茉・渡邉葵心\\n/);
+  assert.match(ics, /DESCRIPTION:推しメン: 奥本カイリ、渡邉葵心\\n出演メンバー: 岩立沙穂・奥本カイリ・大賀彩姫・近藤沙樹・丸山ひなた・田中沙友利・牧戸愛茉・渡邉葵心\\n/);
 });
