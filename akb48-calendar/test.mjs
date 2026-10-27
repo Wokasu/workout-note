@@ -452,3 +452,11 @@ test('ロビー観覧チケット: 締切を座席とは別に読み、座席が
   assert.equal(lobbyOpen({ year: 2026, month: 10, day: 31 }, at('2026-10-28T15:59:00'), rule), true);
   assert.equal(lobbyOpen({ year: 2026, month: 10, day: 31 }, at('2026-10-28T16:00:00'), rule), false);
 });
+
+test('トップページ: 曜日と時刻の間に空白がない一覧（「土17:30~」）も読む', () => {
+  const lines = fixture('top-page.txt').map((l) => l.replace(/^(20\d{2} 年 \d{1,2} 月 \d{1,2} 日 \S) (\d)/, '$1$2'));
+  assert.ok(lines.some((l) => /日 土13:00~$/.test(l)));
+  assert.deepEqual(extractSchedule(lines), extractSchedule(fixture('top-page.txt')));
+  assert.deepEqual(extractTopCasts(lines), extractTopCasts(fixture('top-page.txt')));
+  assert.ok(extractTopCasts(lines).length > 10);
+});
