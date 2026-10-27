@@ -5,11 +5,14 @@ import { MAINTENANCE_WINDOW_DAYS, movingAverage, seriesOf, weeklySummary, type P
 import { FIELD_BY_KEY, FIELD_DEFS, formatValue } from '../lib/fields';
 import { addDays, formatJa } from '../lib/date';
 import { Chart } from './Chart';
+import { MaintenanceSuggestion } from './MaintenanceSuggestion';
 import type { Targets } from '../lib/nutrition';
 
 interface Props {
   profile: Profile;
   targets: Targets;
+  onApplyTdee: (kcal: number) => void;
+  onUseFormula: () => void;
   /** 減量期の目標体重（増量期は計画線を出さないので null） */
   targetWeightKg: number | null;
   body: BodyRecord[];
@@ -33,7 +36,7 @@ function fmtChange(v: number | null, unit: string): string {
   return `${v > 0 ? '+' : ''}${v}${unit}`;
 }
 
-export function Analysis({ profile, targetWeightKg, body, logs, today, targets }: Props) {
+export function Analysis({ profile, targetWeightKg, body, logs, today, targets, onApplyTdee, onUseFormula }: Props) {
   const navy = useMemo(() => navySeries(body, profile), [body, profile]);
   const lean = useMemo(() => leanSeries(body, bodyFatSeries(body, profile, profile.bodyFatSource).points), [body, profile]);
   const available: { key: Metric; label: string }[] = [
@@ -109,7 +112,9 @@ export function Analysis({ profile, targetWeightKg, body, logs, today, targets }
         )}
       </section>
 
-      <MaintenanceCard targets={targets} profile={profile} today={today} />
+      <MaintenanceSuggestion targets={targets} manualDate={profile.manualTdee?.date ?? null} onApply={onApplyTdee} onUseFormula={onUseFormula} />
+
+      <MaintenanceCard targets={targets} today={today} />
 
       <section className="card">
         <h3>週ごとのまとめ</h3>
@@ -160,14 +165,14 @@ export function Analysis({ profile, targetWeightKg, body, logs, today, targets }
 }
 
 /** 維持カロリーの推移：毎週の記録から出した値（点）と、それをならした推定値（線） */
-function MaintenanceCard({ targets: t, profile, today }: { targets: Targets; profile: Profile; today: string }) {
+function MaintenanceCard({ targets: t, today }: { targets: Targets; today: string }) {
   const h = t.maintenance.history;
   const weekly = h.filter((x) => x.observed !== null).map((x) => ({ date: x.date, value: x.observed! }));
   const line = h.map((x) => ({ date: x.date, value: x.tdee }));
   const recent = [...h].reverse().slice(0, 6);
   return (
     <section className="card">
-      <h3>維持カロリーの推移</h3>
+      <h3>維持カロリーの推移（2週間ごとの自動更新）</h3>
       {t.maintenance.updates === 0 ? (
         <p className="muted">
           食事と体重を2週間ほど記録すると、その間の平均摂取と体重の変化から維持カロリーを計算し、毎週更新していきます。今は計算式の値（{t.formulaTdee} kcal）を使っています。
@@ -178,7 +183,7 @@ function MaintenanceCard({ targets: t, profile, today }: { targets: Targets; pro
             <div className="stat">
               <div className="stat-label">推定維持カロリー</div>
               <div className="stat-value">{t.maintenance.tdee} kcal</div>
-              <div className="stat-sub">{profile.tdeeMode === 'auto' ? '目標カロリーの計算に使用中' : '設定で「計算式のみ」のため参考'}</div>
+              <div className="stat-sub">{t.tdeeSource === 'adaptive' ? '目標カロリーの計算に使用中' : '参考（設定で「毎週自動で更新」にすると使います）'}</div>
             </div>
             <div className="stat">
               <div className="stat-label">計算式の値</div>

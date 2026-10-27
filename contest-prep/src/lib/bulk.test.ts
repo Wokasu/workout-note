@@ -25,6 +25,7 @@ const profile: Profile = {
   tdeeMode: 'formula',
   manualMacros: null,
   calibrationDays: 0,
+  manualTdee: null,
 };
 
 /** 除脂肪 68kg（体重 × (1 - 体脂肪率) が 68 になるよう体脂肪率も入れる） */

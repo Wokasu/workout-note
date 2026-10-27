@@ -80,6 +80,10 @@ export function App() {
 
   const targets = calcTargets(profile, body, intake, today);
   const bulkPlan = bulkPlanFor(profile, targets, today);
+  // 記録から出した維持カロリーを、本人が選んだときだけ目標に反映する
+  const applyTdee = (kcal: number) =>
+    setData((d) => ({ ...d, profile: d.profile && { ...d.profile, tdeeMode: 'manual', manualTdee: { kcal, date: today } } }));
+  const useFormula = () => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, tdeeMode: 'formula' } }));
   // 増量期から大会に向けた減量へ：今日を減量開始日にして、目標体重は設定画面で決め直す
   const switchToCut = () =>
     setData((d) => ({
@@ -94,6 +98,8 @@ export function App() {
       <main>
         {tab === 'today' && (
           <Today
+            onApplyTdee={applyTdee}
+            onUseFormula={useFormula}
             bulkPlan={bulkPlan}
             profile={profile}
             targets={targets}
@@ -130,6 +136,7 @@ export function App() {
         )}
         {tab === 'plan' && profile.phase === 'bulk' && (
           <BulkPlan
+            onApplyTdee={applyTdee}
             plan={bulkPlan!}
             onSwitchToCut={switchToCut}
             profile={profile}
@@ -141,6 +148,7 @@ export function App() {
         )}
         {tab === 'plan' && profile.phase === 'cut' && (
           <Plan
+            onApplyTdee={applyTdee}
             profile={profile}
             targets={targets}
             body={body}
@@ -149,7 +157,7 @@ export function App() {
             onSetTarget={(kg) => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, targetWeightKg: kg } }))}
           />
         )}
-        {tab === 'analysis' && <Analysis profile={profile} targets={targets} targetWeightKg={profile.phase === 'cut' ? targets.targetWeightKg : null} body={body} logs={logs} today={today} />}
+        {tab === 'analysis' && <Analysis onApplyTdee={applyTdee} onUseFormula={useFormula} profile={profile} targets={targets} targetWeightKg={profile.phase === 'cut' ? targets.targetWeightKg : null} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
           <Settings data={data} sync={sync} today={today} currentKg={targets.currentKg} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}

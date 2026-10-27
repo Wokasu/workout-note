@@ -233,6 +233,73 @@ export function maintenanceEstimate(
   return { tdee: Math.round(tdee), updates, lastUpdate: last?.date ?? null, history };
 }
 
+export interface QuickEstimate {
+  tdee: number;
+  /** 推定の幅（±kcal） */
+  marginKcal: number;
+  confidence: 'low' | 'medium' | 'high';
+  /** 計算に使った食事の記録日数 */
+  loggedDays: number;
+  /** 記録が少なすぎて（1日の一部だけとみて）外した日数 */
+  excludedDays: number;
+  /** 計算に使った体重の記録回数 */
+  weighIns: number;
+  /** 期間（最初と最後の体重の日） */
+  from: string;
+  to: string;
+  avgIntake: number;
+  /** 体重の変化（kg/週、減れば負） */
+  kgPerWeek: number;
+}
+
+/**
+ * 今あるデータだけで維持カロリーを推定する（きっちり記録した期間がなくても出す）。
+ * 直近 days 日のうち、食事を記録した日の平均摂取と、体重の直線の傾き（最小二乗）から
+ * 「平均摂取 − 体重の変化 × 7200」を出し、データの量とばらつきから幅と信頼度をつける。
+ * ふだんの6割に満たない日は1日の一部しか記録していないとみて外す。
+ */
+export function quickEstimate(weights: Point[], intake: Map<string, number>, today: string, days = 28): QuickEstimate | null {
+  const end = addDays(today, -1);
+  const start = addDays(today, -days);
+  const logged = [...intake.entries()].filter(([d, k]) => d >= start && d <= end && k > 0).map(([, k]) => k);
+  if (logged.length === 0) return null;
+  const median = [...logged].sort((a, b) => a - b)[Math.floor(logged.length / 2)];
+  const used = logged.filter((k) => k >= median * 0.6);
+  const w = weights.filter((p) => p.date >= start && p.date <= end);
+  if (used.length < 3 || w.length < 2) return null;
+  const span = daysBetween(w[0].date, w[w.length - 1].date);
+  if (span < 4) return null;
+
+  // 体重の傾き（kg/日）と、その標準誤差
+  const xs = w.map((p) => daysBetween(w[0].date, p.date));
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
+  const my = w.reduce((a, p) => a + p.value, 0) / w.length;
+  const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  const slope = xs.reduce((a, x, i) => a + (x - mx) * (w[i].value - my), 0) / sxx;
+  const resid = w.map((p, i) => p.value - (my + slope * (xs[i] - mx)));
+  // 点が少ないときは、体重の日々のぶれ（約0.5kg）を下限にして過信しない
+  const sd = Math.max(0.5, w.length > 2 ? Math.sqrt(resid.reduce((a, r) => a + r * r, 0) / (w.length - 2)) : 0.5);
+  const slopeErr = sd / Math.sqrt(sxx);
+
+  const avgIntake = used.reduce((a, b) => a + b, 0) / used.length;
+  const intakeSd = Math.sqrt(used.reduce((a, k) => a + (k - avgIntake) ** 2, 0) / Math.max(1, used.length - 1));
+  const tdee = avgIntake - slope * KCAL_PER_KG;
+  const margin = Math.sqrt((slopeErr * KCAL_PER_KG) ** 2 + (intakeSd / Math.sqrt(used.length)) ** 2);
+  const marginKcal = Math.round(margin / 10) * 10;
+  return {
+    tdee: Math.round(tdee / 10) * 10,
+    marginKcal,
+    confidence: marginKcal <= 150 ? 'high' : marginKcal <= 350 ? 'medium' : 'low',
+    loggedDays: used.length,
+    excludedDays: logged.length - used.length,
+    weighIns: w.length,
+    from: w[0].date,
+    to: w[w.length - 1].date,
+    avgIntake: Math.round(avgIntake),
+    kgPerWeek: Math.round(slope * 7 * 100) / 100,
+  };
+}
+
 /** その日が属する週の月曜日 */
 export function mondayOf(date: string): string {
   const [y, m, d] = date.split('-').map(Number);

@@ -997,3 +997,35 @@ label.check.small {
   color: var(--f);
   box-shadow: inset 0 -3px 0 var(--f), 0 1px 3px rgb(0 0 0 / 0.12);
 }
+
+/* 記録からの維持カロリー */
+.suggest-value {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.suggest-value b {
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.pill.conf-high {
+  background: color-mix(in srgb, var(--good) 15%, var(--card));
+  color: var(--good);
+}
+.pill.conf-medium {
+  background: var(--tint);
+  color: var(--accent);
+}
+.pill.conf-low {
+  background: color-mix(in srgb, var(--warn) 12%, var(--card));
+  color: var(--warn);
+}
+.maintenance-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.maintenance-suggestion h3 {
+  margin-bottom: 4px;
+}

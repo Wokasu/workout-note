@@ -50,7 +50,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const [activity, setActivity] = useState(initial?.activityFactor ?? 1.55);
   const [sizesEdited, setSizesEdited] = useState(false);
   const [bodyFatSource, setBodyFatSource] = useState<BodyFatSource>(initial?.bodyFatSource ?? 'auto');
-  const [tdeeMode, setTdeeMode] = useState<Profile['tdeeMode']>(initial?.tdeeMode ?? 'auto');
+  const [tdeeMode, setTdeeMode] = useState<Profile['tdeeMode']>(initial?.tdeeMode ?? 'formula');
   const [useManual, setUseManual] = useState(initial?.manualMacros != null);
   const [phase, setPhase] = useState<Profile['phase']>(initial?.phase ?? 'cut');
   const bulkInit = initial?.bulk ?? defaultBulkSettings(initial?.sex ?? 'male', today);
@@ -183,6 +183,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         maxWeeklyLossPct: num('maxWeeklyLossPct'),
         calibrationDays: Math.round(num('calibrationDays')),
         tdeeMode,
+        manualTdee: initial?.manualTdee ?? null,
         manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
       },
       sizes,
@@ -445,15 +446,22 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
 
         <div className="label">維持カロリーの決め方</div>
         <div className="seg">
-          <button type="button" className={tdeeMode === 'auto' ? 'on' : ''} onClick={() => setTdeeMode('auto')}>
-            記録から推定
-          </button>
           <button type="button" className={tdeeMode === 'formula' ? 'on' : ''} onClick={() => setTdeeMode('formula')}>
-            計算式のみ
+            計算式
+          </button>
+          {initial?.manualTdee && (
+            <button type="button" className={tdeeMode === 'manual' ? 'on' : ''} onClick={() => setTdeeMode('manual')}>
+              反映した値
+            </button>
+          )}
+          <button type="button" className={tdeeMode === 'auto' ? 'on' : ''} onClick={() => setTdeeMode('auto')}>
+            毎週自動で更新
           </button>
         </div>
         <p className="muted">
-          「記録から推定」は、計算式の値から始めて、毎週の食事量と体重の増減から維持カロリーを計算し直し、少しずつ実際の値に合わせていきます（減量中・増量中どちらでも）。確認期間が終わったときは、その実測値に合わせ直します。
+          記録からの推定値は、今日タブ・分析タブに出る「目標カロリーに反映する」を押したときに使います（「反映した値」
+          {initial?.manualTdee ? `：${initial.manualTdee.kcal} kcal` : ''}
+          ）。「毎週自動で更新」は、食事を6割以上記録した2週間ごとに推定値を少しずつ自動で反映します。
         </p>
 
         <label className="check">

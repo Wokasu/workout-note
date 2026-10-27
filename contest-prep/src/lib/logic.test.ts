@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyRecord, FoodLog, Profile } from '../types';
-import { estimateTdee, maintenanceEstimate, mondayOf, movingAverage, recentRate, seriesOf, weeklySummary } from './analysis';
+import { estimateTdee, maintenanceEstimate, mondayOf, quickEstimate, movingAverage, recentRate, seriesOf, weeklySummary } from './analysis';
 import { addDays } from './date';
 import { applyMapping, autoMap, decodeText, mergeBody, parseDateTime, prepareImport } from './importer';
 import { kcalOf, scaleMacros } from './macros';
@@ -29,6 +29,7 @@ const profile: Profile = {
   tdeeMode: 'auto',
   manualMacros: null,
   calibrationDays: 0,
+  manualTdee: null,
 };
 
 /** start から毎日 perDay kg ずつ変わる体重 */
@@ -437,5 +438,64 @@ describe('food groups', () => {
     expect(groupOf({ p: 0, f: 0, c: 0 })).toBe('other');
     // 登録済みの食品は一般的な分類（卵・サバ缶・納豆などはタンパク質）で、すべてどれかのタブに入る
     expect(PRESET_FOODS.every((f) => ['carb', 'protein', 'fat', 'other'].includes(f.group))).toBe(true);
+  });
+});
+
+describe('quickEstimate', () => {
+  // 実際の維持は 2760kcal（毎日 2400kcal 食べて 1日 0.05kg 減る）
+  const allWeights = seriesOf(weightsFrom('2026-10-01', 28, 80, -0.05), 'weightKg');
+  const allIntake = new Map(logsFrom('2026-10-01', 28, 2400).map((l) => [l.date, kcalOf(l)] as [string, number]));
+  const today = '2026-10-29';
+
+  it('estimates from sparse data, with a wide margin', () => {
+    // 食事は3日、体重は4回だけ
+    const w = allWeights.filter((p) => ['2026-10-20', '2026-10-23', '2026-10-25', '2026-10-28'].includes(p.date));
+    const intake = new Map([...allIntake].filter(([d]) => ['2026-10-21', '2026-10-24', '2026-10-27'].includes(d)));
+    const q = quickEstimate(w, intake, today)!;
+    expect(q.loggedDays).toBe(3);
+    expect(q.weighIns).toBe(4);
+    expect(Math.abs(q.tdee - 2760)).toBeLessThan(60);
+    expect(q.confidence).toBe('low');
+    expect(q.marginKcal).toBeGreaterThan(350);
+  });
+
+  it('gets confident with more data', () => {
+    const q = quickEstimate(allWeights, allIntake, today)!;
+    expect(Math.abs(q.tdee - 2760)).toBeLessThan(30);
+    expect(q.confidence).toBe('high');
+    expect(q.kgPerWeek).toBeCloseTo(-0.35, 2);
+  });
+
+  it('drops days that look only partly logged', () => {
+    const intake = new Map(allIntake);
+    intake.set('2026-10-27', 600); // 1食だけの日
+    const q = quickEstimate(allWeights, intake, today)!;
+    expect(q.excludedDays).toBe(1);
+    expect(q.avgIntake).toBe(2400);
+  });
+
+  it('needs at least 3 logged days and 2 weigh-ins 4+ days apart', () => {
+    const twoDays = new Map([...allIntake].slice(-2));
+    expect(quickEstimate(allWeights, twoDays, today)).toBeNull();
+    const close = allWeights.filter((p) => p.date >= '2026-10-26');
+    expect(quickEstimate(close, allIntake, today)).toBeNull();
+  });
+});
+
+describe('maintenance mode', () => {
+  const body = weightsFrom('2026-10-01', 28, 80, -0.05);
+  const intake = new Map(logsFrom('2026-10-01', 28, 2400).map((l) => [l.date, kcalOf(l)] as [string, number]));
+
+  it('shows the estimate but keeps the formula until the user applies it', () => {
+    const t = calcTargets({ ...profile, tdeeMode: 'formula' }, body, intake, '2026-10-29');
+    expect(t.quick?.tdee).toBeGreaterThan(2700);
+    expect(t.tdeeSource).toBe('formula');
+    expect(t.tdee).toBe(t.formulaTdee);
+  });
+
+  it('uses the applied value', () => {
+    const t = calcTargets({ ...profile, tdeeMode: 'manual', manualTdee: { kcal: 2750, date: '2026-10-29' } }, body, intake, '2026-10-29');
+    expect(t.tdeeSource).toBe('manual');
+    expect(t.tdee).toBe(2750);
   });
 });

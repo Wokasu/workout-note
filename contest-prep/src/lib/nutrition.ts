@@ -3,6 +3,8 @@ import {
   KCAL_PER_KG,
   calibratedTdee,
   maintenanceEstimate,
+  quickEstimate,
+  type QuickEstimate,
   type MaintenanceEstimate,
   movingAverage,
   seriesOf,
@@ -44,8 +46,10 @@ export interface Targets extends Macros {
   /** 記録から毎週更新している推定維持カロリー */
   maintenance: MaintenanceEstimate;
   tdee: number;
-  /** adaptive：記録から更新した推定値、formula：計算式（記録がまだない、または設定で計算式のみ） */
-  tdeeSource: 'formula' | 'adaptive';
+  /** adaptive：記録から毎週自動で更新した値、manual：自分で反映した推定値、formula：計算式 */
+  tdeeSource: 'formula' | 'adaptive' | 'manual';
+  /** 今あるデータからの推定（反映するかどうかは本人が決める） */
+  quick: QuickEstimate | null;
   /** キャリブレーション期間（減量前に維持カロリーで食べる期間）。設定がなければ null */
   calibration: {
     start: string;
@@ -116,8 +120,14 @@ export function calcTargets(
   const calResult = window && today >= window.end && today < addDays(window.end, 28) ? calibratedTdee(weights, intake, window.start, window.end) : null;
   // 計算式から始めて、記録から毎週更新する（確認期間が終わったらその実測値に合わせ直す）
   const maintenance = maintenanceEstimate(weights, intake, today, formulaTdee, window && window.end <= today ? [window] : []);
-  const tdeeSource: Targets['tdeeSource'] = profile.tdeeMode === 'auto' && maintenance.updates > 0 ? 'adaptive' : 'formula';
-  const tdee = tdeeSource === 'adaptive' ? maintenance.tdee : formulaTdee;
+  const quick = quickEstimate(weights, intake, today);
+  const tdeeSource: Targets['tdeeSource'] =
+    profile.tdeeMode === 'manual' && profile.manualTdee
+      ? 'manual'
+      : profile.tdeeMode === 'auto' && maintenance.updates > 0
+        ? 'adaptive'
+        : 'formula';
+  const tdee = tdeeSource === 'manual' ? profile.manualTdee!.kcal : tdeeSource === 'adaptive' ? maintenance.tdee : formulaTdee;
 
   const daysLeft = Math.max(0, daysBetween(today, profile.contestDate));
   // 減量に使える日数（キャリブレーション中は、その残りを除く）
@@ -147,6 +157,7 @@ export function calcTargets(
     bmr,
     formulaTdee,
     maintenance,
+    quick,
     tdee,
     tdeeSource,
     calibration: window

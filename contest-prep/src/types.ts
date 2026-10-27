@@ -26,8 +26,10 @@ export interface Profile {
   fatPct: number;
   /** 週あたり減量ペースの上限（体重比 %） */
   maxWeeklyLossPct: number;
-  /** 'auto' は記録から推定した消費カロリーが出せればそちらを使う */
-  tdeeMode: 'auto' | 'formula';
+  /** 維持カロリーの決め方：formula 計算式、manual 自分で反映した推定値、auto 記録から毎週自動で更新 */
+  tdeeMode: 'auto' | 'formula' | 'manual';
+  /** 「反映する」を押した推定値と、その日 */
+  manualTdee: { kcal: number; date: string } | null;
   /** 減量（コンテスト減量・プチダイエット）に入る前に、維持カロリーで食べて実際の維持カロリーを測る日数（0 でなし） */
   calibrationDays: number;
   /** コーチ等から指定された PFC を使う場合 */

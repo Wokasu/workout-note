@@ -13,6 +13,7 @@ interface Props {
   today: string;
   onSaveSizes: (sizes: Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>) => void;
   onSetTarget: (weightKg: number) => void;
+  onApplyTdee: (kcal: number) => void;
 }
 
 interface Milestone {
@@ -27,7 +28,7 @@ interface Milestone {
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
-export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarget }: Props) {
+export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarget, onApplyTdee }: Props) {
   const navy = useMemo(() => navySeries(body, profile), [body, profile]);
   const latestNavy = navy.at(-1);
   const latestScale = seriesOf(body, 'bodyFatPct').at(-1);
@@ -130,7 +131,7 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
         <TargetEditor profile={profile} targets={t} onSetTarget={onSetTarget} />
       </section>
 
-      <CalibrationCard targets={t} />
+      <CalibrationCard targets={t} onApply={onApplyTdee} />
 
       <NavyForm profile={profile} today={today} body={body} weightKg={t.currentKg} onSave={onSaveSizes} />
 
@@ -174,7 +175,7 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
 }
 
 /** 減量前に維持カロリーで食べる期間の状態と、そこで測った維持カロリー */
-export function CalibrationCard({ targets: t }: { targets: Targets }) {
+export function CalibrationCard({ targets: t, onApply }: { targets: Targets; onApply: (kcal: number) => void }) {
   const c = t.calibration;
   if (!c || c.status === 'expired') return null;
   return (
@@ -210,6 +211,11 @@ export function CalibrationCard({ targets: t }: { targets: Targets }) {
             </span>
           </li>
         </ul>
+      )}
+      {c.status === 'done' && c.result && (
+        <button className="primary wide" disabled={t.tdeeSource === 'manual' && t.tdee === c.result.tdee} onClick={() => onApply(c.result!.tdee)}>
+          {t.tdeeSource === 'manual' && t.tdee === c.result.tdee ? '反映済み' : `この値を目標カロリーに反映する（${c.result.tdee} kcal）`}
+        </button>
       )}
       {c.status === 'done' && !c.result && (
         <p className="status warn">期間中の食事の記録が足りないため（7割以上必要）、維持カロリーを実測できませんでした。記録からの推定か計算式を使っています。</p>

@@ -6,9 +6,12 @@ import { daysBetween, formatJa } from '../lib/date';
 import type { bulkPlanFor } from '../lib/bulk';
 import { MacroBars } from './MacroBars';
 import { PhaseLine } from './BulkPlan';
+import { MaintenanceSuggestion } from './MaintenanceSuggestion';
 import { contestRange, formatContestRange } from '../lib/navy';
 
 interface Props {
+  onApplyTdee: (kcal: number) => void;
+  onUseFormula: () => void;
   bulkPlan: ReturnType<typeof bulkPlanFor>;
   profile: Profile;
   targets: Targets;
@@ -50,7 +53,7 @@ function bulkPaceStatus(rate: Rate | null, t: Targets, gainKgPerMonth: number): 
   return { cls: 'ok', text: `月+${perMonth}kg のペースで、目標（月+${gainKgPerMonth}kg）どおり増えています` };
 }
 
-export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, todayBody, onSaveWeight, onGoMeals }: Props) {
+export function Today({ onApplyTdee, onUseFormula, bulkPlan, profile, targets: t, today, eaten, rate, todayBody, onSaveWeight, onGoMeals }: Props) {
   const savedKg = todayBody?.weightKg;
   const [kg, setKg] = useState(savedKg !== undefined ? String(savedKg) : '');
   const [edited, setEdited] = useState(false);
@@ -228,27 +231,12 @@ export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, today
               <small>
                 {t.tdeeSource === 'adaptive'
                   ? `記録から毎週更新（${t.maintenance.updates}回・最終 ${formatJa(t.maintenance.lastUpdate!)}）`
-                  : `計算式（×${profile.activityFactor}）`}
+                  : t.tdeeSource === 'manual'
+                    ? `反映した推定値（${formatJa(profile.manualTdee!.date)}）`
+                    : `計算式（×${profile.activityFactor}）`}
               </small>
             </span>
           </li>
-          {t.tdeeSource === 'adaptive' ? (
-            <li>
-              <span>計算式の値</span>
-              <span>
-                {t.formulaTdee} kcal <small>推定との差 {t.tdee - t.formulaTdee >= 0 ? '+' : ''}{t.tdee - t.formulaTdee}</small>
-              </span>
-            </li>
-          ) : (
-            profile.tdeeMode === 'auto' && (
-              <li>
-                <span>記録からの推定</span>
-                <span>
-                  <small>食事と体重を2週間ほど記録すると、毎週更新が始まります</small>
-                </span>
-              </li>
-            )
-          )}
           {t.calibration?.active ? (
             <li>
               <span>維持カロリーの確認中</span>
@@ -276,6 +264,8 @@ export function Today({ bulkPlan, profile, targets: t, today, eaten, rate, today
         </ul>
         {t.belowBmr && <p className="status warn">目標摂取が基礎代謝を下回っています。体調や筋量の変化に注意してください。</p>}
       </section>
+
+      <MaintenanceSuggestion targets={t} manualDate={profile.manualTdee?.date ?? null} onApply={onApplyTdee} onUseFormula={onUseFormula} />
     </div>
   );
 }

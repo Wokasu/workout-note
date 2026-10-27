@@ -16,6 +16,7 @@ interface Props {
   today: string;
   onSaveSizes: (sizes: Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>) => void;
   onSwitchToCut: () => void;
+  onApplyTdee: (kcal: number) => void;
 }
 
 const STATE_LABEL: Record<PlanState, string> = {
@@ -34,7 +35,7 @@ const EVENT_TEXT: Record<PlanState, string> = {
 };
 
 /** 増量期の計画：上限・戻す線、増量とプチダイエットの波、大会に向けた減量に入る時期 */
-export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, onSwitchToCut }: Props) {
+export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, onSwitchToCut, onApplyTdee }: Props) {
   const st = t.bulk!;
   const s = profile.bulk;
   const lim = st.limits;
@@ -67,7 +68,7 @@ export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, 
         )}
       </section>
 
-      {st.calibration && <CalibrationCard targets={t} />}
+      {st.calibration && <CalibrationCard targets={t} onApply={onApplyTdee} />}
 
       <section className="card">
         <h3>{plan.contest ? '大会までの見込み' : 'これから26週の見込み'}</h3>
