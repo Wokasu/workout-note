@@ -31,6 +31,7 @@
     --p-legs: #1baf7a;
     --p-shoulders: #eda100;
     --p-arms: #e87ba4;
+    --p-abs: #8b5cf6;
     --p-other: #a8a29e;
     --font-num: "Barlow Condensed", "Arial Narrow", "Hiragino Sans", sans-serif;
     --font-body: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
@@ -42,7 +43,7 @@
       --bg: #151311; --surface: #201d1a; --surface-2: #2a2622; --ink: #f1eeea; --ink-2: #bab3ab; --ink-3: #857e77;
       --line: #36312c; --grid: #2c2824; --accent: #f06a2c; --accent-ink: #1a0d06; --accent-soft: #3b2216;
       --warn-bg: #3a2a10; --warn-ink: #f4c77c; --good: #4cc38a; --good-bg: #16301f; --bad: #f07a7a; --paper: #1f2433; --paper-ink: #c7d4ff;
-      --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-other: #78716c;
+      --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2; --p-other: #78716c;
       color-scheme: dark;
     }
   }
@@ -50,7 +51,7 @@
     --bg: #151311; --surface: #201d1a; --surface-2: #2a2622; --ink: #f1eeea; --ink-2: #bab3ab; --ink-3: #857e77;
     --line: #36312c; --grid: #2c2824; --accent: #f06a2c; --accent-ink: #1a0d06; --accent-soft: #3b2216;
     --warn-bg: #3a2a10; --warn-ink: #f4c77c; --good: #4cc38a; --good-bg: #16301f; --bad: #f07a7a; --paper: #1f2433; --paper-ink: #c7d4ff;
-    --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-other: #78716c;
+    --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2; --p-other: #78716c;
     color-scheme: dark;
   }
 
@@ -444,7 +445,7 @@ var WN = (() => {
     weeklyVolumes: () => lt,
     workoutParts: () => H,
   });
-  var w = ["chest", "back", "legs", "shoulders", "arms"];
+  var w = ["chest", "back", "legs", "shoulders", "arms", "abs"];
   function I(e = new Date()) {
     let t = (r) => String(r).padStart(2, "0");
     return `${e.getFullYear()}-${t(e.getMonth() + 1)}-${t(e.getDate())}`;
@@ -466,9 +467,11 @@ var WN = (() => {
       legs: { label: "\u811A", color: "#1baf7a", darkText: !1 },
       shoulders: { label: "\u80A9", color: "#eda100", darkText: !0 },
       arms: { label: "\u8155", color: "#e87ba4", darkText: !0 },
+      abs: { label: "腹", color: "#8b5cf6", darkText: !1 },
     },
     ke = [{ id: "all", label: "\u5168\u4F53" }, ...w.map((e) => ({ id: e, label: te[e].label }))],
     Ge = [
+      ["abs", ["腹", "アブドミナル", "アブローラー", "クランチ", "シットアップ", "レッグレイズ", "プランク", "ドラゴンフラッグ", "ロールアウト", "体幹", "abs", "crunch"]],
       ["chest", ["\u8155\u7ACB\u3066", "\u30D7\u30C3\u30B7\u30E5\u30A2\u30C3\u30D7"]],
       [
         "legs",
@@ -955,7 +958,7 @@ var WN = (() => {
       let c = P(i, -7 * u);
       s.push({
         start: c,
-        byPart: { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, other: 0 },
+        byPart: { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, abs: 0, other: 0 },
         total: 0,
         partial: u === 0,
       });
@@ -974,7 +977,7 @@ var WN = (() => {
   }
   function ct(e, t, r, o = "kg") {
     var i;
-    let n = { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, other: 0 };
+    let n = { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, abs: 0, other: 0 };
     for (let s of e)
       if (!(s.date < t || s.date >= r))
         for (let a of s.exercises) n[(i = a.part) != null ? i : "other"] += De(a, o);
@@ -1186,7 +1189,7 @@ var WN = (() => {
       o = P(r, 7),
       n = _(e, "all", r, o),
       i = _(e, "all", P(r, -7), r),
-      s = { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0 };
+      s = { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, abs: 0 };
     for (let u of e)
       if (!(u.date < r || u.date >= o)) for (let c of u.exercises) c.part && (s[c.part] += W(c));
     for (let u of w) s[u] = Math.round(s[u]);
@@ -2347,7 +2350,7 @@ function adviceCard() {
 // 直近 n 週（今週を含む）の、部位ごとの量と、重ねる種目の週ベスト推定1RM
 function partWeeks(part, n, lift) {
   const cur = WN.weekStart(today()), weeks = [];
-  for (let i = n - 1; i >= 0; i--) weeks.push({ start: WN.addDays(cur, -7 * i), sets: 0, kg: 0, days: new Set(), byPart: { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, other: 0 }, lift: null, partial: i === 0 });
+  for (let i = n - 1; i >= 0; i--) weeks.push({ start: WN.addDays(cur, -7 * i), sets: 0, kg: 0, days: new Set(), byPart: { chest: 0, back: 0, legs: 0, shoulders: 0, arms: 0, abs: 0, other: 0 }, lift: null, partial: i === 0 });
   const first = weeks[0].start, end = WN.addDays(cur, 7), isKg = S.pMeasure === "kg";
   for (const w of S.workouts) {
     if (w.date < first || w.date >= end) continue;
@@ -2646,7 +2649,7 @@ function updateCalc() {
 }
 
 // ===== シェア画像 =====
-const SHARE_PART = { chest: "#3b8be6", back: "#f07440", legs: "#22b884", shoulders: "#f0a818", arms: "#ec86ae" };
+const SHARE_PART = { chest: "#3b8be6", back: "#f07440", legs: "#22b884", shoulders: "#f0a818", arms: "#ec86ae", abs: "#9b7cf2" };
 const SC = { bg: "#191715", bg2: "#24211e", ink: "#f4f1ec", ink2: "#b8b1a9", ink3: "#7f7871", accent: "#f06a2c", line: "#34302b" };
 const SNUM = '"Barlow Condensed", "Arial Narrow", sans-serif';
 const SJP = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif';
@@ -3021,7 +3024,7 @@ const IMPORT_PROMPT = (todayStr) => `この画像は、筋トレの記録です�
 - 1枚に何日分も写っていれば、days に日ごとに分けて入れる。
 - 日付が画面に写っていなければ date は null。
 - 種目名は画面の表記をもとに、略記は一般的な名前に直す（BP → ベンチプレス など）。
-- part は主に鍛える部位：chest=胸 back=背中 legs=脚 shoulders=肩 arms=腕。当てはまらなければ null。
+- part は主に鍛える部位：chest=胸 back=背中 legs=脚 shoulders=肩 arms=腕 abs=腹（腹筋・体幹）。当てはまらなければ null。
 - 各セットの重量（weight）と回数（reps）を入れる。自重は weight を null。単位が lb なら unit を "lb"。
 - ウォームアップと表示されたセットは note に "W" と入れる。
 - 合計重量・合計回数などの集計値は、セットとして入れない。
@@ -3029,7 +3032,7 @@ const IMPORT_PROMPT = (todayStr) => `この画像は、筋トレの記録です�
 - 筋トレの記録が写っていなければ days は空にする。
 
 次の形の JSON だけを返してください：
-{"days": [{"date": "YYYY-MM-DD" または null, "title": 文字列 または null, "uncertain": [文字列], "exercises": [{"name": 文字列, "part": "chest"|"back"|"legs"|"shoulders"|"arms"|null, "sets": [{"weight": 数値|null, "unit": "kg"|"lb", "reps": 数値|null, "note": 文字列|null}], "note": null}]}], "uncertain": [文字列]}`;
+{"days": [{"date": "YYYY-MM-DD" または null, "title": 文字列 または null, "uncertain": [文字列], "exercises": [{"name": 文字列, "part": "chest"|"back"|"legs"|"shoulders"|"arms"|"abs"|null, "sets": [{"weight": 数値|null, "unit": "kg"|"lb", "reps": 数値|null, "note": 文字列|null}], "note": null}]}], "uncertain": [文字列]}`;
 
 const emptyImport = () => ({ items: [], days: [], raw: [], checked: new Set(), dates: {}, open: new Set(), confirmed: new Map(), overrides: {}, running: false, ctl: null });
 function openImport(files, replace) {
@@ -3381,7 +3384,7 @@ const PROMPT = (todayStr) => `あなたは手書きの筋トレ記録ノート�
 - 取り消し線で消された記録は転記しない。
 - 自重の種目は weight を null にする。
 - 種目名の略記は一般的な名前に直す（BP → ベンチプレス、SQ → スクワット、DL → デッドリフト など）。
-- part は主に鍛える部位: chest=胸 back=背中 legs=脚 shoulders=肩 arms=腕。腹筋や有酸素など当てはまらなければ null。
+- part は主に鍛える部位: chest=胸 back=背中 legs=脚 shoulders=肩 arms=腕 abs=腹（腹筋・体幹）。有酸素など当てはまらなければ null。
 - ノートの上の欄（体重・睡眠時間・コンディションスコア・栄養状態・時間・場所・事前記録）があれば、次の項目に入れる：
   bodyweight＝体重（kg の数値）／ sleepHours＝睡眠時間（時間の数値。「7+0.5」のような書き方は足して 7.5）／ condition＝コンディションスコア（1〜5 のうち丸で囲まれた数字）／ nutrition＝栄養状態の書き込み（◎○△× や短い言葉のまま）／ startTime＝開始時刻（"HH:MM"）／ place＝場所／ pre＝事前記録（ウォームアップやストレッチなど）の内容を短く
 - 各種目の下の MEMO 欄の書き込み（フォームの気づき、次回の重量など）は、その種目の note に入れる。
@@ -3394,7 +3397,7 @@ const PROMPT = (todayStr) => `あなたは手書きの筋トレ記録ノート�
 
 次の形の JSON だけを返してください（説明文は不要）:
 {"date": "YYYY-MM-DD" または null, "title": 文字列 または null,
- "exercises": [{"name": 文字列, "part": "chest"|"back"|"legs"|"shoulders"|"arms"|null,
+ "exercises": [{"name": 文字列, "part": "chest"|"back"|"legs"|"shoulders"|"arms"|"abs"|null,
    "sets": [{"weight": 数値|null, "unit": "kg"|"lb"|null, "reps": 数値|null, "note": 文字列|null}], "note": 文字列|null}],
  "notes": 文字列 または null,
  "bodyweight": 数値|null, "sleepHours": 数値|null, "condition": 1〜5の数値|null, "nutrition": 文字列|null, "startTime": 文字列|null, "place": 文字列|null, "pre": 文字列|null,
@@ -3663,12 +3666,12 @@ function renderEdit(view) {
     const move = (d) => { const j = i + d; if (j < 0 || j >= f.exercises.length) return; [f.exercises[i], f.exercises[j]] = [f.exercises[j], f.exercises[i]]; render(); };
     // まだ確認していない項目で名前が出てくる種目は、枠で目立たせる
     const card = h("div", { class: "card" },
+      h("div", { class: "parts" }, WN.BODY_PARTS.map((p) => h("button", { class: "part-pick", type: "button", "aria-pressed": String(ex.part === p), onclick: () => { ex.part = ex.part === p ? null : p; ex.showAll = false; render(); } }, h("i", { class: "dot", c: partColor(p) }), partLabel(p))),
+        ex.part ? null : h("span", { class: "muted", style: "color:var(--warn-ink);align-self:center" }, "部位を選択")),
       h("div", { class: "row", style: "gap:4px" }, nameIn,
         h("button", { class: "x", type: "button", "aria-label": "上へ", onclick: () => move(-1) }, "↑"),
         h("button", { class: "x", type: "button", "aria-label": "下へ", onclick: () => move(1) }, "↓"),
         h("button", { class: "x del", type: "button", "aria-label": "種目を削除", onclick: () => { f.exercises.splice(i, 1); render(); } }, "✕")),
-      h("div", { class: "parts" }, WN.BODY_PARTS.map((p) => h("button", { class: "part-pick", type: "button", "aria-pressed": String(ex.part === p), onclick: () => { ex.part = ex.part === p ? null : p; render(); } }, h("i", { class: "dot", c: partColor(p) }), partLabel(p))),
-        ex.part ? null : h("span", { class: "muted", style: "color:var(--warn-ink);align-self:center" }, "部位を選択")),
       newExerciseRow(ex),
       unregisteredHint(ex, cat),
       ex.raw ? h("div", { class: "raw-line" }, "ノートの表記：", h("span", {}, ex.raw)) : null,
@@ -3689,23 +3692,32 @@ function renderEdit(view) {
   view.append(h("button", { class: "btn primary", type: "button", id: "save-btn", onclick: saveEdit, disabled: !S.db }, E.importKey ? "この内容にする" : "保存する"));
 }
 // 種目はプルダウンで選ぶ。リストにない種目は、その場で登録して使う
-const NEW_EX = "\u0000new";
+const NEW_EX = "\u0000new", ALL_EX = "\u0000all";
 const findExercise = (cat, n) => cat.find((c) => nameKey(c.name) === nameKey(n));
 function exercisePicker(ex, cat) {
   if (ex.adding != null) return h("b", { class: "grow", style: "font-size:14px" }, "新しい種目を登録");
   const known = ex.name.trim() ? findExercise(cat, ex.name) : null;
   if (known && known.name !== ex.name) ex.name = known.name; // 空白や全角半角の違いだけなら登録済みの名前にそろえる
+  // 部位を選んでいれば、その部位の種目だけを出す（「ほかの部位から選ぶ」で全部に広げられる）
+  const only = ex.part && !ex.showAll ? ex.part : undefined;
+  const items = only ? cat.filter((c) => c.part === only) : null;
+  const current = ex.name.trim() && (!known ? `${ex.name}（未登録）` : items && !items.includes(known) ? `${ex.name}（${partLabel(known.part)}の種目）` : null);
   const sel = h("select", { class: "in name grow", id: `f-ex-${ex.key}`, "aria-label": "種目" },
-    h("option", { value: "" }, "種目を選ぶ"),
-    ex.name.trim() && !known ? h("option", { value: ex.name }, `${ex.name}（未登録）`) : null,
-    [...WN.BODY_PARTS, null].map((p) => {
-      const items = cat.filter((c) => c.part === p);
-      return items.length ? h("optgroup", { label: partLabel(p) }, items.map((c) => h("option", { value: c.name }, c.name))) : null;
-    }),
-    h("option", { value: NEW_EX }, "＋ 新しい種目を登録…"));
+    h("option", { value: "" }, only ? `${partLabel(only)}の種目を選ぶ` : "種目を選ぶ"),
+    current ? h("option", { value: ex.name }, current) : null,
+    only
+      ? (items.length ? items.map((c) => h("option", { value: c.name }, c.name)) : h("option", { value: "", disabled: true }, `（${partLabel(only)}の種目はまだありません）`))
+      : [...WN.BODY_PARTS, null].map((p) => {
+        const list = cat.filter((c) => c.part === p);
+        return list.length ? h("optgroup", { label: partLabel(p) }, list.map((c) => h("option", { value: c.name }, c.name))) : null;
+      }),
+    h("option", { value: NEW_EX }, only ? `＋ ${partLabel(only)}の種目を新しく登録…` : "＋ 新しい種目を登録…"),
+    only && cat.length > items.length ? h("option", { value: ALL_EX }, "ほかの部位から選ぶ…") : null);
   sel.value = ex.name.trim() ? ex.name : "";
   sel.addEventListener("change", () => {
     if (sel.value === NEW_EX) { ex.adding = ex.name.trim() && !known ? ex.name : ""; ex.focusNew = true; render(); return; }
+    if (sel.value === ALL_EX) { ex.showAll = true; render(); document.getElementById(`f-ex-${ex.key}`)?.focus(); return; }
+    ex.showAll = false;
     pickExercise(ex, sel.value, cat);
   });
   return sel;
@@ -3724,7 +3736,7 @@ function newExerciseRow(ex) {
 function pickExercise(ex, name, cat) {
   const c = findExercise(cat, name);
   ex.name = c ? c.name : name;
-  ex.part = (c && c.part) || partFor(ex.name) || (c ? null : ex.part);
+  if (ex.name) ex.part = (c && c.part) || partFor(ex.name) || (c ? null : ex.part); // 「選ぶ」に戻しただけなら部位はそのまま
   render();
 }
 // 読み取った名前がリストにないとき：近い種目をすすめ、そのまま保存すれば新しい種目になることを伝える
@@ -3742,8 +3754,8 @@ async function registerExercise(ex, raw) {
   const name = canonName(t), hit = findExercise(exerciseCatalog(), name);
   ex.adding = null;
   if (hit) { pickExercise(ex, hit.name, [hit]); return toast(`「${hit.name}」はすでに登録されています`); }
-  ex.name = name; ex.part = partFor(name);
-  S.exRules = { ...S.exRules, custom: [...(S.exRules.custom || []), name] };
+  ex.name = name; ex.part = ex.part || partFor(name);
+  S.exRules = { ...S.exRules, custom: [...(S.exRules.custom || []), name], parts: ex.part ? { ...S.exRules.parts, [name]: ex.part } : S.exRules.parts };
   render();
   try { await rulesDoc().set(S.exRules); toast(`「${name}」を登録しました`); }
   catch { toast(`「${name}」はこの記録には使えますが、種目リストへの保存に失敗しました`); }
