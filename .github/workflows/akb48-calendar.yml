@@ -198,3 +198,77 @@ jobs:
         run: |
           echo '::error::公式サイトから公演情報を取得できませんでした。前回の予定を残しています。'
           exit 1
+
+  # 知人用（森川優・渡邉葵心・佐藤綺星）。config-friend.json で作り、akb48-calendar-feed-friend ブランチに置く。
+  # 申込開始・締切の通知は Secrets の NTFY_TOPIC_FRIEND に送る（Issue・SNS告知文の通知・X 投稿はしない）
+  friend:
+    runs-on: ubuntu-latest
+    env:
+      FEED_BRANCH: akb48-calendar-feed-friend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout feed branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin "$FEED_BRANCH" >/dev/null; then
+            git clone --depth 1 --branch "$FEED_BRANCH" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" feed
+          else
+            mkdir feed && cd feed && git init -b "$FEED_BRANCH"
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build calendars
+        id: build
+        if: ${{ !inputs.probe }}
+        continue-on-error: true
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC_FRIEND }}
+        run: node akb48-calendar/update.mjs --config config-friend.json --out feed --notify notify-apply.md
+
+      - name: Publish
+        if: ${{ !inputs.probe }}
+        working-directory: feed
+        run: |
+          git add -A
+          if git rev-parse --verify HEAD >/dev/null 2>&1 && git diff --cached --quiet -I '^DTSTAMP:'; then
+            echo '予定に変化なし'
+            exit 0
+          fi
+          git commit -m "カレンダー更新 $(TZ=Asia/Tokyo date '+%Y-%m-%d %H:%M')"
+          git push origin "HEAD:$FEED_BRANCH"
+
+      - name: Test push (ntfy)
+        if: ${{ inputs.ntfy_test }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC_FRIEND }}
+        run: |
+          [ -n "$NTFY_TOPIC" ] || { echo '::error::NTFY_TOPIC_FRIEND が設定されていません'; exit 1; }
+          curl -fsS \
+            -H "Title: 🎫 推しの公演の申込が始まりました" \
+            -H "Click: https://akb48.zaiko.io/" \
+            -d "（テスト）知人用の通知です。10/27(火)〜11/9(月) の推しの公演 5件" \
+            "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+
+      - name: Push application open (ntfy)
+        if: ${{ !inputs.probe && hashFiles('notify-apply.txt') != '' }}
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC_FRIEND }}
+        run: |
+          [ -n "$NTFY_TOPIC" ] || { echo 'NTFY_TOPIC_FRIEND が設定されていないので送りません'; exit 0; }
+          curl -fsS \
+            -H "Title: 🎫 推しの公演の申込が始まりました" \
+            -H "Click: https://akb48.zaiko.io/" \
+            --data-binary @notify-apply.txt \
+            "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+
+      - name: Report fetch failure
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo '::error::公式サイトから公演情報を取得できませんでした。前回の予定を残しています。'
+          exit 1

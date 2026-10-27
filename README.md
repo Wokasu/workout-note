@@ -167,6 +167,27 @@ URLの形は公演ごとにばらばらなので、自分で組み立てるこ�
 生誕祭・女性限定公演は、公式サイトの但し書きを公演名の後ろに付けて表示します（カレンダーの予定名も同じ）（例: `「RESET」公演【女性限定公演】`、`「ここからだ」公演【坂川陽香 生誕祭】`）。
 自分で決めたURLを開きたいときは、`launcher.bat` と同じフォルダに `urls.txt`（1行に1つURL）を置くとそちらを使います。
 
+## 知人用（森川優・渡邉葵心・佐藤綺星）
+
+カレンダー・申込ランチャー・申込通知の3点を、別の推しメンでもう1セット動かしています。設定は `akb48-calendar/config-friend.json`、
+できたファイルは `akb48-calendar-feed-friend` ブランチに置きます（同じワークフローの `friend` ジョブが3時間ごとに更新）。
+
+- **カレンダー**（iPhone の「照会するカレンダーを追加」に登録。締切カレンダーは「通知を削除」をオフ）
+
+  | カレンダー | URL |
+  | --- | --- |
+  | AKB48 森川優（ピンク） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/morikawa.ics` |
+  | AKB48 渡邉葵心（水色） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/kiko.ics` |
+  | AKB48 佐藤綺星（緑） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/kirara.ics` |
+  | AKB48 申込締切（オレンジ） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/deadlines.ics` |
+
+  複数の推しが出る公演は、上の順（森川優 → 渡邉葵心 → 佐藤綺星）で先に来るカレンダーにだけ入ります
+- **申込ランチャー**：`launcher.bat` の代わりに `launcher-friend.bat` を `launcher.ps1` と同じフォルダに置いてダブルクリック（使い方は同じ。Chromeのプロファイル名も `AKB 01` …）
+- **申込通知（ntfy）**：GitHub の Secrets に `NTFY_TOPIC_FRIEND`（自分用の `NTFY_TOPIC` とは別の、推測されにくいトピック名）を登録し、知人がそのトピックを ntfy アプリで購読します。
+  申込開始と締切の1日前が届きます。Run workflow で `ntfy_test` にチェックすると、知人用のトピックにもテスト通知が届きます。
+  知人用は Issue・出演告知文の通知・X 投稿はしません
+- 申込締切の対象の応募枠は自分用と同じ柱の会会員枠です。変えるときは `config-friend.json` の `targetFrame` を直します
+
 ---
 
 # 百花クエストⅠ THE LAST WOTA 〜消えないペンライトの灯〜 🎮

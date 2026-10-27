@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// 使い方: node akb48-calendar/update.mjs --out <出力フォルダ> [--dump <デバッグ用フォルダ>]
+// 使い方: node akb48-calendar/update.mjs --out <出力フォルダ> [--dump <デバッグ用フォルダ>] [--config <設定ファイル>]
+// --config を省くと config.json（推しメンの設定）を使う。知人用は config-friend.json
 // 出力フォルダに <calendar.id>.ics と events.json（前回までの記録）を書き出す。
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -12,7 +13,7 @@ const args = Object.fromEntries(
 );
 const outDir = args.out ?? join(here, 'feed');
 const dumpDir = args.dump;
-const config = JSON.parse(await readFile(join(here, 'config.json'), 'utf8'));
+const config = JSON.parse(await readFile(join(here, args.config ?? 'config.json'), 'utf8'));
 const allMembers = config.calendars.flatMap((c) => c.members);
 const today = args.today ? new Date(args.today) : new Date(); // --today は動作確認用
 
