@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applicationClosed, buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -423,4 +423,16 @@ test('申込受付が終わったか: 締切が分からない公演は、一般
   assert.equal(applicationClosed(show, new Date('2026-10-26T15:59:00+09:00'), rule), false);
   assert.equal(applicationClosed(show, new Date('2026-10-26T16:00:00+09:00'), rule), true);
   assert.equal(applicationClosed({ year: 2026, month: 11, day: 3, deadlines: [] }, new Date('2026-10-27T09:00:00+09:00'), rule), false);
+});
+
+test('公式スタッフブログ（RSS）: 公演のご案内は劇場公演として読み、それ以外で推しメンが出てくる記事はイベント候補にする', () => {
+  const items = parseRss(readFileSync(new URL('./fixtures/blog-rss.xml', import.meta.url), 'utf8'));
+  assert.equal(items.length, 5);
+  const notice = items.find((i) => i.title.includes('公演のご案内'));
+  const casts = extractCasts([notice.title, ...htmlToLines(notice.html)], { today, sourceUrl: notice.link });
+  // 「2026年11月3日(火・祝)」と、別の行の「<1回目> 13:00開演」「<2回目> 17</span><span>:30開演」
+  assert.deepEqual(casts.map((c) => `${c.month}/${c.day} ${c.hour}:${c.minute}`), ['11/3 13:0', '11/3 17:30']);
+  assert.equal(casts[0].deadlines.length, 2);
+  const os = items.find((i) => i.title.includes('69thシングル'));
+  assert.deepEqual(mentionedMembers([os.title, ...htmlToLines(os.html)].join('\n'), members), ['伊藤百花']);
 });
