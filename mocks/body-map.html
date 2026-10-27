@@ -1,0 +1,379 @@
+<title>全身ぬりえ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap">
+<style>
+  /* レイアウト：筋トレノートの1画面（スマホ幅）。上に塗り率、真ん中に前・後ろの全身図、下にタップした筋肉の内訳と種目の裏設定 */
+  :root {
+    --bg: #f4f2ef; --surface: #ffffff; --surface-2: #eeebe7;
+    --ink: #1d1b19; --ink-2: #5d5853; --ink-3: #8c8680; --line: #e2ddd7; --grid: #ece8e3;
+    --accent: #d4480f; --accent-ink: #ffffff; --accent-soft: #fbe3d6;
+    --warn-bg: #fcefd2; --warn-ink: #7f4500; --good: #12744a; --good-bg: #e2f2e8;
+    --paper: #fffdf8; --outline: #a39c94;
+    --p-chest: #2a78d6; --p-back: #eb6834; --p-legs: #1baf7a; --p-shoulders: #eda100; --p-arms: #e87ba4; --p-abs: #8b5cf6;
+    --font-num: "Barlow Condensed", "Arial Narrow", "Hiragino Sans", sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151311; --surface: #201d1a; --surface-2: #2a2622; --ink: #f1eeea; --ink-2: #bab3ab; --ink-3: #857e77; --line: #36312c; --grid: #2c2824;
+      --accent: #f06a2c; --accent-ink: #1a0d06; --accent-soft: #3b2216; --warn-bg: #3a2a10; --warn-ink: #f4c77c; --good: #4cc38a; --good-bg: #16301f;
+      --paper: #2a2622; --outline: #6f6860;
+      --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151311; --surface: #201d1a; --surface-2: #2a2622; --ink: #f1eeea; --ink-2: #bab3ab; --ink-3: #857e77; --line: #36312c; --grid: #2c2824;
+    --accent: #f06a2c; --accent-ink: #1a0d06; --accent-soft: #3b2216; --warn-bg: #3a2a10; --warn-ink: #f4c77c; --good: #4cc38a; --good-bg: #16301f;
+    --paper: #2a2622; --outline: #6f6860;
+    --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 640px; margin: 0 auto; padding-block: 12px 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 10px; }
+  .mock-note { background: var(--warn-bg); color: var(--warn-ink); border-radius: 12px; padding: 8px 12px; font-size: 12px; line-height: 1.6; }
+  h1 { margin: 4px 0 0; font-size: 18px; text-wrap: balance; }
+  .card { background: var(--surface); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .card-title { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .muted { color: var(--ink-3); font-size: 11px; line-height: 1.6; }
+  .sub { color: var(--ink-2); font-size: 13px; line-height: 1.6; margin: 0; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+  .hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .hero { font-family: var(--font-num); font-size: 56px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .hero small { font-size: 22px; color: var(--ink-2); margin-left: 2px; }
+  .hero-side { display: flex; flex-direction: column; gap: 2px; text-align: right; font-size: 12px; color: var(--ink-2); }
+  .hero-side b { font-family: var(--font-num); font-size: 22px; color: var(--ink); }
+  .meter { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .meter i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s; }
+
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .days button { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; }
+  .days button span { font-size: 9px; color: var(--ink-3); }
+  .days button.done { background: var(--surface-2); }
+  .days button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .days button[aria-pressed="true"] span { color: var(--bg); opacity: .8; }
+
+  .figures { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .fig { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+  .fig svg { width: 100%; max-width: 230px; height: auto; display: block; touch-action: manipulation; }
+  .fig b { font-size: 12px; color: var(--ink-2); }
+  .base { fill: var(--paper); stroke: var(--outline); stroke-width: 1.2; stroke-linejoin: round; }
+  .m { stroke: var(--outline); stroke-width: .9; stroke-linejoin: round; cursor: pointer; transition: fill-opacity .35s; }
+  .m.sel { stroke: var(--ink); stroke-width: 2.2; }
+  .m:focus-visible { outline: none; stroke: var(--accent); stroke-width: 2.4; }
+  .absline { stroke: var(--outline); stroke-width: .7; fill: none; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .m, .meter i { transition: none; } }
+
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--ink-2); align-items: center; }
+  .sw { display: inline-flex; align-items: center; gap: 4px; }
+  .sw i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--outline); background: var(--p-chest); }
+
+  .seg { display: flex; background: var(--surface-2); border-radius: 10px; padding: 2px; }
+  .seg button { flex: 1; border: 0; background: transparent; padding: 7px 4px; font-size: 12px; border-radius: 8px; }
+  .seg button[aria-pressed="true"] { background: var(--surface); font-weight: 700; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .flabel { font-size: 11px; font-weight: 700; color: var(--ink-2); }
+
+  .tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+  .detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .detail-head h2 { margin: 0; font-size: 17px; }
+  .pct { font-family: var(--font-num); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .contrib { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 10px; align-items: center; font-size: 13px; }
+  .contrib .h { font-size: 11px; color: var(--ink-3); }
+  .contrib .v { font-family: var(--font-num); font-size: 16px; text-align: right; font-variant-numeric: tabular-nums; }
+
+  .g { border: 0; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+  .g[data-g="x"] { background: var(--accent); color: var(--accent-ink); }
+  .g[data-g="l"] { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .g[data-g="m"] { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .g[data-g="s"] { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); }
+  .g[data-g="n"] { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px dashed var(--line); text-decoration: line-through; }
+  .ex-row { display: flex; flex-direction: column; gap: 5px; padding: 9px 0; border-top: 1px solid var(--grid); }
+  .ex-row:first-of-type { border-top: 0; }
+  .ex-row .name { font-weight: 700; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chips { display: flex; gap: 4px; flex-wrap: wrap; }
+  .todo { display: flex; flex-direction: column; gap: 6px; }
+  .todo-item { display: flex; gap: 8px; align-items: center; border: 0; background: var(--surface-2); border-radius: 10px; padding: 8px 10px; text-align: left; width: 100%; }
+  .todo-item .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .todo-item small { color: var(--ink-2); font-size: 11px; }
+  .todo-item .left { font-family: var(--font-num); font-size: 17px; font-weight: 700; white-space: nowrap; }
+  ul.q { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.6; color: var(--ink-2); }
+  ul.q b { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <div class="mock-note">モックです。数字はサンプルの1週間（家トレ・ジムの記録を想定した例）で、あなたの記録ではありません。筋肉や「効き方」の札をタップすると動きます。</div>
+  <h1>全身ぬりえ</h1>
+
+  <section class="card" aria-label="今週の塗り具合">
+    <div class="hero-row">
+      <div>
+        <div class="flabel" id="hero-label">今週の塗り率</div>
+        <div class="hero" id="hero">0<small>%</small></div>
+      </div>
+      <div class="hero-side"><span>塗り終わった筋肉</span><span><b id="full-n">0</b> / <span id="all-n">0</span></span></div>
+    </div>
+    <div class="meter"><i id="meter" style="width:0%"></i></div>
+    <div class="flabel">何曜日までの記録で塗るか</div>
+    <div class="days" id="days" role="group" aria-label="曜日"></div>
+  </section>
+
+  <section class="card" aria-label="全身図">
+    <div class="figures">
+      <div class="fig"><svg id="front" viewBox="0 0 200 420" role="img" aria-label="体の前側"></svg><b>前</b></div>
+      <div class="fig"><svg id="back" viewBox="0 0 200 420" role="img" aria-label="体の後ろ側"></svg><b>後ろ</b></div>
+    </div>
+    <div class="legend" id="legend"></div>
+    <div class="muted">色は部位の色（胸＝青、背中＝オレンジ…）。濃いほどその筋肉に今週ダメージが入っています。目標まで届くと、その部位の色でベタ塗りになります。</div>
+  </section>
+
+  <section class="card" id="detail" aria-live="polite"></section>
+
+  <section class="card">
+    <h2 class="card-title">まだ塗れていないところ</h2>
+    <div class="todo" id="todo"></div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">塗り方の設定</h2>
+    <div class="flabel">1つの筋肉を塗り終える目標（1週間）</div>
+    <div class="seg" id="target" role="group" aria-label="目標"></div>
+    <div class="flabel">数え方</div>
+    <div class="seg" id="mode" role="group" aria-label="数え方"></div>
+    <div class="muted" id="mode-note"></div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">種目ごとの効き方（裏設定）</h2>
+    <p class="sub">種目ごとに、どの筋肉にどれだけ効くかを決めておきます。札をタップすると 極大 → 大 → 中 → 小 → なし の順に変わり、全身図にすぐ反映されます。</p>
+    <div class="legend"><span class="g" data-g="x">極大 1.0</span><span class="g" data-g="l">大 0.6</span><span class="g" data-g="m">中 0.3</span><span class="g" data-g="s">小 0.1</span><span class="muted">1セットあたり何セット分のダメージか</span></div>
+    <div id="exlist"></div>
+  </section>
+
+  <section class="card">
+    <h2 class="card-title">実装の前に決めたいこと</h2>
+    <ul class="q">
+      <li><b>週の区切り</b>：月曜にまっさらに戻す（今の案）か、直近7日で毎日少しずつ薄れていくか。</li>
+      <li><b>目標の量</b>：1筋肉あたり週10セット相当で満塗り（今の案）。筋肉ごとに変えたいか（例：ふくらはぎは少なめ）。</li>
+      <li><b>数え方</b>：セット数で数えるか、重量×回数（その種目のいつものセットと比べた重さ）で数えるか。</li>
+      <li><b>効き方の初期値</b>：よく使う種目は最初からこちらで設定し、あなたが直せるようにする。新しく登録した種目は、部位から仮の効き方を入れる。</li>
+      <li><b>置き場所</b>：ホームの上の方に小さく出し、押すとこの画面を開く形を想定しています。</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+"use strict";
+// ===== 筋肉（部位の色で塗る） =====
+const MUSCLES = {
+  chest: { label: "大胸筋", part: "chest" },
+  delt_f: { label: "三角筋（前）", part: "shoulders" },
+  delt_s: { label: "三角筋（横）", part: "shoulders" },
+  delt_r: { label: "三角筋（後ろ）", part: "shoulders" },
+  biceps: { label: "上腕二頭筋", part: "arms" },
+  triceps: { label: "上腕三頭筋", part: "arms" },
+  forearm: { label: "前腕", part: "arms" },
+  abs: { label: "腹直筋", part: "abs" },
+  oblique: { label: "腹斜筋", part: "abs" },
+  traps: { label: "僧帽筋", part: "back" },
+  lats: { label: "広背筋", part: "back" },
+  erector: { label: "脊柱起立筋", part: "back" },
+  glutes: { label: "大臀筋", part: "legs" },
+  quads: { label: "大腿四頭筋", part: "legs" },
+  adductor: { label: "内転筋", part: "legs" },
+  hams: { label: "ハムストリング", part: "legs" },
+  calves: { label: "ふくらはぎ", part: "legs" },
+};
+const PART = { chest: "胸", back: "背中", legs: "脚", shoulders: "肩", arms: "腕", abs: "腹" };
+const GRADE = { x: { label: "極大", k: 1 }, l: { label: "大", k: 0.6 }, m: { label: "中", k: 0.3 }, s: { label: "小", k: 0.1 }, n: { label: "なし", k: 0 } };
+const CYCLE = ["x", "l", "m", "s", "n"];
+
+// ===== 種目ごとの効き方（裏設定の初期値） =====
+const EX = {
+  "チンニング（懸垂）": { part: "back", hit: { lats: "x", biceps: "l", traps: "m", forearm: "m", delt_r: "s" } },
+  "プーリーロー": { part: "back", hit: { lats: "l", traps: "l", delt_r: "m", biceps: "m" } },
+  "ラットフレクサー": { part: "back", hit: { lats: "x" } },
+  "シュラッグ": { part: "back", hit: { traps: "x", forearm: "s" } },
+  "ベンチプレス": { part: "chest", hit: { chest: "x", delt_f: "l", triceps: "m" } },
+  "インクラインスミスプレス": { part: "chest", hit: { chest: "x", delt_f: "l", triceps: "m" } },
+  "ディップス": { part: "chest", hit: { triceps: "x", chest: "l", delt_f: "m" } },
+  "スクワット": { part: "legs", hit: { quads: "x", glutes: "l", adductor: "m", erector: "m", hams: "s" } },
+  "レッグエクステンション": { part: "legs", hit: { quads: "x" } },
+  "シーテッドレッグカール": { part: "legs", hit: { hams: "x", calves: "s" } },
+  "45°カーフ": { part: "legs", hit: { calves: "x" } },
+  "腹筋": { part: "abs", hit: { abs: "x", oblique: "m" } },
+  "バーベルカール": { part: "arms", hit: { biceps: "x", forearm: "m" } },
+  "マシンカール": { part: "arms", hit: { biceps: "x" } },
+  "ノーチラス三頭": { part: "arms", hit: { triceps: "x" } },
+  "ショルダープレス": { part: "shoulders", hit: { delt_f: "x", delt_s: "l", triceps: "m" } },
+  "サイドレイズ": { part: "shoulders", hit: { delt_s: "x", traps: "s" } },
+  "デッドリフト": { part: "back", hit: { erector: "x", glutes: "l", hams: "l", traps: "m", forearm: "m", quads: "s" } },
+  "ブルガリアンスクワット": { part: "legs", hit: { glutes: "x", quads: "l", adductor: "m" } },
+  "アブドミナル": { part: "abs", hit: { abs: "x" } },
+};
+
+// ===== サンプルの1週間（[重量, 回数]。自重は重量 null） =====
+const S3 = (w, r, n) => Array.from({ length: n }, () => [w, r]);
+const WEEK = [
+  { day: "月", title: "背中", ex: [["チンニング（懸垂）", S3(null, 8, 4)], ["プーリーロー", [[55, 10], [55, 10], [60, 8], [60, 8]]], ["ラットフレクサー", S3(40, 12, 3)], ["シュラッグ", S3(100, 12, 3)]] },
+  { day: "火", title: "胸（家でベンチ）", ex: [["ベンチプレス", [[100, 5], [100, 5], [100, 5], [90, 8], [80, 10]]], ["インクラインスミスプレス", S3(70, 8, 3)], ["ディップス", S3(null, 10, 3)]] },
+  { day: "水", title: "休み", ex: [] },
+  { day: "木", title: "脚", ex: [["スクワット", [[120, 6], [120, 6], [130, 4], [130, 4]]], ["レッグエクステンション", S3(60, 12, 3)], ["シーテッドレッグカール", S3(50, 12, 3)], ["45°カーフ", S3(100, 15, 3)], ["腹筋", S3(null, 20, 3)]] },
+  { day: "金", title: "腕", ex: [["バーベルカール", S3(35, 10, 4)], ["マシンカール", S3(30, 12, 3)], ["ノーチラス三頭", S3(40, 12, 4)]] },
+  { day: "土", title: "肩", ex: [["ショルダープレス", [[50, 8], [50, 8], [45, 10], [45, 10]]], ["サイドレイズ", S3(10, 15, 4)]] },
+  { day: "日", title: "背中・脚", ex: [["デッドリフト", [[160, 5], [160, 5], [170, 3]]], ["ブルガリアンスクワット", S3(24, 10, 3)], ["アブドミナル", S3(50, 15, 3)]] },
+];
+
+const ST = { upto: 4, target: 10, mode: "sets", sel: "chest" };
+
+// 重量×回数で数えるとき：その種目のいつものセット（中央値）を1セットとして数える
+const setLoad = (w, r) => (w == null ? 1 : w) * r;
+const typical = {};
+for (const d of WEEK) for (const [name, sets] of d.ex) (typical[name] ||= []).push(...sets.map(([w, r]) => setLoad(w, r)));
+for (const k in typical) { const v = typical[k].sort((a, b) => a - b); typical[k] = v[Math.floor(v.length / 2)]; }
+
+function compute() {
+  const m = Object.fromEntries(Object.keys(MUSCLES).map((k) => [k, { pts: 0, from: [] }]));
+  WEEK.slice(0, ST.upto + 1).forEach((d) => {
+    for (const [name, sets] of d.ex) {
+      const eff = ST.mode === "sets" ? sets.length : sets.reduce((a, [w, r]) => a + setLoad(w, r) / typical[name], 0);
+      for (const [mu, g] of Object.entries(EX[name].hit)) {
+        const k = GRADE[g].k;
+        if (!k) continue;
+        m[mu].pts += eff * k;
+        m[mu].from.push({ name, day: d.day, g, sets: sets.length, pts: eff * k });
+      }
+    }
+  });
+  for (const k in m) m[k].fill = m[k].pts / ST.target;
+  return m;
+}
+const level = (f) => (f <= 0 ? 0 : f < 0.25 ? 0.22 : f < 0.5 ? 0.42 : f < 0.75 ? 0.62 : f < 1 ? 0.8 : 1);
+const fmt = (v) => (Math.round(v * 10) / 10).toFixed(1);
+
+// ===== 全身図（左半分を描いて、左右反転でもう半分） =====
+const NS = "http://www.w3.org/2000/svg";
+const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); if (parent) parent.append(n); return n; };
+const BASE = [
+  ["path", { d: "M100,62 L76,68 Q58,72 52,90 L48,118 Q44,150 46,152 Q38,180 40,212 L52,214 Q58,184 60,154 L64,112 L68,140 Q66,172 72,202 Q70,262 74,306 L76,320 Q72,360 76,398 L94,398 Q96,360 94,320 L98,306 L100,216 Z" }],
+  ["ellipse", { cx: 46, cy: 224, rx: 7, ry: 10 }],
+  ["ellipse", { cx: 85, cy: 406, rx: 12, ry: 6 }],
+];
+const FRONT = {
+  delt_s: "M64,72 Q50,76 49,96 L54,100 Q55,84 66,76 Z",
+  delt_f: "M66,76 Q55,84 54,100 L62,108 Q64,90 77,80 Z",
+  chest: "M99,80 L77,80 Q63,88 66,108 Q78,124 99,120 Z",
+  biceps: "M55,104 Q47,120 48,146 L58,148 Q62,124 62,110 Z",
+  forearm: "M47,153 Q41,178 42,206 L51,208 Q56,180 58,155 Z",
+  abs: "M99,126 L88,127 L86,198 Q92,206 99,208 Z",
+  oblique: "M86,128 L71,138 Q69,170 75,198 L85,198 Z",
+  quads: "M77,218 Q71,258 78,300 L92,302 Q96,258 94,224 Z",
+  adductor: "M95,224 Q97,250 93,270 L99,268 L99,220 Z",
+  calves: "M78,324 Q74,350 79,378 L86,380 Q86,350 84,324 Z",
+};
+const BACK = {
+  traps: "M99,58 L82,70 L72,78 L84,86 Q92,104 99,132 Z",
+  delt_s: "M64,72 Q50,76 49,96 L54,100 Q55,84 66,76 Z",
+  delt_r: "M70,78 Q57,84 55,100 L62,108 Q66,92 81,86 Z",
+  lats: "M84,90 L72,98 Q67,122 76,150 L91,172 Q95,140 90,106 Z",
+  erector: "M99,134 L93,132 Q93,170 92,200 L99,204 Z",
+  triceps: "M55,104 Q47,120 48,146 L58,148 Q62,124 62,110 Z",
+  forearm: "M47,153 Q41,178 42,206 L51,208 Q56,180 58,155 Z",
+  glutes: "M99,206 L82,204 Q71,214 76,236 Q88,246 99,240 Z",
+  hams: "M78,244 Q72,272 78,302 L92,302 Q97,272 96,246 Z",
+  calves: "M76,324 Q70,346 76,372 L90,374 Q94,346 90,324 Z",
+};
+const shapes = { front: [], back: [] };
+function drawFigure(svg, map, key) {
+  const halves = [el("g", {}, svg), el("g", { transform: "translate(200,0) scale(-1,1)" }, svg)];
+  el("circle", { cx: 100, cy: 34, r: 19, class: "base" }, svg);
+  el("rect", { x: 91, y: 50, width: 18, height: 14, rx: 4, class: "base" }, svg);
+  for (const g of halves) {
+    for (const [tag, a] of BASE) el(tag, { ...a, class: "base" }, g);
+    for (const [mu, d] of Object.entries(map)) {
+      const p = el("path", { d, class: "m", "data-m": mu, tabindex: "0", role: "button", "aria-label": MUSCLES[mu].label }, g);
+      p.style.fill = `var(--p-${MUSCLES[mu].part})`;
+      p.addEventListener("click", () => select(mu));
+      p.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(mu); } });
+      shapes[key].push(p);
+    }
+  }
+  if (map.abs) for (const y of [150, 172]) el("line", { x1: 86, x2: 114, y1: y, y2: y, class: "absline" }, svg);
+  if (map.abs) el("line", { x1: 100, x2: 100, y1: 126, y2: 207, class: "absline" }, svg);
+}
+drawFigure(document.getElementById("front"), FRONT, "front");
+drawFigure(document.getElementById("back"), BACK, "back");
+
+// ===== 画面 =====
+const $ = (id) => document.getElementById(id);
+const h = (tag, attrs, ...kids) => { const n = document.createElement(tag); for (const k in attrs || {}) { const v = attrs[k]; if (v == null || v === false) continue; if (k === "class") n.className = v; else if (k.startsWith("on")) n.addEventListener(k.slice(2), v); else if (k === "c") n.style.setProperty("--c", v); else n.setAttribute(k, v); } for (const c of kids.flat()) if (c != null && c !== false) n.append(c instanceof Node ? c : document.createTextNode(String(c))); return n; };
+const partTag = (p) => h("span", { class: "tag" }, h("i", { class: "dot", c: `var(--p-${p})` }), PART[p]);
+function select(mu) { ST.sel = mu; render(); }
+
+function render() {
+  const M = compute(), keys = Object.keys(MUSCLES);
+  const avg = keys.reduce((a, k) => a + Math.min(1, M[k].fill), 0) / keys.length;
+  const full = keys.filter((k) => M[k].fill >= 1).length;
+  $("hero").replaceChildren(String(Math.round(avg * 100)), h("small", {}, "%"));
+  $("hero-label").textContent = `今週の塗り率（月〜${WEEK[ST.upto].day}）`;
+  $("full-n").textContent = full; $("all-n").textContent = keys.length;
+  $("meter").style.width = `${avg * 100}%`;
+
+  $("days").replaceChildren(...WEEK.map((d, i) => h("button", { type: "button", class: d.ex.length ? "done" : "", "aria-pressed": String(i === ST.upto), "aria-label": `${d.day}曜日まで（${d.title}）`, onclick: () => { ST.upto = i; render(); } }, d.day, h("span", {}, d.ex.length ? d.title.replace(/（.*）/, "") : "休み"))));
+
+  for (const p of [...shapes.front, ...shapes.back]) {
+    const mu = p.dataset.m;
+    p.style.fillOpacity = level(M[mu].fill);
+    p.classList.toggle("sel", mu === ST.sel);
+    p.setAttribute("aria-label", `${MUSCLES[mu].label} ${Math.round(Math.min(1, M[mu].fill) * 100)}%`);
+  }
+  $("legend").replaceChildren(...[["まだ", 0], ["少し", 0.22], ["半分", 0.42], ["もう少し", 0.62], ["あと一息", 0.8], ["塗り終わり", 1]].map(([l, o]) => {
+    const i = h("i"); i.style.opacity = o ? 1 : 1; i.style.background = o ? `color-mix(in srgb, var(--p-chest) ${o * 100}%, var(--paper))` : "var(--paper)";
+    return h("span", { class: "sw" }, i, l);
+  }));
+
+  // タップした筋肉の内訳
+  const m = M[ST.sel], info = MUSCLES[ST.sel];
+  const pct = Math.round(Math.min(1, m.fill) * 100);
+  $("detail").replaceChildren(
+    h("div", { class: "detail-head" }, h("div", { class: "row" }, h("h2", {}, info.label), partTag(info.part)), h("span", { class: "pct", style: m.fill >= 1 ? "color:var(--good)" : "" }, `${pct}%`)),
+    h("div", { class: "meter" }, (() => { const i = h("i"); i.style.width = `${pct}%`; i.style.background = `var(--p-${info.part})`; return i; })()),
+    h("div", { class: "muted" }, `${fmt(m.pts)} / ${ST.target} セット分のダメージ${m.fill >= 1 ? "（塗り終わり）" : `・あと ${fmt(Math.max(0, ST.target - m.pts))} セット分`}`),
+    m.from.length
+      ? h("div", { class: "contrib" }, h("span", { class: "h" }, "種目"), h("span", { class: "h" }, "効き方"), h("span", { class: "h", style: "text-align:right" }, "ダメージ"),
+        m.from.sort((a, b) => b.pts - a.pts).map((x) => [h("span", {}, `${x.day}　${x.name}`, h("span", { class: "muted" }, ` ${x.sets}セット`)), h("span", { class: "g", "data-g": x.g }, GRADE[x.g].label), h("span", { class: "v" }, fmt(x.pts))]).flat())
+      : h("p", { class: "sub" }, "今週はまだこの筋肉に効く種目をやっていません。"));
+
+  // まだ塗れていないところと、いちばん効く種目
+  const low = keys.filter((k) => M[k].fill < 1).sort((a, b) => M[a].fill - M[b].fill).slice(0, 4);
+  $("todo").replaceChildren(...(low.length ? low.map((k) => {
+    const best = Object.entries(EX).filter(([, e]) => e.hit[k] === "x").map(([n]) => n).slice(0, 2);
+    return h("button", { class: "todo-item", type: "button", onclick: () => select(k) },
+      h("i", { class: "dot", c: `var(--p-${MUSCLES[k].part})`, style: "width:10px;height:10px" }),
+      h("span", { class: "grow" }, h("b", {}, `${MUSCLES[k].label}　${Math.round(M[k].fill * 100)}%`), h("small", {}, best.length ? `よく効く：${best.join("、")}` : "極大で効く種目がまだありません")),
+      h("span", { class: "left" }, `あと${fmt(ST.target - M[k].pts)}`));
+  }) : [h("p", { class: "sub" }, "全身塗り終わりました。")]));
+
+  $("target").replaceChildren(...[8, 10, 15, 20].map((t) => h("button", { type: "button", "aria-pressed": String(ST.target === t), onclick: () => { ST.target = t; render(); } }, `${t}セット分`)));
+  $("mode").replaceChildren(...[["sets", "セット数"], ["load", "重量×回数"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(ST.mode === k), onclick: () => { ST.mode = k; render(); } }, l)));
+  $("mode-note").textContent = ST.mode === "sets"
+    ? "1セット＝1。効き方が極大なら1セット分、大なら0.6セット分のダメージになります。"
+    : "その種目のいつものセット（重量×回数）を1として、重いセットは多め、軽いセットは少なめに数えます。種目どうしの重さの違い（レッグプレスとカールなど）は打ち消されます。";
+
+  // 種目ごとの効き方（今週やった種目）
+  const done = [...new Set(WEEK.flatMap((d) => d.ex.map(([n]) => n)))];
+  $("exlist").replaceChildren(...done.map((name) => {
+    const e = EX[name];
+    return h("div", { class: "ex-row" }, h("div", { class: "name" }, name, partTag(e.part)),
+      h("div", { class: "chips" }, Object.entries(e.hit).map(([mu, g]) => h("button", { type: "button", class: "g", "data-g": g, "aria-label": `${name}の${MUSCLES[mu].label}：${GRADE[g].label}（タップで変更）`, onclick: () => { e.hit[mu] = CYCLE[(CYCLE.indexOf(g) + 1) % CYCLE.length]; render(); } }, MUSCLES[mu].label, " ", GRADE[g].label))));
+  }));
+}
+render();
+</script>
