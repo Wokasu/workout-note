@@ -1,0 +1,122 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//workout-note//akb48-calendar//JA
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:AKB48 申込締切
+X-WR-TIMEZONE:Asia/Tokyo
+X-APPLE-CALENDAR-COLOR:#FF9500
+REFRESH-INTERVAL;VALUE=DURATION:PT6H
+X-PUBLISHED-TTL:PT6H
+BEGIN:VEVENT
+UID:deadline-20261027T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261027T022116Z
+DTSTART:20261027T063000Z
+DTEND:20261027T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/3(火)「ここからだ」
+ 公演 ほか1公演
+DESCRIPTION:柱の会会員枠の受付は 10/27(火) 16:00 までです。
+ \n\n11/3(火) 13:00 「ここからだ」公演（森川優・渡邉葵心
+ ）\n申込: https://akb48.zaiko.io/e/2026k-1103-1300\n11/3(火) 17:30 「
+ ここからだ」公演（森川優・渡邉葵心）\n申込: https://ak
+ b48.zaiko.io/e/kokokara-1103-1730
+URL:https://akb48.zaiko.io/e/2026k-1103-1300
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/3(火)「
+ ここからだ」公演 ほか1公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261029T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261027T022116Z
+DTSTART:20261029T063000Z
+DTEND:20261029T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/5(木)「ここからだ」
+ 公演
+DESCRIPTION:柱の会会員枠の受付は 10/29(木) 16:00 までです。
+ \n\n11/5(木) 18:30 「ここからだ」公演（渡邉葵心）\n申込:
+  https://akb48.zaiko.io/e/2026ko-nov5-1830
+URL:https://akb48.zaiko.io/e/2026ko-nov5-1830
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/5(木)「
+ ここからだ」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261030T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261027T022116Z
+DTSTART:20261030T063000Z
+DTEND:20261030T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/6(金)「手をつなぎな
+ がら」公演
+DESCRIPTION:柱の会会員枠の受付は 10/30(金) 16:00 までです。
+ \n\n11/6(金) 18:30 「手をつなぎながら」公演（渡邉葵心）
+ \n申込: https://akb48.zaiko.io/e/2026e-1106-1830
+URL:https://akb48.zaiko.io/e/2026e-1106-1830
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/6(金)「
+ 手をつなぎながら」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261031T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261027T022116Z
+DTSTART:20261031T063000Z
+DTEND:20261031T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/7(土)「RESET」公演
+DESCRIPTION:柱の会会員枠の受付は 10/31(土) 16:00 までです。
+ \n\n11/7(土) 12:30 「RESET」公演（森川優）\n申込: https://akb4
+ 8.zaiko.io/e/2026t-nov7-1230
+URL:https://akb48.zaiko.io/e/2026t-nov7-1230
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/7(土)「R
+ ESET」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261101T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261027T022116Z
+DTSTART:20261101T063000Z
+DTEND:20261101T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/8(日)「ここからだ」
+ 公演 ほか1公演
+DESCRIPTION:柱の会会員枠の受付は 11/1(日) 16:00 までです。\
+ n\n11/8(日) 13:00 「ここからだ」公演（森川優）\n申込: htt
+ ps://akb48.zaiko.io/e/2026ra-nov8-1300\n11/8(日) 17:30 「ここからだ
+ 」公演（森川優）\n申込: https://akb48.zaiko.io/e/2026kk-1108-173
+ 0
+URL:https://akb48.zaiko.io/e/2026ra-nov8-1300
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/8(日)「
+ ここからだ」公演 ほか1公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261102T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261027T022116Z
+DTSTART:20261102T063000Z
+DTEND:20261102T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/9(月)「ここからだ」
+ 公演
+DESCRIPTION:柱の会会員枠の受付は 11/2(月) 16:00 までです。\
+ n\n11/9(月) 18:30 「ここからだ」公演（佐藤綺星）\n申込: 
+ https://akb48.zaiko.io/e/2026d-1109-1830
+URL:https://akb48.zaiko.io/e/2026d-1109-1830
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/9(月)「
+ ここからだ」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+END:VCALENDAR
