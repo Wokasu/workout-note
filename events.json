@@ -154,6 +154,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 22,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -197,6 +206,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 22,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -247,6 +265,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 24,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -297,6 +324,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 26,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -339,6 +375,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 28,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -389,6 +434,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 30,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": "長友彩海 生誕祭"
     },
     {
@@ -439,6 +493,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 31,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -489,6 +552,15 @@
           "minute": 0
         }
       ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 10,
+        "day": 31,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -540,6 +612,7 @@
           "minute": 0
         }
       ],
+      "lobby": null,
       "tag": null
     },
     {
@@ -583,6 +656,7 @@
           "minute": 0
         }
       ],
+      "lobby": null,
       "tag": null
     },
     {
@@ -633,6 +707,7 @@
           "minute": 0
         }
       ],
+      "lobby": null,
       "tag": null
     },
     {
@@ -683,6 +758,7 @@
           "minute": 0
         }
       ],
+      "lobby": null,
       "tag": "女性限定公演"
     },
     {
@@ -733,6 +809,7 @@
           "minute": 0
         }
       ],
+      "lobby": null,
       "tag": null
     },
     {
@@ -759,6 +836,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -792,6 +870,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -826,6 +905,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -894,6 +974,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -920,6 +1001,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -946,6 +1028,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -998,6 +1081,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
@@ -1023,6 +1107,7 @@
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
       "deadlines": [],
+      "lobby": null,
       "tag": null
     },
     {
