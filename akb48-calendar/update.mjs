@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -201,6 +201,17 @@ const withKnownMembers = (s) => {
   const known = (config.knownMembers ?? []).find((k) => s.title.includes(k.titleIncludes) && (!k.date || k.date === `${s.year}-${String(s.month).padStart(2, '0')}-${String(s.day).padStart(2, '0')}`));
   return known ? { ...s, members: known.members, memberUnknown: false } : s;
 };
+// 今回読んだ記事に申込リンクや締切が書かれていなくても（ブログの「公演のご案内」はチケットセンターのトップへのリンクだけ）、
+// 前回までに読めていたものは残す
+const previousByKey = new Map(previous.filter((s) => s.kind !== 'event').map((s) => [showKey(s), s]));
+for (const s of found) {
+  const p = previousByKey.get(showKey(s));
+  if (!p) continue;
+  s.applyUrl ??= p.applyUrl ?? null;
+  if (!s.deadlines?.length && p.deadlines?.length) s.deadlines = p.deadlines;
+  s.lobby ??= p.lobby ?? null;
+  s.tag ??= p.tag ?? null;
+}
 const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents].map(withKnownMembers)).filter(afterStart);
 
 await mkdir(outDir, { recursive: true });
