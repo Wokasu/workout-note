@@ -21,6 +21,8 @@ export function htmlToLines(html) {
     .replace(/<a\b[^>]*href=["']([^"']*zaiko\.io[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi, '$2 ⟨$1⟩')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?(p|div|li|ul|ol|tr|td|th|dt|dd|dl|h[1-6]|section|article|table|time)\b[^>]*>/gi, '\n')
+    // 文字の途中で区切られる飾りのタグ（ブログの「17</span><span>:30開演」など）は詰める
+    .replace(/<\/?(span|font|b|strong|em|i|u)\b[^>]*>/gi, '')
     .replace(/<[^>]+>/g, ' ')
     .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => {
       if (e[0] === '#') {
@@ -65,7 +67,7 @@ export function normalizeTitle(s) {
 
 const SCHEDULE_RE = /^(20\d{2}) ?年 ?(\d{1,2}) ?月 ?(\d{1,2}) ?日 ?\S* (\d{1,2}):(\d{2}) ?[~～]$/;
 const MONTHLY_RE = /^(\d{1,2})\/(\d{1,2}) ?\(.\) ?(.+?) ((?:\d{1,2}:\d{2}開演 ?\/? ?)+)$/;
-const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\((.)\)$/;
+const SINGLE_DATE_RE = /^(20\d{2})年(\d{1,2})月(\d{1,2})日 ?\((.)(?:・[^)]*)?\)$/; // 「(火・祝)」も
 const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
 
 // 公演ごとの申込ページへのリンク（htmlToLines が残した ⟨URL⟩）。チケットセンターのトップへのリンクは除く
@@ -245,6 +247,9 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
         times: parseTimes(next), kind: 'single', casts: [], deadlines: [], label: null, notes: [], header: true,
       };
       i++;
+    } else if (cur?.header && !cur.times.length && (m = line.match(/^(?:<\d+回目>\s*)?(\d{1,2}):(\d{2})開演$/))) {
+      // 開演時刻が公演名の行になく「<1回目> 13:00開演」のように別の行にある記事（ブログなど）
+      cur.pendingTimes = [...(cur.pendingTimes ?? []), { hour: Number(m[1]), minute: Number(m[2]) }];
     } else if (cur?.header && (m = readNote(line))) {
       cur.notes.push(m);
     } else if (cur && (m = line.match(CAST_HEAD_RE))) {
@@ -254,7 +259,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
         // 【14:00公演 出演メンバー】のように、時刻ごとにメンバーが違う場合
         push(parseTimes(m[1]), names);
       } else {
-        push(cur.times, names);
+        push(cur.times.length ? cur.times : cur.pendingTimes ?? [], names);
       }
     } else if (cur && SALE_LABEL_RE.test(line)) {
       cur.label = line.match(SALE_LABEL_RE)[1];
@@ -702,4 +707,31 @@ export function dueDeadlineReminders(shows, sent, now, horizonMs = 4 * 3600_000)
     }
   }
   return out.sort((a, b) => (a.at ?? 0) - (b.at ?? 0));
+}
+
+// ---- 公式スタッフブログ（RSS） ----
+
+/** RSS の記事を { title, link, pubDate, html } の配列にする */
+export function parseRss(xml) {
+  const text = (tag, item) => {
+    const m = item.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+    if (!m) return '';
+    const v = m[1].trim();
+    const cdata = v.match(/^<!\[CDATA\[([\s\S]*)\]\]>$/);
+    return cdata ? cdata[1] : v.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+  };
+  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].map(([, item]) => ({
+    title: normalizeWidth(text('title', item)),
+    link: text('link', item),
+    pubDate: text('pubDate', item),
+    html: text('description', item),
+  }));
+}
+
+/** 推しメンの名前（別表記も）が出てくるか。出てくる推しメンの名前を返す */
+export function mentionedMembers(text, members) {
+  const compactText = text.replace(/[\s　]/g, '');
+  return members
+    .filter((m) => [m.name, ...(m.aliases ?? [])].some((n) => compactText.includes(n.replace(/[\s　]/g, ''))))
+    .map((m) => m.name);
 }
