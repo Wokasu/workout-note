@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applicationClosed, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -435,4 +435,20 @@ test('公式スタッフブログ（RSS）: 公演のご案内は劇場公演と
   assert.equal(casts[0].deadlines.length, 2);
   const os = items.find((i) => i.title.includes('69thシングル'));
   assert.deepEqual(mentionedMembers([os.title, ...htmlToLines(os.html)].join('\n'), members), ['伊藤百花']);
+});
+
+test('ロビー観覧チケット: 締切を座席とは別に読み、座席が締め切られても受付中かどうか分かる', () => {
+  const casts = extractCasts(fixture('single-notice-1029.txt'), { today });
+  assert.deepEqual(casts[0].deadlines.map((d) => d.label), ['(1)〜(3)枠', '(4)〜(6)枠']);
+  const { shows } = buildShows(casts, [], members);
+  const s = shows[0];
+  assert.equal(`${s.lobby.month}/${s.lobby.day} ${s.lobby.hour}`, '10/26 16');
+  const at = (t) => new Date(`${t}+09:00`);
+  assert.equal(applicationClosed(s, at('2026-10-25T12:00:00')), true); // 座席は 10/24 16:00 まで
+  assert.equal(lobbyOpen(s, at('2026-10-25T12:00:00')), true);
+  assert.equal(lobbyOpen(s, at('2026-10-26T16:00:00')), false);
+  // 締切が分からない公演は、公演日の3日前の16時まで受付中とみなす
+  const rule = { daysBefore: 3, hour: 16 };
+  assert.equal(lobbyOpen({ year: 2026, month: 10, day: 31 }, at('2026-10-28T15:59:00'), rule), true);
+  assert.equal(lobbyOpen({ year: 2026, month: 10, day: 31 }, at('2026-10-28T16:00:00'), rule), false);
 });
