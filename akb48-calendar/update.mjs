@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationClosed, buildAnnouncement, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { applicationClosed, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -16,10 +16,10 @@ const config = JSON.parse(await readFile(join(here, 'config.json'), 'utf8'));
 const allMembers = config.calendars.flatMap((c) => c.members);
 const today = args.today ? new Date(args.today) : new Date(); // --today は動作確認用
 
+const HEADERS = { 'User-Agent': 'Mozilla/5.0 (akb48-calendar; personal use)', 'Accept-Language': 'ja' };
+
 async function fetchHtml(url) {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (akb48-calendar; personal use)', 'Accept-Language': 'ja' },
-  });
+  const res = await fetch(url, { headers: HEADERS });
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   return res.text();
 }
@@ -120,6 +120,35 @@ while (queue.length) {
     casts.push(...c);
     console.log(`${url}: 出演情報 ${c.length} 件 (${lines.find((l) => /公演|お知らせ/.test(l) && !/^AKB48公式/.test(l)) ?? ''})`);
   }
+}
+
+// 公式スタッフブログ（Ameba「akihabara48」）の新着記事（RSS）。
+// 劇場公演の「公演のご案内」「受付開始のお知らせ」はお知らせ記事と同じように読む（公式サイトのニュースが止まっていても拾える）。
+// 劇場公演以外で推しメンの名前が出てくる新しい記事は「イベント候補」として ntfy で知らせる（カレンダーには自動では入れない）
+const blogFeeds = config.blogFeeds ?? ['https://rssblog.ameba.jp/akihabara48/rss20.xml'];
+const blogIgnore = new RegExp(config.blogIgnorePattern ?? '放送|出演!|ラジオ|テレビ|雑誌|月号|Instagram|開設|モデル|MV|Music video|配信開始|公演のご案内|受付開始のお知らせ|スケジュール更新');
+const blogCandidates = [];
+const blogLinks = [];
+for (const feed of blogFeeds) {
+  let items;
+  try {
+    const res = await fetch(feed, { headers: HEADERS });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    items = parseRss(await res.text());
+  } catch (e) {
+    console.warn(`ブログ取得失敗 ${feed}: ${e.message}`);
+    continue;
+  }
+  fetchedPages++;
+  for (const item of items) {
+    const lines = [item.title, ...htmlToLines(item.html)];
+    const c = extractCasts(lines, { today, sourceUrl: item.link });
+    casts.push(...c);
+    blogLinks.push(item.link);
+    const who = mentionedMembers(lines.join('\n'), allMembers);
+    if (!c.length && who.length && !blogIgnore.test(item.title)) blogCandidates.push({ ...item, members: who });
+  }
+  console.log(`${feed}: 記事 ${items.length} 件（推しメンのイベント候補 ${blogCandidates.length} 件）`);
 }
 
 const { shows: found, covered } = buildShows(casts, schedule, allMembers);
@@ -231,6 +260,32 @@ if (process.env.NTFY_TOPIC) {
   // 締切を過ぎた記録は消す
   for (const [k, v] of Object.entries(sent)) if (new Date(v).getTime() < today.getTime() - 7 * 86400_000) delete sent[k];
   await writeFile(sentPath, JSON.stringify(sent, null, 2) + '\n');
+}
+
+// ブログのイベント候補: 初めて見た記事だけ ntfy で知らせる。blog-seen.json に見た記事を記録する（初回は記録するだけで知らせない）
+if (blogLinks.length) {
+  const seenPath = join(outDir, 'blog-seen.json');
+  let seenLinks = null;
+  try {
+    seenLinks = JSON.parse(await readFile(seenPath, 'utf8'));
+  } catch {}
+  if (seenLinks && process.env.NTFY_TOPIC) {
+    for (const c of blogCandidates.filter((x) => !seenLinks.includes(x.link))) {
+      const params = new URLSearchParams({ title: '📰 推しメンのイベント候補', click: c.link });
+      try {
+        const res = await fetch(`https://ntfy.sh/${encodeURIComponent(process.env.NTFY_TOPIC)}?${params}`, { method: 'POST', body: `${c.title}（${c.members.join('・')}）` });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        console.log(`イベント候補を通知: ${c.title}`);
+      } catch (e) {
+        console.warn(`イベント候補の通知に失敗: ${e.message}`);
+        blogLinks.splice(blogLinks.indexOf(c.link), 1); // 次の実行でもう一度送る
+      }
+    }
+  }
+  if (!seenLinks) console.log(`ブログ: 初回なので記事 ${blogLinks.length} 件を記録だけします（イベント候補: ${blogCandidates.map((c) => c.title).join(' / ') || 'なし'}）`);
+  const merged = [...new Set([...blogLinks, ...(seenLinks ?? [])])].slice(0, 300);
+  await mkdir(outDir, { recursive: true });
+  await writeFile(seenPath, JSON.stringify(merged, null, 2) + '\n');
 }
 
 // SNS告知文: 来月以降の月ごと・推しメンごとに sns/YYYY-MM/<名前>.txt と、3人ぶんをまとめた sns/YYYY-MM.txt を作る
