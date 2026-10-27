@@ -15,6 +15,7 @@ import { BulkPlan } from './components/BulkPlan';
 import { bulkPlanFor } from './lib/bulk';
 import { Settings } from './components/Settings';
 import { Importer } from './components/Importer';
+import { QuickWeight, isQuickWeight } from './components/QuickWeight';
 import type { BodyRecord, Profile } from './types';
 
 type Tab = 'today' | 'meals' | 'plan' | 'body' | 'analysis' | 'settings';
@@ -50,6 +51,17 @@ export function App() {
       body: sizes ? upsertBody(d.body, { ...d.body.find((r) => r.date === today), date: today, ...sizes }) : d.body,
     }));
   const importBody = (records: BodyRecord[]) => setData((d) => ({ ...d, body: mergeBody(d.body, records) }));
+
+  if (isQuickWeight()) {
+    return (
+      <QuickWeight
+        current={body.find((r) => r.date === today)?.weightKg}
+        last={weights.at(-1)?.value}
+        status={sync.status}
+        onSave={(kg) => setData((d) => ({ ...d, body: upsertBody(d.body, { ...d.body.find((r) => r.date === today), date: today, weightKg: kg }) }))}
+      />
+    );
+  }
 
   // 目標体重が決まっていない（初回、または以前の版で体脂肪率から決めていた）ときは設定画面から
   if (!profile || (profile.phase === 'cut' && !(profile.targetWeightKg >= 30))) {
