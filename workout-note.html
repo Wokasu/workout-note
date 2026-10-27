@@ -32,6 +32,8 @@
     --p-shoulders: #eda100;
     --p-arms: #e87ba4;
     --p-abs: #8b5cf6;
+    --bm-paper: #fffdf8;
+    --bm-outline: #a39c94;
     --p-other: #a8a29e;
     --font-num: "Barlow Condensed", "Arial Narrow", "Hiragino Sans", sans-serif;
     --font-body: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
@@ -43,7 +45,7 @@
       --bg: #151311; --surface: #201d1a; --surface-2: #2a2622; --ink: #f1eeea; --ink-2: #bab3ab; --ink-3: #857e77;
       --line: #36312c; --grid: #2c2824; --accent: #f06a2c; --accent-ink: #1a0d06; --accent-soft: #3b2216;
       --warn-bg: #3a2a10; --warn-ink: #f4c77c; --good: #4cc38a; --good-bg: #16301f; --bad: #f07a7a; --paper: #1f2433; --paper-ink: #c7d4ff;
-      --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2; --p-other: #78716c;
+      --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2; --p-other: #78716c; --bm-paper: #2a2622; --bm-outline: #6f6860;
       color-scheme: dark;
     }
   }
@@ -51,7 +53,7 @@
     --bg: #151311; --surface: #201d1a; --surface-2: #2a2622; --ink: #f1eeea; --ink-2: #bab3ab; --ink-3: #857e77;
     --line: #36312c; --grid: #2c2824; --accent: #f06a2c; --accent-ink: #1a0d06; --accent-soft: #3b2216;
     --warn-bg: #3a2a10; --warn-ink: #f4c77c; --good: #4cc38a; --good-bg: #16301f; --bad: #f07a7a; --paper: #1f2433; --paper-ink: #c7d4ff;
-    --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2; --p-other: #78716c;
+    --p-chest: #3987e5; --p-back: #d95926; --p-legs: #199e70; --p-shoulders: #c98500; --p-arms: #d55181; --p-abs: #9b7cf2; --p-other: #78716c; --bm-paper: #2a2622; --bm-outline: #6f6860;
     color-scheme: dark;
   }
 
@@ -340,6 +342,43 @@
   .linkish { border: 0; background: none; padding: 0; color: var(--accent); font-size: 12px; font-weight: 700; text-align: left; }
   .empty { text-align: center; padding: 36px 8px; display: flex; flex-direction: column; gap: 12px; align-items: center; }
   .empty h2 { margin: 0; font-size: 18px; text-wrap: balance; }
+  /* 全身ぬりえ */
+  .bm-fig { width: 100%; height: auto; display: block; touch-action: manipulation; }
+  .bm-base { fill: var(--bm-paper); stroke: var(--bm-outline); stroke-width: 1.2; stroke-linejoin: round; }
+  .bm-m { stroke: var(--bm-outline); stroke-width: .9; stroke-linejoin: round; transition: fill-opacity .35s; }
+  .bm-m[role="button"] { cursor: pointer; }
+  .bm-m.sel { stroke: var(--ink); stroke-width: 2.2; }
+  .bm-m:focus-visible { outline: none; stroke: var(--accent); stroke-width: 2.4; }
+  .bm-line { stroke: var(--bm-outline); stroke-width: .7; fill: none; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) { .bm-m { transition: none; } }
+  .bm-card { flex-direction: row; align-items: center; gap: 12px; border: 0; text-align: left; width: 100%; color: inherit; }
+  .bm-card-figs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; width: 46%; max-width: 190px; flex: none; }
+  .bm-card-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .bm-figs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .bm-figs > div { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+  .bm-figs .bm-fig { max-width: 230px; }
+  .bm-figs b { font-size: 12px; color: var(--ink-2); }
+  .bm-meter { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .bm-meter i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+  .bm-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .bm-days button { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; }
+  .bm-days button span { font-size: 9px; color: var(--ink-3); }
+  .bm-days button.done { background: var(--surface-2); }
+  .bm-days button:disabled { opacity: .35; cursor: default; }
+  .bm-days button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .bm-days button[aria-pressed="true"] span { color: var(--bg); }
+  .bm-contrib { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 4px 10px; align-items: center; font-size: 13px; }
+  .bm-todo { display: flex; gap: 8px; align-items: center; border: 0; background: var(--surface-2); border-radius: 10px; padding: 8px 10px; text-align: left; width: 100%; color: inherit; }
+  .bm-ex { display: flex; flex-direction: column; gap: 5px; padding: 9px 0; border-top: 1px solid var(--grid); }
+  .bm-chips { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+  .bm-g { border: 0; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .bm-g[data-g="x"] { background: var(--accent); color: var(--accent-ink); }
+  .bm-g[data-g="l"] { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .bm-g[data-g="m"] { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+  .bm-g[data-g="s"] { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); }
+  .bm-g[data-g="n"] { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); text-decoration: line-through; }
+  .bm-g[data-g="add"] { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px dashed var(--accent); }
+  .bm-g:disabled { opacity: .6; cursor: default; }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 5; max-width: calc(100% - 32px); text-align: center; }
 </style>
 
@@ -1556,7 +1595,7 @@ const S = {
   exm: null, // 種目の管理画面の状態
   exRules: { parts: {}, aliases: {}, custom: [] }, // 種目ごとの部位と、まとめた名前（これからの読み取りにも使う）。custom は記録より先に登録した種目
 };
-const TITLES = { home: "ダッシュボード", calendar: "カレンダー", graph: "グラフ", add: "記録を追加", edit: "読み取り結果の確認", detail: "記録", settings: "設定・バックアップ", calc: "重量計算", share: "シェア画像", ai: "AI 分析", import: "まとめて取り込む", exercises: "種目の管理", form: "調子の分析", review: "振り返り" };
+const TITLES = { home: "ダッシュボード", calendar: "カレンダー", graph: "グラフ", add: "記録を追加", edit: "読み取り結果の確認", detail: "記録", settings: "設定・バックアップ", calc: "重量計算", share: "シェア画像", ai: "AI 分析", import: "まとめて取り込む", exercises: "種目の管理", form: "調子の分析", review: "振り返り", paint: "全身ぬりえ" };
 const TABS = ["home", "calendar", "graph", "calc"];
 const FILTER_VIEWS = ["home", "calendar", "graph"]; // 部位チップを出す画面
 const today = () => WN.todayString();
@@ -1642,7 +1681,7 @@ function render() {
   view.replaceChildren();
   const banner = storeBanner();
   if (banner) view.append(banner);
-  ({ home: renderHome, calendar: renderCalendar, graph: renderGraph, calc: renderCalc, share: renderShare, ai: renderAI, import: renderImport, add: renderAdd, edit: renderEdit, detail: renderDetail, settings: renderSettings, exercises: renderExercises, form: renderForm, review: renderReview })[v](view);
+  ({ home: renderHome, calendar: renderCalendar, graph: renderGraph, calc: renderCalc, share: renderShare, ai: renderAI, import: renderImport, add: renderAdd, edit: renderEdit, detail: renderDetail, settings: renderSettings, exercises: renderExercises, form: renderForm, review: renderReview, paint: renderPaint })[v](view);
 }
 
 function storeBanner() {
@@ -1687,6 +1726,8 @@ function renderHome(view) {
   const unit = isKg ? "kg" : "セット";
   const pick = (x) => (isKg ? x.volume : x.sets);
   const pct = prev && pick(prev) > 0 ? Math.round((pick(cur) / pick(prev) - 1) * 100) : null;
+  const paint = paintCard();
+  if (paint) view.append(paint);
   const adv = adviceCard();
   if (adv) view.append(adv);
   view.append(monthSwitcher());
@@ -3832,7 +3873,7 @@ async function loadRules() {
   try {
     const snap = await rulesDoc().get();
     const d = snap.exists ? snap.data() : null;
-    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}) };
+    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}), ...(d.hits ? { hits: d.hits } : {}), ...(d.paint ? { paint: d.paint } : {}) };
   } catch {}
 }
 const canonName = (n) => S.exRules.aliases[nameKey(n)] || n;
@@ -3891,6 +3932,13 @@ async function applyExerciseChange(fromNames, toName, part) {
     for (const k in R.aliases) if (from.has(R.aliases[k])) R.aliases[k] = toName;
     delete R.aliases[nameKey(toName)];
     if (part) R.parts[toName] = part; else delete R.parts[toName];
+    // 全身ぬりえの効き方：まとめた種目は、まとめ先にまだ設定がなければ元の種目の設定を引き継ぐ
+    if (S.exRules.hits) {
+      const H = { ...S.exRules.hits };
+      for (const n of from) if (n !== toName) { if (H[n] && !H[toName]) H[toName] = H[n]; delete H[n]; }
+      R.hits = H;
+    }
+    if (S.exRules.paint) R.paint = S.exRules.paint;
     S.exRules = R;
     try { await rulesDoc().set(R); } catch {}
     toast(from.size > 1 ? `「${toName}」に1つにまとめました（${touched.length}件の記録）` : `「${toName}」を更新しました（${touched.length}件の記録）`);
@@ -4074,6 +4122,307 @@ function renderDetail(view) {
       h("button", { class: "btn secondary grow", type: "button", disabled: !S.db, onclick: () => { S.edit = { form: { ...WN.formFromWorkout(w), cond: toFormCond(w.cond) }, uncertain: [], photoUrl: null, sourceText: null, existing: w }; go("edit"); } }, "編集"),
       h("button", { class: "btn secondary grow", type: "button", disabled: !S.db, style: "color:var(--bad)", onclick: () => { S.confirmDelete = true; render(); } }, "削除")));
   }
+}
+
+// ===== 全身ぬりえ =====
+// 種目ごとに「どの筋肉にどれだけ効くか」（極大〜小）を決めておき、1週間（月曜はじまり）のセット数をかけて筋肉を塗る。
+// 目標（初期値は週10セット分）に届いた筋肉は、その部位の色でベタ塗りになる。
+const MUSCLES = {
+  chest: { label: "大胸筋", part: "chest" },
+  delt_f: { label: "三角筋（前）", part: "shoulders" },
+  delt_s: { label: "三角筋（横）", part: "shoulders" },
+  delt_r: { label: "三角筋（後ろ）", part: "shoulders" },
+  biceps: { label: "上腕二頭筋", part: "arms" },
+  triceps: { label: "上腕三頭筋", part: "arms" },
+  forearm: { label: "前腕", part: "arms" },
+  abs: { label: "腹直筋", part: "abs" },
+  oblique: { label: "腹斜筋", part: "abs" },
+  traps: { label: "僧帽筋", part: "back" },
+  lats: { label: "広背筋", part: "back" },
+  erector: { label: "脊柱起立筋", part: "back" },
+  glutes: { label: "大臀筋", part: "legs" },
+  quads: { label: "大腿四頭筋", part: "legs" },
+  adductor: { label: "内転筋", part: "legs" },
+  hams: { label: "ハムストリング", part: "legs" },
+  calves: { label: "ふくらはぎ", part: "legs" },
+};
+const MUSCLE_KEYS = Object.keys(MUSCLES);
+const GRADE = { x: { label: "極大", k: 1 }, l: { label: "大", k: 0.6 }, m: { label: "中", k: 0.3 }, s: { label: "小", k: 0.1 }, n: { label: "なし", k: 0 } };
+const GRADE_CYCLE = ["x", "l", "m", "s", "n"];
+const PAINT_TARGETS = [8, 10, 15, 20];
+
+// 種目名から効き方の初期値を決める（上から順に見て、最初に当てはまったもの）
+const HIT_RULES = [
+  [/アブダクション|アブダクター|脚パカ|外転/, { glutes: "l" }],
+  [/アダクション|アダクター|内転/, { adductor: "x" }],
+  [/ツイスト|サイドベント|オブリーク|腹斜/, { oblique: "x", abs: "m" }],
+  [/プランク|体幹/, { abs: "l", oblique: "l" }],
+  [/腹|アブ|クランチ|シットアップ|レッグレイズ|ロールアウト|ドラゴンフラッグ|\babs\b|crunch/i, { abs: "x", oblique: "m" }],
+  [/カーフ|calf/i, { calves: "x" }],
+  [/レッグカール|ハムカール|leg\s*curl/i, { hams: "x", calves: "s" }],
+  [/レッグエクステンション|leg\s*ext/i, { quads: "x" }],
+  [/レッグプレス|leg\s*press/i, { quads: "x", glutes: "l", adductor: "m", hams: "s" }],
+  [/ルーマニアン|RDL|スティッフ/i, { hams: "x", glutes: "l", erector: "l", forearm: "s" }],
+  [/バックエクステンション|ハイパーエクステンション/, { erector: "x", glutes: "m", hams: "m" }],
+  [/デッド|deadlift/i, { erector: "x", glutes: "l", hams: "l", traps: "m", forearm: "m", quads: "s" }],
+  [/ブルガリアン|ランジ|スプリットスクワット|lunge/i, { glutes: "x", quads: "l", adductor: "m", hams: "s" }],
+  [/スクワット|ハック|squat/i, { quads: "x", glutes: "l", adductor: "m", erector: "m", hams: "s" }],
+  [/ヒップスラスト|ヒップリフト|グルート|ヒップエクステンション/, { glutes: "x", hams: "m" }],
+  [/クローズ|ナロー/, { triceps: "x", chest: "l", delt_f: "m" }],
+  [/フライ|ペック|クロスオーバー|fly/i, { chest: "x", delt_f: "s" }],
+  [/ディップス|dips/i, { triceps: "x", chest: "l", delt_f: "m" }],
+  [/プッシュアップ|腕立て/, { chest: "l", triceps: "m", delt_f: "m" }],
+  [/チンニング|懸垂|プルアップ|chin|pull-?up/i, { lats: "x", biceps: "l", traps: "m", forearm: "m", delt_r: "s" }],
+  [/ラットプル|プルダウン|pulldown/i, { lats: "x", biceps: "m", traps: "s", delt_r: "s" }],
+  [/プルオーバー|ラットフレクサー|pullover/i, { lats: "x", chest: "s" }],
+  [/シュラッグ|shrug/i, { traps: "x", forearm: "s" }],
+  [/アップライト/, { delt_s: "l", traps: "l", biceps: "s" }],
+  [/ロー$|ロウ|ロー[（(\s]|ローイング|row/i, { lats: "l", traps: "l", delt_r: "m", biceps: "m", erector: "s" }],
+  [/リア|フェイスプル|リバースフライ/, { delt_r: "x", traps: "m" }],
+  [/サイドレイズ|ラテラル|lateral/i, { delt_s: "x", traps: "s" }],
+  [/フロントレイズ/, { delt_f: "x" }],
+  [/三頭|トライセプス|プッシュダウン|フレンチ|スカル|キックバック|tricep/i, { triceps: "x" }],
+  [/ショルダープレス|ミリタリー|オーバーヘッドプレス|OHP/i, { delt_f: "x", delt_s: "l", triceps: "m" }],
+  [/^(?!.*カール).*(インクライン|デクライン|ベンチ|チェストプレス|スミス|ダンベルプレス|bench)/i, { chest: "x", delt_f: "l", triceps: "m" }],
+  [/ハンマー/, { biceps: "l", forearm: "l" }],
+  [/リストカール|前腕|グリップ/, { forearm: "x" }],
+  [/カール|二頭|バイセップ|バイソレーター|curl/i, { biceps: "x", forearm: "m" }],
+];
+// 名前で決まらないときは部位から
+const HIT_BY_PART = {
+  chest: { chest: "l", delt_f: "m", triceps: "s" },
+  back: { lats: "l", traps: "m", delt_r: "s", biceps: "s" },
+  legs: { quads: "l", glutes: "m", hams: "m" },
+  shoulders: { delt_f: "m", delt_s: "l", delt_r: "m" },
+  arms: { biceps: "m", triceps: "m", forearm: "s" },
+  abs: { abs: "l", oblique: "m" },
+};
+function defaultHits(name, part) {
+  for (const [re, hit] of HIT_RULES) if (re.test(name)) return hit;
+  return HIT_BY_PART[part] || {};
+}
+// その種目の効き方：自分で直したものがあればそれ、なければ初期値
+const hitsFor = (name, part) => S.exRules.hits?.[name] || defaultHits(name, part);
+
+const paintPrefs = () => ({ target: 10, mode: "sets", ...(S.exRules.paint || {}) });
+const countedSets = (ex) => ex.sets.filter((st) => st.note !== "W" && ((st.reps ?? 0) > 0 || st.weight != null));
+const setLoad = (st) => (st.weight == null ? 1 : st.unit === "lb" ? st.weight * 0.4536 : st.weight) * (st.reps || 1);
+// 重量×回数で数えるとき：その種目の直近8週のセットの中央値を1セットとして数える
+function typicalLoad(name, until) {
+  const from = WN.addDays(until, -56), v = [];
+  for (const w of S.workouts) if (w.date >= from && w.date <= until) for (const ex of w.exercises) if (ex.name === name) v.push(...countedSets(ex).map(setLoad));
+  v.sort((a, b) => a - b);
+  return v.length ? v[Math.floor(v.length / 2)] : 1;
+}
+// start（月曜）から upto までの記録で、筋肉ごとのダメージ（セット分）を出す
+function paintWeek(start, upto) {
+  const P = paintPrefs(), m = Object.fromEntries(MUSCLE_KEYS.map((k) => [k, { pts: 0, from: [] }])), typ = new Map();
+  for (const w of S.workouts) {
+    if (w.date < start || w.date > upto) continue;
+    for (const ex of w.exercises) {
+      const ss = countedSets(ex);
+      if (!ss.length) continue;
+      let eff = ss.length;
+      if (P.mode === "load") {
+        if (!typ.has(ex.name)) typ.set(ex.name, typicalLoad(ex.name, upto));
+        eff = ss.reduce((a, st) => a + setLoad(st) / typ.get(ex.name), 0);
+      }
+      for (const [mu, g] of Object.entries(hitsFor(ex.name, ex.part))) {
+        const k = GRADE[g]?.k;
+        if (!k || !m[mu]) continue;
+        m[mu].pts += eff * k;
+        m[mu].from.push({ name: ex.name, part: ex.part, date: w.date, g, sets: ss.length, pts: eff * k });
+      }
+    }
+  }
+  for (const k of MUSCLE_KEYS) m[k].fill = m[k].pts / P.target;
+  const avg = MUSCLE_KEYS.reduce((a, k) => a + Math.min(1, m[k].fill), 0) / MUSCLE_KEYS.length;
+  return { m, avg, full: MUSCLE_KEYS.filter((k) => m[k].fill >= 1).length, target: P.target };
+}
+const paintLevel = (f) => (f <= 0 ? 0 : f < 0.25 ? 0.22 : f < 0.5 ? 0.42 : f < 0.75 ? 0.62 : f < 1 ? 0.8 : 1);
+const fmt1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+
+// 全身図（左半分を描いて左右反転）。viewBox 200×420
+const BODY_BASE = [
+  ["path", { d: "M100,62 L76,68 Q58,72 52,90 L48,118 Q44,150 46,152 Q38,180 40,212 L52,214 Q58,184 60,154 L64,112 L68,140 Q66,172 72,202 Q70,262 74,306 L76,320 Q72,360 76,398 L94,398 Q96,360 94,320 L98,306 L100,216 Z" }],
+  ["ellipse", { cx: 46, cy: 224, rx: 7, ry: 10 }],
+  ["ellipse", { cx: 85, cy: 406, rx: 12, ry: 6 }],
+];
+const BODY_FRONT = {
+  delt_s: "M64,72 Q50,76 49,96 L54,100 Q55,84 66,76 Z",
+  delt_f: "M66,76 Q55,84 54,100 L62,108 Q64,90 77,80 Z",
+  chest: "M99,80 L77,80 Q63,88 66,108 Q78,124 99,120 Z",
+  biceps: "M55,104 Q47,120 48,146 L58,148 Q62,124 62,110 Z",
+  forearm: "M47,153 Q41,178 42,206 L51,208 Q56,180 58,155 Z",
+  abs: "M99,126 L88,127 L86,198 Q92,206 99,208 Z",
+  oblique: "M86,128 L71,138 Q69,170 75,198 L85,198 Z",
+  quads: "M77,218 Q71,258 78,300 L92,302 Q96,258 94,224 Z",
+  adductor: "M95,224 Q97,250 93,270 L99,268 L99,220 Z",
+  calves: "M78,324 Q74,350 79,378 L86,380 Q86,350 84,324 Z",
+};
+const BODY_BACK = {
+  traps: "M99,58 L82,70 L72,78 L84,86 Q92,104 99,132 Z",
+  delt_s: "M64,72 Q50,76 49,96 L54,100 Q55,84 66,76 Z",
+  delt_r: "M70,78 Q57,84 55,100 L62,108 Q66,92 81,86 Z",
+  lats: "M84,90 L72,98 Q67,122 76,150 L91,172 Q95,140 90,106 Z",
+  erector: "M99,134 L93,132 Q93,170 92,200 L99,204 Z",
+  triceps: "M55,104 Q47,120 48,146 L58,148 Q62,124 62,110 Z",
+  forearm: "M47,153 Q41,178 42,206 L51,208 Q56,180 58,155 Z",
+  glutes: "M99,206 L82,204 Q71,214 76,236 Q88,246 99,240 Z",
+  hams: "M78,244 Q72,272 78,302 L92,302 Q97,272 96,246 Z",
+  calves: "M76,324 Q70,346 76,372 L90,374 Q94,346 90,324 Z",
+};
+// side: "front" | "back"。onPick を渡すと筋肉をタップできる
+function bodyFigure(side, M, { sel = null, onPick = null, label } = {}) {
+  const svg = s("svg", { class: "bm-fig", viewBox: "0 0 200 420", role: "img", "aria-label": label || (side === "front" ? "体の前側" : "体の後ろ側") });
+  const map = side === "front" ? BODY_FRONT : BODY_BACK;
+  const halves = [s("g", {}, svg), s("g", { transform: "translate(200,0) scale(-1,1)" }, svg)];
+  s("circle", { cx: 100, cy: 34, r: 19, class: "bm-base" }, svg);
+  s("rect", { x: 91, y: 50, width: 18, height: 14, rx: 4, class: "bm-base" }, svg);
+  for (const g of halves) {
+    for (const [tag, a] of BODY_BASE) s(tag, { ...a, class: "bm-base" }, g);
+    for (const [mu, d] of Object.entries(map)) {
+      const f = M[mu].fill;
+      const p = s("path", { d, class: "bm-m" + (mu === sel ? " sel" : ""), style: `fill:var(--p-${MUSCLES[mu].part});fill-opacity:${paintLevel(f)}` }, g);
+      if (onPick) {
+        Object.entries({ tabindex: "0", role: "button", "aria-label": `${MUSCLES[mu].label} ${Math.round(Math.min(1, f) * 100)}%` }).forEach(([k, v]) => p.setAttribute(k, v));
+        p.addEventListener("click", () => onPick(mu));
+        p.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick(mu); } });
+      }
+    }
+  }
+  if (map.abs) {
+    for (const y of [150, 172]) s("line", { x1: 86, x2: 114, y1: y, y2: y, class: "bm-line" }, svg);
+    s("line", { x1: 100, x2: 100, y1: 126, y2: 207, class: "bm-line" }, svg);
+  }
+  return svg;
+}
+
+// ホームの小さなカード
+function paintCard() {
+  if (!S.workouts.length) return null;
+  const start = WN.weekStart(today()), R = paintWeek(start, today());
+  return h("button", { class: "card bm-card", type: "button", onclick: () => openPaint() },
+    h("div", { class: "bm-card-figs" }, bodyFigure("front", R.m, { label: "今週の塗り具合（前）" }), bodyFigure("back", R.m, { label: "今週の塗り具合（後ろ）" })),
+    h("div", { class: "bm-card-text" },
+      h("div", { class: "hero-label" }, "今週の全身ぬりえ"),
+      h("div", { class: "hero", style: "font-size:40px" }, String(Math.round(R.avg * 100)), h("small", {}, "%")),
+      h("div", { class: "muted" }, `塗り終わり ${R.full} / ${MUSCLE_KEYS.length} 筋肉`),
+      h("span", { class: "linkish" }, "開く ›")));
+}
+
+function openPaint() { S.paint = { week: WN.weekStart(today()), upto: null, sel: null, all: false, adding: null }; go("paint"); }
+let paintSaveTimer;
+function savePaintRules() {
+  clearTimeout(paintSaveTimer);
+  paintSaveTimer = setTimeout(async () => { try { await rulesDoc().set(S.exRules); } catch { toast("設定を保存できませんでした。通信状態を確認してください"); } }, 600);
+}
+function setHit(name, part, mu, g) {
+  const cur = { ...hitsFor(name, part) };
+  if (g == null) delete cur[mu]; else cur[mu] = g;
+  S.exRules = { ...S.exRules, hits: { ...(S.exRules.hits || {}), [name]: cur } };
+  savePaintRules(); render();
+}
+function resetHits(name) {
+  const hits = { ...(S.exRules.hits || {}) }; delete hits[name];
+  S.exRules = { ...S.exRules, hits }; savePaintRules(); render();
+}
+
+function renderPaint(view) {
+  const P = S.paint || (S.paint = { week: WN.weekStart(today()), upto: null, sel: null, all: false, adding: null });
+  const thisWeek = WN.weekStart(today()), isThis = P.week === thisWeek;
+  const days = Array.from({ length: 7 }, (_, i) => WN.addDays(P.week, i));
+  const last = isThis ? today() : days[6];
+  const upto = P.upto && P.upto <= last ? P.upto : last;
+  const R = paintWeek(P.week, upto), prefs = paintPrefs();
+  if (!P.sel) P.sel = MUSCLE_KEYS.slice().sort((a, b) => R.m[b].pts - R.m[a].pts)[0];
+
+  // 週の切り替えと塗り率
+  view.append(h("div", { class: "nav-row" },
+    h("button", { class: "icon-btn", type: "button", "aria-label": "前の週", onclick: () => { P.week = WN.addDays(P.week, -7); P.upto = null; render(); } }, "‹"),
+    h("b", {}, `${WN.shortDate(P.week)}〜${WN.shortDate(days[6])}${isThis ? "（今週）" : ""}`),
+    h("button", { class: "icon-btn", type: "button", "aria-label": "次の週", disabled: isThis, style: isThis ? "opacity:.3" : "", onclick: () => { if (!isThis) { P.week = WN.addDays(P.week, 7); P.upto = null; render(); } } }, "›")));
+  const trained = new Set(S.workouts.filter((w) => w.date >= P.week && w.date <= days[6]).map((w) => w.date));
+  view.append(h("div", { class: "card" },
+    h("div", { class: "row", style: "justify-content:space-between;align-items:flex-end;flex-wrap:wrap" },
+      h("div", {}, h("div", { class: "hero-label" }, `塗り率（${WN.WEEKDAYS[WN.parseDate(upto).getDay()]}曜まで）`), h("div", { class: "hero" }, String(Math.round(R.avg * 100)), h("small", {}, "%"))),
+      h("div", { class: "muted", style: "text-align:right;font-size:12px" }, "塗り終わり", h("br"), h("b", { class: "num", style: "font-size:22px;color:var(--ink)" }, `${R.full}`), ` / ${MUSCLE_KEYS.length} 筋肉`)),
+    h("div", { class: "bm-meter" }, h("i", { style: `width:${R.avg * 100}%` })),
+    h("div", { class: "bm-days", role: "group", "aria-label": "何曜日までの記録で塗るか" }, days.map((d) => h("button", {
+      type: "button", class: trained.has(d) ? "done" : "", disabled: d > last, "aria-pressed": String(d === upto), "aria-label": `${WN.formatDateJa(d)}まで`,
+      onclick: () => { P.upto = d; render(); },
+    }, WN.WEEKDAYS[WN.parseDate(d).getDay()], h("span", {}, trained.has(d) ? "記録" : "—"))))));
+
+  // 全身図
+  const pick = (mu) => { P.sel = mu; render(); };
+  view.append(h("div", { class: "card" },
+    h("div", { class: "bm-figs" },
+      h("div", {}, bodyFigure("front", R.m, { sel: P.sel, onPick: pick }), h("b", {}, "前")),
+      h("div", {}, bodyFigure("back", R.m, { sel: P.sel, onPick: pick }), h("b", {}, "後ろ"))),
+    h("div", { class: "legend" }, [["まだ", 0], ["少し", 0.22], ["半分", 0.42], ["もう少し", 0.62], ["あと一息", 0.8], ["塗り終わり", 1]].map(([l, o]) =>
+      h("span", {}, h("i", { style: `background:color-mix(in srgb, var(--p-chest) ${o * 100}%, var(--bm-paper));border:1px solid var(--bm-outline)` }), l))),
+    h("div", { class: "muted" }, `色は部位の色です。濃いほどその筋肉に今週ダメージが入っています。1つの筋肉につき週${prefs.target}セット分で塗り終わります。筋肉をタップすると内訳が出ます。`)));
+
+  // タップした筋肉の内訳
+  const m = R.m[P.sel], info = MUSCLES[P.sel], pct = Math.round(Math.min(1, m.fill) * 100);
+  view.append(h("div", { class: "card", "aria-live": "polite" },
+    h("div", { class: "row", style: "justify-content:space-between;align-items:baseline" },
+      h("div", { class: "row", style: "gap:6px" }, h("b", { style: "font-size:17px" }, info.label), tag(info.part)),
+      h("span", { class: "num", style: `font-size:30px;font-weight:700${m.fill >= 1 ? ";color:var(--good)" : ""}` }, `${pct}%`)),
+    h("div", { class: "bm-meter" }, h("i", { style: `width:${pct}%;background:var(--p-${info.part})` })),
+    h("div", { class: "muted" }, `${fmt1(m.pts)} / ${prefs.target} セット分${m.fill >= 1 ? "（塗り終わり）" : `・あと ${fmt1(prefs.target - m.pts)} セット分`}`),
+    m.from.length
+      ? h("div", { class: "bm-contrib" }, h("span", { class: "muted" }, "種目"), h("span", { class: "muted" }, "効き方"), h("span", { class: "muted", style: "text-align:right" }, "セット分"),
+        m.from.sort((a, b) => b.pts - a.pts).flatMap((x) => [h("span", {}, `${WN.shortDate(x.date)} ${x.name}`, h("span", { class: "muted" }, ` ${x.sets}セット`)), h("span", { class: "bm-g", "data-g": x.g }, GRADE[x.g].label), h("span", { class: "num", style: "font-size:16px;text-align:right" }, fmt1(x.pts))]))
+      : h("div", { class: "sub" }, "この週は、まだこの筋肉に効く種目をやっていません。")));
+
+  // まだ塗れていないところ
+  const low = MUSCLE_KEYS.filter((k) => R.m[k].fill < 1).sort((a, b) => R.m[a].fill - R.m[b].fill).slice(0, 4);
+  if (low.length) {
+    const known = exerciseCatalog();
+    view.append(h("div", { class: "card" }, h("h2", { class: "card-title" }, "まだ塗れていないところ"),
+      low.map((k) => {
+        const best = known.filter((c) => hitsFor(c.name, c.part)[k] === "x").slice(0, 2).map((c) => c.name);
+        return h("button", { class: "bm-todo", type: "button", onclick: () => pick(k) },
+          h("i", { class: "dot", c: partColor(MUSCLES[k].part), style: "width:10px;height:10px" }),
+          h("span", { class: "grow", style: "display:flex;flex-direction:column;gap:2px" }, h("b", {}, `${MUSCLES[k].label}　${Math.round(R.m[k].fill * 100)}%`),
+            h("small", { class: "muted" }, best.length ? `よく効く：${best.join("、")}` : "極大で効く種目がまだありません")),
+          h("span", { class: "num", style: "font-size:17px;font-weight:700;white-space:nowrap" }, `あと${fmt1(prefs.target - R.m[k].pts)}`));
+      })));
+  } else view.append(h("div", { class: "notice" }, "全身塗り終わりました。"));
+
+  // 塗り方の設定
+  const setPref = (k, v) => { S.exRules = { ...S.exRules, paint: { ...paintPrefs(), [k]: v } }; savePaintRules(); render(); };
+  view.append(h("div", { class: "card" }, h("h2", { class: "card-title" }, "塗り方の設定"),
+    h("div", { class: "flabel" }, "1つの筋肉を塗り終える目標（1週間）"),
+    h("div", { class: "seg", role: "group", "aria-label": "目標" }, PAINT_TARGETS.map((t) => h("button", { type: "button", "aria-pressed": String(prefs.target === t), disabled: !S.db, onclick: () => setPref("target", t) }, `${t}セット分`))),
+    h("div", { class: "flabel" }, "数え方"),
+    h("div", { class: "seg", role: "group", "aria-label": "数え方" }, [["sets", "セット数"], ["load", "重量×回数"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(prefs.mode === k), disabled: !S.db, onclick: () => setPref("mode", k) }, l))),
+    h("div", { class: "muted" }, prefs.mode === "sets"
+      ? "1セット＝1。効き方が極大なら1セット分、大なら0.6、中なら0.3、小なら0.1セット分のダメージになります。ウォームアップ（W）のセットは数えません。"
+      : "その種目の直近8週のいつものセット（重量×回数）を1として、重いセットは多め、軽いセットは少なめに数えます。")));
+
+  // 種目ごとの効き方（裏設定）
+  const weekNames = new Map();
+  for (const w of S.workouts) if (w.date >= P.week && w.date <= days[6]) for (const ex of w.exercises) if (!weekNames.has(ex.name)) weekNames.set(ex.name, ex.part);
+  const list = P.all ? exerciseCatalog().map((c) => [c.name, c.part]) : [...weekNames];
+  const card = h("div", { class: "card" }, h("h2", { class: "card-title" }, "種目ごとの効き方（裏設定）"),
+    h("div", { class: "sub" }, "札をタップすると 極大 → 大 → 中 → 小 → なし の順に変わり、全身図にすぐ反映されます。「なし」にした札は数えません（もう一度タップすると極大に戻ります）。"),
+    h("div", { class: "seg", role: "group", "aria-label": "表示する種目" }, [[false, "この週の種目"], [true, "すべての種目"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(P.all === k), onclick: () => { P.all = k; render(); } }, l))));
+  if (!list.length) card.append(h("div", { class: "muted" }, "この週の記録はまだありません。"));
+  for (const [name, part] of list) {
+    const hit = hitsFor(name, part), custom = !!S.exRules.hits?.[name];
+    const adding = P.adding === name;
+    const addSel = adding ? h("select", { class: "step", "aria-label": `${name}に効く筋肉を追加` }, h("option", { value: "" }, "筋肉を選ぶ"), MUSCLE_KEYS.filter((k) => !hit[k]).map((k) => h("option", { value: k }, MUSCLES[k].label))) : null;
+    addSel?.addEventListener("change", () => { if (addSel.value) { P.adding = null; setHit(name, part, addSel.value, "m"); } });
+    card.append(h("div", { class: "bm-ex" },
+      h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" }, h("b", {}, name), tag(part), custom ? h("button", { class: "linkish", type: "button", disabled: !S.db, onclick: () => resetHits(name) }, "初期値に戻す") : h("span", { class: "muted" }, "初期値")),
+      h("div", { class: "bm-chips" },
+        Object.entries(hit).map(([mu, g]) => h("button", { type: "button", class: "bm-g", "data-g": g, disabled: !S.db, "aria-label": `${name}の${MUSCLES[mu]?.label || mu}：${GRADE[g]?.label}（タップで変更）`,
+          onclick: () => { const nx = GRADE_CYCLE[(GRADE_CYCLE.indexOf(g) + 1) % GRADE_CYCLE.length]; setHit(name, part, mu, nx); } }, `${MUSCLES[mu]?.label || mu} ${GRADE[g]?.label || g}`)),
+        adding ? addSel : h("button", { type: "button", class: "bm-g", "data-g": "add", disabled: !S.db, onclick: () => { P.adding = name; render(); } }, "＋ 筋肉"))));
+  }
+  view.append(card);
 }
 
 // ===== 設定・バックアップ =====
