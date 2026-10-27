@@ -32,8 +32,8 @@
   },
   "calendars": [
     {
-      "id": "morikawa",
-      "name": "AKB48 森川優",
+      "id": "oshi",
+      "name": "AKB48 森川優・渡邉葵心・佐藤綺星",
       "color": "#FF2D55",
       "members": [
         {
@@ -41,14 +41,7 @@
           "mid": 1104,
           "aliases": [],
           "snsEmoji": ""
-        }
-      ]
-    },
-    {
-      "id": "kiko",
-      "name": "AKB48 渡邉葵心",
-      "color": "#5AC8FA",
-      "members": [
+        },
         {
           "name": "渡邉葵心",
           "mid": 1105,
@@ -59,14 +52,7 @@
             "渡辺きこ"
           ],
           "snsEmoji": "🧤🤍"
-        }
-      ]
-    },
-    {
-      "id": "kirara",
-      "name": "AKB48 佐藤綺星",
-      "color": "#34C759",
-      "members": [
+        },
         {
           "name": "佐藤綺星",
           "mid": 1076,

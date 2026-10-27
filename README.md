@@ -176,12 +176,10 @@ URLの形は公演ごとにばらばらなので、自分で組み立てるこ�
 
   | カレンダー | URL |
   | --- | --- |
-  | AKB48 森川優（ピンク） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/morikawa.ics` |
-  | AKB48 渡邉葵心（水色） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/kiko.ics` |
-  | AKB48 佐藤綺星（緑） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/kirara.ics` |
+  | AKB48 森川優・渡邉葵心・佐藤綺星（ピンク） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/oshi.ics` |
   | AKB48 申込締切（オレンジ） | `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed-friend/deadlines.ics` |
 
-  複数の推しが出る公演は、上の順（森川優 → 渡邉葵心 → 佐藤綺星）で先に来るカレンダーにだけ入ります
+  3人とも同じカレンダー（同じ色）に入ります。予定のタイトルに出演する推しメンが書かれます
 - **申込ランチャー**：`launcher.bat` の代わりに `launcher-friend.bat` を `launcher.ps1` と同じフォルダに置いてダブルクリック（使い方は同じ。Chromeのプロファイル名も `AKB 01` …）
 - **申込通知（ntfy）**：GitHub の Secrets に `NTFY_TOPIC_FRIEND`（自分用の `NTFY_TOPIC` とは別の、推測されにくいトピック名）を登録し、知人がそのトピックを ntfy アプリで購読します。
   申込開始と締切の1日前が届きます。Run workflow で `ntfy_test` にチェックすると、知人用のトピックにもテスト通知が届きます。
