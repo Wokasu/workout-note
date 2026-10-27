@@ -73,15 +73,17 @@ const CAST_HEAD_RE = /^【(?:(\d{1,2}:\d{2})公演 ?)?出演メンバー】$/;
 // 公演ごとの申込ページへのリンク（htmlToLines が残した ⟨URL⟩）。チケットセンターのトップへのリンクは除く
 const APPLY_LINK_RE = /⟨(https:\/\/akb48\.zaiko\.io\/(?:[a-z]{2}\/)?e\/[^⟩\s]+)⟩/;
 
-// 「【(1)～(3)枠の販売スケジュール】」の次の「＜受付期間＞2026年10月18日(日)16:00まで」を締切として読む（ロビー観覧チケットは除く）
+// 「【(1)～(3)枠の販売スケジュール】」の次の「＜受付期間＞2026年10月18日(日)16:00まで」を締切として読む。
+// ロビー観覧チケットの締切は lobby: true を付けて返し、座席の締切（deadlines）とは別に持つ
 const SALE_LABEL_RE = /^【(.+)の販売スケジュール】$/;
 const DEADLINE_RE = /^[<＜]受付期間[>＞]\s*(20\d{2})年(\d{1,2})月(\d{1,2})日\s*\(.\)\s*(\d{1,2}):(\d{2})まで/;
 function readDeadline(line, label) {
   const m = line.match(DEADLINE_RE);
-  if (!m || !label || /ロビー/.test(label)) return null;
+  if (!m || !label) return null;
   return {
     label: label.replace(/[~～]/g, '〜'),
     year: Number(m[1]), month: Number(m[2]), day: Number(m[3]), hour: Number(m[4]), minute: Number(m[5]),
+    ...(/ロビー/.test(label) ? { lobby: true } : {}),
   };
 }
 
@@ -135,7 +137,7 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
     if (details.length && l.startsWith('【')) details.at(-1).header = false;
     let n;
     if (t && /公演|イベント/.test(lines[i - 1])) {
-      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null, deadlines: [], label: null, notes: [], header: true });
+      details.push({ title: normalizeTitle(lines[i - 1]), hour: Number(t[1]), minute: Number(t[2]), names: [], applyUrl: null, deadlines: [], lobby: null, label: null, notes: [], header: true });
     } else if (details.length && details.at(-1).header && (n = readNote(l))) {
       details.at(-1).notes.push(n);
     } else if (l === '休館日') {
@@ -149,7 +151,8 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
       details.at(-1).label = l.match(SALE_LABEL_RE)[1];
     } else if (details.length && DEADLINE_RE.test(l)) {
       const d = readDeadline(l, details.at(-1).label);
-      if (d) details.at(-1).deadlines.push(d);
+      if (d?.lobby) details.at(-1).lobby = d;
+      else if (d) details.at(-1).deadlines.push(d);
     }
   }
   if (!entries.length || entries.length !== details.length) return [];
@@ -159,7 +162,7 @@ export function extractTopCasts(lines, { sourceUrl = '' } = {}) {
   });
   if (!same) return [];
   return entries
-    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, tag: noteFor(details[i].notes ?? [], e), kind: 'top', sourceUrl }))
+    .map((e, i) => ({ ...e, names: details[i].names, applyUrl: details[i].applyUrl, deadlines: details[i].deadlines, lobby: details[i].lobby ?? null, tag: noteFor(details[i].notes ?? [], e), kind: 'top', sourceUrl }))
     .filter((c) => c.title !== null && c.names.length);
 }
 
@@ -200,7 +203,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
   let relative = []; // 公演日から数えた締切（受付開始のお知らせ）
   const push = (times, names) => {
     for (const t of times.length ? times : [{ hour: null, minute: null }]) {
-      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, tag: noteFor(cur.notes, t), kind: cur.kind, sourceUrl };
+      const cast = { year: cur.year, month: cur.month, day: cur.day, title: cur.title, ...t, names, applyUrl: null, deadlines: cur.deadlines, lobby: cur.lobby, tag: noteFor(cur.notes, t), kind: cur.kind, sourceUrl };
       out.push(cast);
       cur.casts.push(cast);
     }
@@ -220,7 +223,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
         const d = new Date(Date.UTC(year, month - 1, day - r.days));
         return { label: r.label, year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate(), hour: r.hour, minute: 0 };
       });
-      cur = { year, month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines, label: null, notes: [], header: true };
+      cur = { year, month, day, title: normalizeTitle(m[3]), times: parseTimes(m[4]), kind: 'monthly', casts: [], deadlines, lobby: {}, label: null, notes: [], header: true };
     } else if ((m = line.match(SINGLE_DATE_RE)) && lines[i + 1]) {
       const next = lines[i + 1];
       const year = Number(m[1]);
@@ -244,7 +247,7 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
       cur = {
         year, month, day,
         title: normalizeTitle(next.replace(/\d{1,2}:\d{2}.*$/, '')),
-        times: parseTimes(next), kind: 'single', casts: [], deadlines: [], label: null, notes: [], header: true,
+        times: parseTimes(next), kind: 'single', casts: [], deadlines: [], lobby: {}, label: null, notes: [], header: true,
       };
       i++;
     } else if (cur?.header && !cur.times.length && (m = line.match(/^(?:<\d+回目>\s*)?(\d{1,2}):(\d{2})開演$/))) {
@@ -266,7 +269,9 @@ export function extractCasts(lines, { today = new Date(), sourceUrl = '' } = {})
     } else if (cur && DEADLINE_RE.test(line)) {
       // 締切はその日の公演（昼夜とも）に共通。cur.deadlines は cast と同じ配列なので、後から読んだ分も反映される
       const d = readDeadline(line, cur.label);
-      if (d) cur.deadlines.push(d);
+      if (d?.lobby) {
+        Object.assign(cur.lobby, d); // cast と同じオブジェクトなので、後から読んだ分も反映される
+      } else if (d) cur.deadlines.push(d);
     } else if (cur && APPLY_LINK_RE.test(line)) {
       // 申込ページへのリンクは、まだリンクのない公演に書かれた順に付ける
       const cast = cur.casts.find((c) => !c.applyUrl);
@@ -294,6 +299,8 @@ export function buildShows(casts, schedule, members) {
   // 申込締切は日付・公演名ごと（昼夜の公演で共通）
   const deadlines = new Map();
   for (const c of casts) if (c.deadlines?.length && !deadlines.has(performanceKey(c))) deadlines.set(performanceKey(c), c.deadlines);
+  const lobbies = new Map();
+  for (const c of casts) if (c.lobby?.year && !lobbies.has(performanceKey(c))) lobbies.set(performanceKey(c), c.lobby);
   // 生誕祭・女性限定公演などの但し書きも、どの記事に書かれていたものでも使う
   const tags = new Map(casts.filter((c) => c.tag && c.hour != null).map((c) => [timeKey(c), c.tag]));
   const groups = new Map();
@@ -315,7 +322,7 @@ export function buildShows(casts, schedule, members) {
         : schedule.filter((s) => performanceKey(s) === performanceKey(c)).map(({ hour, minute }) => ({ hour, minute }));
       for (const t of times.length ? times : [{ hour: null, minute: null }]) {
         const show = { year: c.year, month: c.month, day: c.day, ...t, title: c.title, members: hits, cast: c.names, sourceUrl: c.sourceUrl };
-        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [], tag: tags.get(timeKey(show)) ?? c.tag ?? null });
+        shows.push({ ...show, applyUrl: urls.get(timeKey(show)) ?? null, deadlines: deadlines.get(performanceKey(show)) ?? [], lobby: lobbies.get(performanceKey(show)) ?? null, tag: tags.get(timeKey(show)) ?? c.tag ?? null });
       }
     }
   }
@@ -341,6 +348,7 @@ export function mergeShows(list) {
       prev.tag ??= s.tag;
       prev.cast ??= s.cast;
       if (!prev.deadlines?.length) prev.deadlines = s.deadlines;
+      prev.lobby ??= s.lobby;
     }
   }
   return [...map.values()].sort((a, b) => showKey(a).localeCompare(showKey(b)));
@@ -685,6 +693,18 @@ export function applicationClosed(show, now, fallback = null) {
   const ends = (show.deadlines ?? []).map((d) => jstToUtc(d.year, d.month, d.day, d.hour, d.minute).getTime());
   if (!ends.length && fallback) ends.push(jstToUtc(show.year, show.month, show.day - fallback.daysBefore, fallback.hour, 0).getTime());
   return ends.length > 0 && Math.max(...ends) <= now.getTime();
+}
+
+/**
+ * ロビー観覧チケットの受付が続いているか。締切が分からない公演は、公式の決まり
+ * （公演日の fallback.daysBefore 日前の fallback.hour 時。これまでの記事では一般枠の2日後＝3日前の16時）で判断する
+ */
+export function lobbyOpen(show, now, fallback = null) {
+  const d = show.lobby?.year ? show.lobby : null;
+  const end = d
+    ? jstToUtc(d.year, d.month, d.day, d.hour, d.minute)
+    : fallback && jstToUtc(show.year, show.month, show.day - fallback.daysBefore, fallback.hour, 0);
+  return Boolean(end) && end.getTime() > now.getTime();
 }
 
 export function dueDeadlineReminders(shows, sent, now, horizonMs = 4 * 3600_000) {

@@ -4,7 +4,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationClosed, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
+import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -311,18 +311,21 @@ if (blogLinks.length) {
   }
 }
 
-// 申込ランチャー（Windows）が読む一覧: 今日以降の公演。launcherExclude の公演、申込受付が終わった公演、女性限定公演は除く
+// 申込ランチャー（Windows）が読む一覧: 今日以降の公演。launcherExclude の公演、女性限定公演、
+// 申込受付が終わった公演（座席もロビー観覧も締切を過ぎたもの）は除く。座席が締め切られロビー観覧だけ受付中なら【ロビー観覧のみ】を付ける
 const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).replace(/-/g, ''));
 const pad = (n) => String(n).padStart(2, '0');
 const links = events
   .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
   .filter((s) => s.kind !== 'event' && !(config.launcherExclude ?? []).includes(s.title))
-  .filter((s) => !applicationClosed(s, today, config.generalDeadline) && !s.tag?.includes('女性限定'))
+  .filter((s) => !s.tag?.includes('女性限定'))
+  .map((s) => ({ ...s, lobbyOnly: applicationClosed(s, today, config.generalDeadline) }))
+  .filter((s) => !s.lobbyOnly || lobbyOpen(s, today, config.lobbyDeadline ?? { daysBefore: 3, hour: 16 }))
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,
     // 生誕祭・女性限定公演は公演名の後ろに【】で付ける
-    title: s.tag ? `${s.title}【${s.tag}】` : s.title,
+    title: `${s.title}${s.tag ? `【${s.tag}】` : ''}${s.lobbyOnly ? '【ロビー観覧のみ】' : ''}`,
     members: s.members,
     url: s.applyUrl,
   }));
