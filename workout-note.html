@@ -361,6 +361,15 @@
   .bm-meter { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
   .bm-meter i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
   .bm-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .bm-days > div { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 5px 0 4px; display: flex; flex-direction: column; align-items: center; gap: 0; font-size: 12px; min-width: 0; }
+  .bm-days > div.done { background: var(--surface-2); }
+  .bm-days > div span { font-size: 9px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .bm-days > div .mark { color: var(--accent); font-size: 10px; line-height: 1; min-height: 10px; }
+  .bm-row { display: flex; align-items: center; gap: 8px; border: 0; border-top: 1px solid var(--grid); background: none; padding: 8px 0; text-align: left; width: 100%; color: inherit; font-size: 13px; }
+  .bm-row .go { color: var(--ink-3); font-size: 16px; }
+  .bm-ex.focus { background: var(--accent-soft); border-radius: 10px; padding: 9px 8px; border-top-color: transparent; }
+  .bm-guide { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--ink-2); }
+  .bm-guide > span { display: inline-flex; align-items: center; gap: 4px; }
   .bm-days button { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 0 5px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 12px; }
   .bm-days button span { font-size: 9px; color: var(--ink-3); }
   .bm-days button.done { background: var(--surface-2); }
@@ -4029,6 +4038,9 @@ function renderExerciseForm(view, E, cat) {
     h("div", { class: "parts" }, WN.BODY_PARTS.map((p) => h("button", { class: "part-pick", type: "button", "aria-pressed": String(E.part === p), onclick: () => { E.part = E.part === p ? null : p; render(); } }, h("i", { class: "dot", c: partColor(p) }), partLabel(p))),
       E.part ? null : h("span", { class: "muted", style: "align-self:center" }, "未分類のまま"))));
   view.append(h("div", { class: "notice" }, `${affected}件の記録を書き換えます。これから読み取る記録でも、同じ名前と部位を使います。`));
+  if (!merge) view.append(h("div", { class: "card" }, h("h2", { class: "card-title" }, "全身ぬりえのダメージ設定"),
+    h("div", { class: "muted" }, "札をタップすると 極大 → 大 → 中 → 小 → なし の順に変わります。ここはタップした時点で保存されます（下の「保存する」は名前と部位の変更用です）。"),
+    gradeGuide(), hitEditor(E.from[0], cat.find((c) => c.name === E.from[0])?.part ?? E.part, { showName: false })));
   view.append(h("button", { class: "btn primary", type: "button", disabled: !S.db, onclick: () => {
     const t = E.name.trim();
     if (!t) return toast("種目名を入れてください");
@@ -4298,20 +4310,20 @@ function bodyFigure(side, M, { sel = null, onPick = null, label } = {}) {
   return svg;
 }
 
-// ホームの小さなカード
+// ホームの小さなカード（直近7日）
 function paintCard() {
   if (!S.workouts.length) return null;
-  const start = WN.weekStart(today()), R = paintWeek(start, today());
+  const end = today(), R = paintWeek(WN.addDays(end, -6), end);
   return h("button", { class: "card bm-card", type: "button", onclick: () => openPaint() },
-    h("div", { class: "bm-card-figs" }, bodyFigure("front", R.m, { label: "今週の塗り具合（前）" }), bodyFigure("back", R.m, { label: "今週の塗り具合（後ろ）" })),
+    h("div", { class: "bm-card-figs" }, bodyFigure("front", R.m, { label: "直近7日の塗り具合（前）" }), bodyFigure("back", R.m, { label: "直近7日の塗り具合（後ろ）" })),
     h("div", { class: "bm-card-text" },
-      h("div", { class: "hero-label" }, "今週の全身ぬりえ"),
+      h("div", { class: "hero-label" }, "全身ぬりえ（直近7日）"),
       h("div", { class: "hero", style: "font-size:40px" }, String(Math.round(R.avg * 100)), h("small", {}, "%")),
       h("div", { class: "muted" }, `塗り終わり ${R.full} / ${MUSCLE_KEYS.length} 筋肉`),
       h("span", { class: "linkish" }, "開く ›")));
 }
 
-function openPaint() { S.paint = { week: WN.weekStart(today()), upto: null, sel: null, all: false, adding: null }; go("paint"); }
+function openPaint() { S.paint = { end: today(), sel: null, all: false, focusEx: null }; go("paint"); }
 let paintSaveTimer;
 function savePaintRules() {
   clearTimeout(paintSaveTimer);
@@ -4327,31 +4339,51 @@ function resetHits(name) {
   const hits = { ...(S.exRules.hits || {}) }; delete hits[name];
   S.exRules = { ...S.exRules, hits }; savePaintRules(); render();
 }
+const hitId = (name) => "bm-ex-" + hashKey(name);
+// 種目ごとのダメージ設定（全身ぬりえの画面と、種目の管理の編集画面で使う）
+let hitAdding = null;
+function hitEditor(name, part, { focus = false, showName = true } = {}) {
+  const hit = hitsFor(name, part), custom = !!S.exRules.hits?.[name];
+  const addSel = hitAdding === name ? h("select", { class: "step", "aria-label": `${name}に効く筋肉を追加` }, h("option", { value: "" }, "筋肉を選ぶ"), MUSCLE_KEYS.filter((k) => !hit[k]).map((k) => h("option", { value: k }, MUSCLES[k].label))) : null;
+  addSel?.addEventListener("change", () => { if (addSel.value) { hitAdding = null; setHit(name, part, addSel.value, "m"); } });
+  return h("div", { class: "bm-ex" + (focus ? " focus" : ""), id: hitId(name) },
+    h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" }, showName ? h("b", {}, name) : null, showName ? tag(part) : null,
+      custom ? h("button", { class: "linkish", type: "button", disabled: !S.db, onclick: () => resetHits(name) }, "初期値に戻す") : h("span", { class: "muted" }, "初期値（名前から自動で設定）")),
+    h("div", { class: "bm-chips" },
+      Object.entries(hit).map(([mu, g]) => h("button", { type: "button", class: "bm-g", "data-g": g, disabled: !S.db, "aria-label": `${name}の${MUSCLES[mu]?.label || mu}：${GRADE[g]?.label}（タップで変更）`,
+        onclick: () => setHit(name, part, mu, GRADE_CYCLE[(GRADE_CYCLE.indexOf(g) + 1) % GRADE_CYCLE.length]) }, `${MUSCLES[mu]?.label || mu} ${GRADE[g]?.label || g}`)),
+      addSel || h("button", { type: "button", class: "bm-g", "data-g": "add", disabled: !S.db, onclick: () => { hitAdding = name; render(); } }, "＋ 筋肉を追加")));
+}
+const gradeGuide = () => h("div", { class: "bm-guide" },
+  ["x", "l", "m", "s", "n"].map((g) => h("span", {}, h("span", { class: "bm-g", "data-g": g }, GRADE[g].label), g === "n" ? "数えない" : `1セットで${GRADE[g].k}セット分`)));
 
 function renderPaint(view) {
-  const P = S.paint || (S.paint = { week: WN.weekStart(today()), upto: null, sel: null, all: false, adding: null });
-  const thisWeek = WN.weekStart(today()), isThis = P.week === thisWeek;
-  const days = Array.from({ length: 7 }, (_, i) => WN.addDays(P.week, i));
-  const last = isThis ? today() : days[6];
-  const upto = P.upto && P.upto <= last ? P.upto : last;
-  const R = paintWeek(P.week, upto), prefs = paintPrefs();
+  const P = S.paint || (S.paint = { end: today(), sel: null, all: false, focusEx: null });
+  if (!P.end || P.end > today()) P.end = today();
+  const isNow = P.end === today(), start = WN.addDays(P.end, -6);
+  const days = Array.from({ length: 7 }, (_, i) => WN.addDays(start, i));
+  const R = paintWeek(start, P.end), prefs = paintPrefs();
   if (!P.sel) P.sel = MUSCLE_KEYS.slice().sort((a, b) => R.m[b].pts - R.m[a].pts)[0];
+  const toSettings = (name) => {
+    if (name) { P.focusEx = name; if (!names7.has(name)) P.all = true; }
+    render();
+    document.getElementById(name ? hitId(name) : "bm-hits")?.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  };
 
-  // 週の切り替えと塗り率
+  // 期間（7日分ずつ前後に動かせる）と塗り率
   view.append(h("div", { class: "nav-row" },
-    h("button", { class: "icon-btn", type: "button", "aria-label": "前の週", onclick: () => { P.week = WN.addDays(P.week, -7); P.upto = null; render(); } }, "‹"),
-    h("b", {}, `${WN.shortDate(P.week)}〜${WN.shortDate(days[6])}${isThis ? "（今週）" : ""}`),
-    h("button", { class: "icon-btn", type: "button", "aria-label": "次の週", disabled: isThis, style: isThis ? "opacity:.3" : "", onclick: () => { if (!isThis) { P.week = WN.addDays(P.week, 7); P.upto = null; render(); } } }, "›")));
-  const trained = new Set(S.workouts.filter((w) => w.date >= P.week && w.date <= days[6]).map((w) => w.date));
+    h("button", { class: "icon-btn", type: "button", "aria-label": "1週間前", onclick: () => { P.end = WN.addDays(P.end, -7); render(); } }, "‹"),
+    h("b", {}, `${WN.shortDate(start)}〜${WN.shortDate(P.end)}${isNow ? "（直近7日）" : ""}`),
+    h("button", { class: "icon-btn", type: "button", "aria-label": "1週間後", disabled: isNow, style: isNow ? "opacity:.3" : "", onclick: () => { if (!isNow) { const e = WN.addDays(P.end, 7); P.end = e > today() ? today() : e; render(); } } }, "›")));
+  const trained = new Set(S.workouts.filter((w) => w.date >= start && w.date <= P.end).map((w) => w.date));
   view.append(h("div", { class: "card" },
     h("div", { class: "row", style: "justify-content:space-between;align-items:flex-end;flex-wrap:wrap" },
-      h("div", {}, h("div", { class: "hero-label" }, `塗り率（${WN.WEEKDAYS[WN.parseDate(upto).getDay()]}曜まで）`), h("div", { class: "hero" }, String(Math.round(R.avg * 100)), h("small", {}, "%"))),
+      h("div", {}, h("div", { class: "hero-label" }, "塗り率"), h("div", { class: "hero" }, String(Math.round(R.avg * 100)), h("small", {}, "%"))),
       h("div", { class: "muted", style: "text-align:right;font-size:12px" }, "塗り終わり", h("br"), h("b", { class: "num", style: "font-size:22px;color:var(--ink)" }, `${R.full}`), ` / ${MUSCLE_KEYS.length} 筋肉`)),
     h("div", { class: "bm-meter" }, h("i", { style: `width:${R.avg * 100}%` })),
-    h("div", { class: "bm-days", role: "group", "aria-label": "何曜日までの記録で塗るか" }, days.map((d) => h("button", {
-      type: "button", class: trained.has(d) ? "done" : "", disabled: d > last, "aria-pressed": String(d === upto), "aria-label": `${WN.formatDateJa(d)}まで`,
-      onclick: () => { P.upto = d; render(); },
-    }, WN.WEEKDAYS[WN.parseDate(d).getDay()], h("span", {}, trained.has(d) ? "記録" : "—"))))));
+    h("div", { class: "bm-days", role: "list", "aria-label": "この7日間の記録" }, days.map((d) => h("div", { role: "listitem", class: trained.has(d) ? "done" : "" },
+      h("b", {}, WN.WEEKDAYS[WN.parseDate(d).getDay()]), h("span", {}, WN.shortDate(d)), h("span", { class: "mark" }, trained.has(d) ? "●" : "")))),
+    h("div", { class: "muted" }, isNow ? "今日までの7日間の記録で塗っています。日がたつと古い記録の分は消えていきます。" : "この7日間の記録で塗っています。")));
 
   // 全身図
   const pick = (mu) => { P.sel = mu; render(); };
@@ -4361,9 +4393,10 @@ function renderPaint(view) {
       h("div", {}, bodyFigure("back", R.m, { sel: P.sel, onPick: pick }), h("b", {}, "後ろ"))),
     h("div", { class: "legend" }, [["まだ", 0], ["少し", 0.22], ["半分", 0.42], ["もう少し", 0.62], ["あと一息", 0.8], ["塗り終わり", 1]].map(([l, o]) =>
       h("span", {}, h("i", { style: `background:color-mix(in srgb, var(--p-chest) ${o * 100}%, var(--bm-paper));border:1px solid var(--bm-outline)` }), l))),
-    h("div", { class: "muted" }, `色は部位の色です。濃いほどその筋肉に今週ダメージが入っています。1つの筋肉につき週${prefs.target}セット分で塗り終わります。筋肉をタップすると内訳が出ます。`)));
+    h("div", { class: "muted" }, `色は部位の色です。濃いほどその筋肉にダメージが入っています。1つの筋肉につき7日で${prefs.target}セット分で塗り終わります。筋肉をタップすると内訳が出ます。`),
+    h("button", { class: "btn secondary small", type: "button", onclick: () => toSettings(null) }, "種目ごとのダメージ設定へ ↓")));
 
-  // タップした筋肉の内訳
+  // タップした筋肉の内訳（種目を押すとその種目のダメージ設定へ）
   const m = R.m[P.sel], info = MUSCLES[P.sel], pct = Math.round(Math.min(1, m.fill) * 100);
   view.append(h("div", { class: "card", "aria-live": "polite" },
     h("div", { class: "row", style: "justify-content:space-between;align-items:baseline" },
@@ -4372,9 +4405,13 @@ function renderPaint(view) {
     h("div", { class: "bm-meter" }, h("i", { style: `width:${pct}%;background:var(--p-${info.part})` })),
     h("div", { class: "muted" }, `${fmt1(m.pts)} / ${prefs.target} セット分${m.fill >= 1 ? "（塗り終わり）" : `・あと ${fmt1(prefs.target - m.pts)} セット分`}`),
     m.from.length
-      ? h("div", { class: "bm-contrib" }, h("span", { class: "muted" }, "種目"), h("span", { class: "muted" }, "効き方"), h("span", { class: "muted", style: "text-align:right" }, "セット分"),
-        m.from.sort((a, b) => b.pts - a.pts).flatMap((x) => [h("span", {}, `${WN.shortDate(x.date)} ${x.name}`, h("span", { class: "muted" }, ` ${x.sets}セット`)), h("span", { class: "bm-g", "data-g": x.g }, GRADE[x.g].label), h("span", { class: "num", style: "font-size:16px;text-align:right" }, fmt1(x.pts))]))
-      : h("div", { class: "sub" }, "この週は、まだこの筋肉に効く種目をやっていません。")));
+      ? [...m.from.sort((a, b) => b.pts - a.pts).map((x) => h("button", { class: "bm-row", type: "button", "aria-label": `${x.name}のダメージ設定を開く`, onclick: () => toSettings(x.name) },
+          h("span", { class: "grow" }, `${WN.shortDate(x.date)} ${x.name}`, h("span", { class: "muted" }, ` ${x.sets}セット`)),
+          h("span", { class: "bm-g", "data-g": x.g }, GRADE[x.g].label),
+          h("span", { class: "num", style: "font-size:16px;min-width:34px;text-align:right" }, fmt1(x.pts)),
+          h("span", { class: "go" }, "›"))),
+        h("div", { class: "muted" }, "種目を押すと、その種目のダメージ設定に移ります。")]
+      : h("div", { class: "sub" }, "この7日間は、まだこの筋肉に効く種目をやっていません。")));
 
   // まだ塗れていないところ
   const low = MUSCLE_KEYS.filter((k) => R.m[k].fill < 1).sort((a, b) => R.m[a].fill - R.m[b].fill).slice(0, 4);
@@ -4391,38 +4428,26 @@ function renderPaint(view) {
       })));
   } else view.append(h("div", { class: "notice" }, "全身塗り終わりました。"));
 
+  // 種目ごとのダメージ設定
+  const names7 = new Map();
+  for (const w of S.workouts) if (w.date >= start && w.date <= P.end) for (const ex of w.exercises) if (!names7.has(ex.name)) names7.set(ex.name, ex.part);
+  const list = P.all ? exerciseCatalog().map((c) => [c.name, c.part]) : [...names7];
+  view.append(h("div", { class: "card", id: "bm-hits" }, h("h2", { class: "card-title", style: "color:var(--ink);font-size:15px" }, "種目ごとのダメージ設定"),
+    h("div", { class: "sub" }, "種目ごとに、どの筋肉にどれだけ効くかを決めます。札をタップすると 極大 → 大 → 中 → 小 → なし の順に変わり、すぐ保存されて全身図に反映されます。設定 →「種目の管理」の各種目の「編集」からも直せます。"),
+    gradeGuide(),
+    h("div", { class: "seg", role: "group", "aria-label": "表示する種目" }, [[false, "この7日の種目"], [true, "すべての種目"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(P.all === k), onclick: () => { P.all = k; render(); } }, l))),
+    list.length ? list.map(([name, part]) => hitEditor(name, part, { focus: P.focusEx === name })) : h("div", { class: "muted" }, "この7日間の記録はまだありません。")));
+
   // 塗り方の設定
   const setPref = (k, v) => { S.exRules = { ...S.exRules, paint: { ...paintPrefs(), [k]: v } }; savePaintRules(); render(); };
   view.append(h("div", { class: "card" }, h("h2", { class: "card-title" }, "塗り方の設定"),
-    h("div", { class: "flabel" }, "1つの筋肉を塗り終える目標（1週間）"),
+    h("div", { class: "flabel" }, "1つの筋肉を塗り終える目標（7日間）"),
     h("div", { class: "seg", role: "group", "aria-label": "目標" }, PAINT_TARGETS.map((t) => h("button", { type: "button", "aria-pressed": String(prefs.target === t), disabled: !S.db, onclick: () => setPref("target", t) }, `${t}セット分`))),
     h("div", { class: "flabel" }, "数え方"),
     h("div", { class: "seg", role: "group", "aria-label": "数え方" }, [["sets", "セット数"], ["load", "重量×回数"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(prefs.mode === k), disabled: !S.db, onclick: () => setPref("mode", k) }, l))),
     h("div", { class: "muted" }, prefs.mode === "sets"
-      ? "1セット＝1。効き方が極大なら1セット分、大なら0.6、中なら0.3、小なら0.1セット分のダメージになります。ウォームアップ（W）のセットは数えません。"
+      ? "1セット＝1として、ダメージ設定の倍率をかけます。ウォームアップ（W）のセットは数えません。"
       : "その種目の直近8週のいつものセット（重量×回数）を1として、重いセットは多め、軽いセットは少なめに数えます。")));
-
-  // 種目ごとの効き方（裏設定）
-  const weekNames = new Map();
-  for (const w of S.workouts) if (w.date >= P.week && w.date <= days[6]) for (const ex of w.exercises) if (!weekNames.has(ex.name)) weekNames.set(ex.name, ex.part);
-  const list = P.all ? exerciseCatalog().map((c) => [c.name, c.part]) : [...weekNames];
-  const card = h("div", { class: "card" }, h("h2", { class: "card-title" }, "種目ごとの効き方（裏設定）"),
-    h("div", { class: "sub" }, "札をタップすると 極大 → 大 → 中 → 小 → なし の順に変わり、全身図にすぐ反映されます。「なし」にした札は数えません（もう一度タップすると極大に戻ります）。"),
-    h("div", { class: "seg", role: "group", "aria-label": "表示する種目" }, [[false, "この週の種目"], [true, "すべての種目"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(P.all === k), onclick: () => { P.all = k; render(); } }, l))));
-  if (!list.length) card.append(h("div", { class: "muted" }, "この週の記録はまだありません。"));
-  for (const [name, part] of list) {
-    const hit = hitsFor(name, part), custom = !!S.exRules.hits?.[name];
-    const adding = P.adding === name;
-    const addSel = adding ? h("select", { class: "step", "aria-label": `${name}に効く筋肉を追加` }, h("option", { value: "" }, "筋肉を選ぶ"), MUSCLE_KEYS.filter((k) => !hit[k]).map((k) => h("option", { value: k }, MUSCLES[k].label))) : null;
-    addSel?.addEventListener("change", () => { if (addSel.value) { P.adding = null; setHit(name, part, addSel.value, "m"); } });
-    card.append(h("div", { class: "bm-ex" },
-      h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" }, h("b", {}, name), tag(part), custom ? h("button", { class: "linkish", type: "button", disabled: !S.db, onclick: () => resetHits(name) }, "初期値に戻す") : h("span", { class: "muted" }, "初期値")),
-      h("div", { class: "bm-chips" },
-        Object.entries(hit).map(([mu, g]) => h("button", { type: "button", class: "bm-g", "data-g": g, disabled: !S.db, "aria-label": `${name}の${MUSCLES[mu]?.label || mu}：${GRADE[g]?.label}（タップで変更）`,
-          onclick: () => { const nx = GRADE_CYCLE[(GRADE_CYCLE.indexOf(g) + 1) % GRADE_CYCLE.length]; setHit(name, part, mu, nx); } }, `${MUSCLES[mu]?.label || mu} ${GRADE[g]?.label || g}`)),
-        adding ? addSel : h("button", { type: "button", class: "bm-g", "data-g": "add", disabled: !S.db, onclick: () => { P.adding = name; render(); } }, "＋ 筋肉"))));
-  }
-  view.append(card);
 }
 
 // ===== 設定・バックアップ =====
@@ -4450,7 +4475,7 @@ function renderSettings(view) {
     fileIn.value = "";
   });
   view.append(h("div", { class: "card" }, h("h2", { class: "card-title", style: "color:var(--ink);font-size:15px" }, "種目の管理"),
-    h("div", { class: "sub" }, "部位の付け直しや、同じ種目なのに名前が違うものを1つにまとめられます（例：デッドリフトを脚にする、「デッド」と「デッドリフト」をまとめる）。"),
+    h("div", { class: "sub" }, "部位の付け直しや、同じ種目なのに名前が違うものを1つにまとめられます（例：デッドリフトを脚にする、「デッド」と「デッドリフト」をまとめる）。各種目の「編集」から、全身ぬりえのダメージ設定も直せます。"),
     h("button", { class: "btn secondary", type: "button", disabled: !S.db || (!S.workouts.length && !(S.exRules.custom || []).length), onclick: openExercises }, "種目の一覧を開く")));
   view.append(h("div", { class: "card" }, h("h2", { class: "card-title", style: "color:var(--ink);font-size:15px" }, "バックアップ"),
     h("div", { class: "sub" }, "記録は claude.ai のこのページに、あなた専用で保存されています（ほかの人からは見えません）。ファイルに書き出しておくと、Web アプリ版（GitHub Pages 版）にも取り込めます。"),
