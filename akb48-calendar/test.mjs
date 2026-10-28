@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -459,4 +459,25 @@ test('トップページ: 曜日と時刻の間に空白がない一覧（「土
   assert.deepEqual(extractSchedule(lines), extractSchedule(fixture('top-page.txt')));
   assert.deepEqual(extractTopCasts(lines), extractTopCasts(fixture('top-page.txt')));
   assert.ok(extractTopCasts(lines).length > 10);
+});
+
+test('申込していない公演: 座席の応募が受付中で、申込済みの一覧にない推しの公演（ロビー観覧・女性限定は見ない）', () => {
+  const now = new Date('2026-10-28T10:00:00+09:00');
+  const dl = (gd) => [
+    { label: '(1)〜(3)枠', year: 2026, month: 10, day: gd - 2, hour: 16, minute: 0 },
+    { label: '(4)〜(6)枠', year: 2026, month: 10, day: gd, hour: 16, minute: 0 },
+  ];
+  const base = { year: 2026, hour: 18, minute: 30, members: ['奥本カイリ'], applyUrl: 'https://akb48.zaiko.io/e/x' };
+  const shows = [
+    { ...base, month: 11, day: 2, title: '「ここからだ」公演', tag: '長友彩海 生誕祭', deadlines: dl(28) }, // 一般枠が今日まで
+    { ...base, month: 11, day: 3, title: '「ここからだ」公演', deadlines: dl(29) }, // 申込済み
+    { ...base, month: 10, day: 31, title: '「夢のポップスター」公演', deadlines: dl(26) }, // 座席は締切済み（ロビー観覧のみ）
+    { ...base, month: 11, day: 8, hour: 17, title: '「ここからだ」公演', tag: '女性限定公演', deadlines: dl(30) },
+    { ...base, month: 11, day: 13, title: '「夢のポップスター」公演', applyUrl: null, deadlines: [] }, // 申込前
+  ];
+  const applied = parseApplied('11月3日 18:30, 10/31 17:30', now);
+  assert.deepEqual(applied, ['2026-11-03 18:30', '2026-10-31 17:30']);
+  const list = unappliedShows(shows, applied, now, { frameNames: { '(1)〜(3)枠': '柱の会会員枠', '(4)〜(6)枠': '一般枠' } });
+  assert.equal(unappliedMessage(list), '11/2(月) 18:30 「ここからだ」公演【長友彩海 生誕祭】（奥本カイリ） 一般枠 10/28 16:00締切');
+  assert.equal(unappliedShows(shows, [...applied, '2026-11-02 18:30'], now).length, 0);
 });

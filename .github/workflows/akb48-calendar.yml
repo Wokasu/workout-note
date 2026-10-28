@@ -13,6 +13,10 @@ on:
         description: 'この月の出演告知文を X に投稿する（例 2026-11）。投稿済みのメンバーは飛ばす'
         required: false
         default: ''
+      applied:
+        description: '申込済みの公演の開演日時（例 "11/3 13:00, 11/9 18:30"。なければ "なし"）。これ以外に申込していない推しの公演があれば ntfy で知らせる'
+        required: false
+        default: ''
       ntfy_test:
         description: 'ntfy にテスト通知を送る'
         type: boolean
@@ -165,6 +169,14 @@ jobs:
             -H "Click: https://akb48.zaiko.io/" \
             --data-binary @notify-apply.txt \
             "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+
+      # 申込していない推しの公演を知らせる（Claude の定期実行が Gmail の「応募ありがとうございました」を読んで applied に渡す）
+      - name: Notify unapplied shows (ntfy)
+        if: ${{ !inputs.probe && inputs.applied != '' }}
+        env:
+          NTFY_TOPIC_UNAPPLIED: ${{ secrets.NTFY_TOPIC_UNAPPLIED }}
+          APPLIED: ${{ inputs.applied }}
+        run: node akb48-calendar/unapplied.mjs --dir feed --applied "$APPLIED"
 
       # 新しい月の出演告知文ができたら、自分の X アカウントに投稿する（Secrets に X の認証情報があるときだけ）
       - name: Post to X
