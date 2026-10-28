@@ -27,4 +27,15 @@ foreach ($e in @(
 )) {
   if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
 }
+# 申込状況・キャンセルモード（全アカウントで一度に開く）
+$out = & "$dir\launcher.ps1" -Mode applications -DryRun -NoWait -LocalState "$dir\test\Local State" *>&1 | Out-String -Width 1000
+Write-Host $out
+foreach ($e in @(
+  '申込状況のページを 2 個のアカウントで一度に開きます。',
+  '[AKB 01 柱の会] chrome --profile-directory="Profile 1" --new-window https://zaiko.io/account/applications',
+  '[AKB 02 映像倉庫] chrome --profile-directory="Profile 2" --new-window https://zaiko.io/account/applications',
+  '全アカウントで開きました！'
+)) {
+  if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
+}
 Write-Host 'OK'
