@@ -756,3 +756,45 @@ export function mentionedMembers(text, members) {
     .filter((m) => [m.name, ...(m.aliases ?? [])].some((n) => compactText.includes(n.replace(/[\s　]/g, ''))))
     .map((m) => m.name);
 }
+
+// ---- 申込していない公演（Gmail の「応募ありがとうございました」と突き合わせる） ----
+
+/** 「11/3 13:00, 11/9 18:30」のような申込済みの一覧を「2026-11-03 13:00」の形にそろえる */
+export function parseApplied(text, today) {
+  return [...String(text ?? '').matchAll(/(\d{1,2})[/月](\d{1,2})日?\s*(\d{1,2}):(\d{2})/g)].map(([, mo, d, h, mi]) => {
+    const y = resolveYear(Number(mo), Number(d), today);
+    return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')} ${String(h).padStart(2, '0')}:${mi}`;
+  });
+}
+
+/**
+ * 申込していない推しの公演: 今日以降・申込リンクがある・座席の応募枠がまだ受付中で、申込済みの一覧にないもの。
+ * ロビー観覧チケット、女性限定公演、exclude の公演は見ない。次に来る締切（応募枠の名前つき）も返す
+ */
+export function unappliedShows(shows, applied, now, { exclude = [], fallback = null, frameNames = {} } = {}) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const done = new Set(applied);
+  return shows
+    .filter((s) => s.kind !== 'event' && s.applyUrl && s.hour != null && !exclude.includes(s.title) && !s.tag?.includes('女性限定'))
+    .filter((s) => !applicationClosed(s, now, fallback))
+    .filter((s) => !done.has(`${s.year}-${pad(s.month)}-${pad(s.day)} ${pad(s.hour)}:${pad(s.minute)}`))
+    .map((s) => {
+      const next = (s.deadlines ?? [])
+        .map((d) => ({ ...d, at: jstToUtc(d.year, d.month, d.day, d.hour, d.minute) }))
+        .filter((d) => d.at.getTime() > now.getTime())
+        .sort((a, b) => a.at - b.at)[0];
+      return { ...s, next: next ? { ...next, label: frameNames[next.label] ?? next.label } : null };
+    })
+    .sort((a, b) => showKey(a).localeCompare(showKey(b)));
+}
+
+/** ntfy の本文: 1公演1行「11/2(月) 18:30 「ここからだ」公演（奥本カイリ） 一般枠 10/28 16:00締切」 */
+export function unappliedMessage(list) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return list
+    .map((s) => {
+      const dl = s.next ? ` ${s.next.label} ${s.next.month}/${s.next.day} ${s.next.hour}:${pad(s.next.minute)}締切` : '';
+      return `${md(s.year, s.month, s.day)} ${s.hour}:${pad(s.minute)} ${s.title}${s.tag ? `【${s.tag}】` : ''}（${s.members.join('・')}）${dl}`;
+    })
+    .join('\n');
+}
