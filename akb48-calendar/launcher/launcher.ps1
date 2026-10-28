@@ -5,10 +5,11 @@
 # 使い方: launcher.bat をダブルクリックして、モードを選ぶ
 #   1. 申込ページを開く … 選んだ公演の申込ページを、アカウントごとに順番に開く
 #   2. ログイン確認    … チケットセンターを、アカウントごとに順番に開く（申込前にログインを確かめる）
+#   3. 申込状況・キャンセル … 申込履歴のページを、全アカウントで一度に開く（キャンセルは自分でボタンを押す）
 # 準備: Chromeのプロファイル名を「AKB 01」「AKB 02」…のように「AKB」で始め、番号は2桁にしておく
 param(
-  [ValidateSet('', 'apply', 'login')]
-  [string]$Mode,            # apply=申込ページを開く / login=ログイン確認。指定すると質問しない
+  [ValidateSet('', 'apply', 'login', 'applications')]
+  [string]$Mode,            # apply=申込ページを開く / login=ログイン確認 / applications=申込状況・キャンセル。指定すると質問しない
   [string]$Select,          # 開く公演の番号（例 "1-5"）。指定すると質問しない
   [switch]$DryRun,          # Chromeを起動せず、開く内容を表示するだけ
   [switch]$NoWait,          # Enterを待たずに次のアカウントへ進む（テスト用）
@@ -16,6 +17,7 @@ param(
   [string]$Links = 'https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/links.json',
   [string]$ProfilePrefix = 'AKB',
   [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
+  [string]$ApplicationsUrl = 'https://zaiko.io/account/applications',
   [string]$ChromePath
 )
 
@@ -125,7 +127,8 @@ if (-not $Mode) {
   Write-Host ''
   Write-Host '  1. 申込ページを開く'
   Write-Host '  2. 全アカウントのログイン確認'
-  $Mode = switch (Read-Host '番号を選んでください') { '1' { 'apply' } '2' { 'login' } default { Stop-WithMessage '1 か 2 を入力してください。' } }
+  Write-Host '  3. 申込状況の確認・キャンセル（全アカウントで一度に開く）'
+  $Mode = switch (Read-Host '番号を選んでください') { '1' { 'apply' } '2' { 'login' } '3' { 'applications' } default { Stop-WithMessage '1〜3 を入力してください。' } }
 }
 
 if ($Mode -eq 'login') {
@@ -135,6 +138,26 @@ if ($Mode -eq 'login') {
   Open-PerProfile @($LoginUrl) 'ログインできていたら Enter で次のアカウントへ'
   Write-Host ''
   Write-Host 'ログイン確認が終わりました！' -ForegroundColor Magenta
+  if (-not $NoWait) { [void](Read-Host 'Enterで閉じます') }
+  exit 0
+}
+
+if ($Mode -eq 'applications') {
+  Write-Host ''
+  Write-Host "申込状況のページを $($profiles.Count) 個のアカウントで一度に開きます。" -ForegroundColor Cyan
+  Write-Host 'キャンセルしたい申込があれば、そのアカウントのウィンドウで取り消してください（取り消しは自分で操作します）。'
+  foreach ($prof in $profiles) {
+    $arguments = @("--profile-directory=`"$($prof.Dir)`"", '--new-window', $ApplicationsUrl)
+    if ($DryRun) {
+      Write-Host "  [$($prof.Name)] chrome $($arguments -join ' ')"
+    } else {
+      Write-Host "  [$($prof.Name)] を開きました"
+      Start-Process -FilePath $chrome -ArgumentList $arguments
+      Start-Sleep -Milliseconds 300 # 一度に起動するとChromeが取りこぼすことがあるので少し間をあける
+    }
+  }
+  Write-Host ''
+  Write-Host '全アカウントで開きました！' -ForegroundColor Magenta
   if (-not $NoWait) { [void](Read-Host 'Enterで閉じます') }
   exit 0
 }
