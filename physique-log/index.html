@@ -1,0 +1,1209 @@
+<title>フィジークログ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#16191d">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* layout: one app column — a sticky header with tabs, then stacked panels; the measuring view takes the whole column */
+:root {
+  --bg: #eceef1;
+  --surface: #ffffff;
+  --surface-2: #f5f6f8;
+  --ink: #16191d;
+  --muted: #5b646e;
+  --line: #d3d8de;
+  --accent: #b05a1e;        /* tanned bronze: current session */
+  --accent-soft: #f6e6d9;
+  --accent-ink: #ffffff;
+  --prev: #3b74b0;          /* steel blue: the session it is compared with */
+  --fig: #e7c9ae;
+  --fig-edge: #8a4a1c;
+  --up: #2c7a4b;
+  --down: #b3362f;
+  --overlay: rgba(10, 12, 15, .55);
+  --display: "Barlow Condensed", "Zen Kaku Gothic New", "Hiragino Sans", sans-serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111316; --surface: #1a1d22; --surface-2: #22262c; --ink: #eceef1; --muted: #9aa3ad; --line: #2e333a;
+    --accent: #c4733a; --accent-soft: #3a2719; --accent-ink: #ffffff; --prev: #5f8fc8;
+    --fig: #6b4a33; --fig-edge: #e0a274; --up: #5cbf84; --down: #ef7a72; --overlay: rgba(0,0,0,.65);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111316; --surface: #1a1d22; --surface-2: #22262c; --ink: #eceef1; --muted: #9aa3ad; --line: #2e333a;
+  --accent: #c4733a; --accent-soft: #3a2719; --accent-ink: #ffffff; --prev: #5f8fc8;
+  --fig: #6b4a33; --fig-edge: #e0a274; --up: #5cbf84; --down: #ef7a72; --overlay: rgba(0,0,0,.65);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.6 var(--body);
+  -webkit-tap-highlight-color: transparent;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap {
+  max-width: 980px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+header.top .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; flex-wrap: wrap; }
+.brand { font: 700 24px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; margin-right: auto; }
+.brand small { font: 500 12px var(--body); color: var(--muted); letter-spacing: 0; text-transform: none; margin-left: 8px; }
+nav.tabs { display: flex; gap: 4px; }
+nav.tabs button {
+  border: 0; background: transparent; padding: 6px 12px; border-radius: 999px; color: var(--muted); font-weight: 500;
+}
+nav.tabs button[aria-current="page"] { background: var(--ink); color: var(--surface); }
+main { padding-block: 18px 64px; display: grid; gap: 18px; }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h2 { font: 700 20px/1.2 var(--body); }
+h3 { font: 700 15px/1.3 var(--body); }
+.eyebrow { font: 600 13px/1 var(--display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-family: var(--display); font-variant-numeric: tabular-nums; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 8px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { color: var(--down); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn:disabled { opacity: .45; cursor: default; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0;
+}
+.field textarea { min-height: 64px; resize: vertical; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+/* session list */
+.sessions { display: grid; gap: 10px; }
+.sess {
+  display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; text-align: left;
+  border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); padding: 8px; width: 100%;
+}
+.sess:hover { border-color: var(--muted); }
+.sess .thumb { width: 64px; height: 80px; border-radius: 6px; background: var(--surface-2) center/cover no-repeat; }
+.sess .date { font: 700 22px/1 var(--display); }
+.sess .meta { font-size: 13px; color: var(--muted); }
+.pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+.pill.on { background: var(--accent-soft); color: var(--ink); border-color: transparent; }
+
+/* photo grid */
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.slot {
+  position: relative; border: 1px dashed var(--line); background: var(--surface-2); border-radius: 8px; padding: 0;
+  aspect-ratio: 3 / 4; max-width: 100%; overflow: hidden; display: grid; place-items: center; color: var(--muted); text-align: center;
+}
+.slot.filled { border-style: solid; }
+.slot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.slot .cap {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 8px 6px; font-size: 12px; font-weight: 500; line-height: 1.3;
+  background: linear-gradient(transparent, rgba(0,0,0,.72)); color: #fff; text-align: left;
+}
+.slot .cap b { display: block; font: 600 11px/1.2 var(--display); letter-spacing: .1em; text-transform: uppercase; opacity: .8; }
+.slot:not(.filled) .cap { background: none; color: var(--muted); }
+.slot .plus { font: 600 34px/1 var(--display); }
+.slot .badge { position: absolute; top: 6px; right: 6px; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+.slot .badge.todo { background: rgba(0,0,0,.6); color: #fff; }
+.group-title { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; }
+.group-title h2 { white-space: nowrap; }
+
+/* results */
+.result { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 720px) { .result { grid-template-columns: 1fr; } }
+.figure svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--accent); vertical-align: middle; margin-right: 6px; }
+.legend i.prev { border-top: 2px dashed var(--prev); }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 12px; color: var(--muted); font-weight: 500; }
+td.v { font: 600 18px/1 var(--display); font-variant-numeric: tabular-nums; }
+.d { font-family: var(--display); font-variant-numeric: tabular-nums; font-size: 15px; }
+.d.up { color: var(--up); } .d.down { color: var(--down); } .d.flat { color: var(--muted); }
+.est { font-size: 11px; color: var(--muted); }
+
+/* measure editor */
+.editor { display: grid; gap: 10px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.chip {
+  flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; white-space: nowrap;
+}
+.chip.done { background: var(--accent-soft); border-color: transparent; }
+.chip.done::before { content: "✓ "; color: var(--accent); font-weight: 700; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.chip[aria-pressed="true"]::before { color: inherit; }
+.hint { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; font-size: 14px; display: grid; gap: 2px; }
+.hint b { font-size: 15px; }
+.stage {
+  position: relative; overflow: auto; background: #0d0f12; border-radius: var(--radius);
+  height: min(72vh, 820px); touch-action: pan-x pan-y; overscroll-behavior: contain;
+}
+.stage .canvas { position: relative; margin: 0 auto; }
+.stage img { display: block; width: 100%; height: 100%; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.stage svg { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+.stage .handle { cursor: grab; touch-action: none; }
+.loupe {
+  position: fixed; width: 132px; height: 132px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 4px 18px rgba(0,0,0,.5);
+  pointer-events: none; z-index: 30; background: #000;
+}
+.zoombar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+/* compare */
+.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cmp.single { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; width: 100%; }
+.cmp figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.cmp canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #0d0f12; max-width: 100%; }
+.cmp figcaption { font-size: 13px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.cmp figcaption .num { font-size: 18px; font-weight: 700; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 6px 12px; font-size: 13px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+input[type="range"] { accent-color: var(--accent); width: 100%; }
+
+/* trend chart */
+.metric-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chart { position: relative; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.tip {
+  position: absolute; pointer-events: none; background: var(--ink); color: var(--surface); border-radius: 6px;
+  padding: 6px 9px; font-size: 12px; line-height: 1.4; transform: translate(-50%, -100%); white-space: nowrap;
+}
+.tip b { font: 700 16px/1 var(--display); }
+
+/* overlays */
+.sheet-bg { position: fixed; inset: 0; background: var(--overlay); z-index: 40; display: grid; place-items: end center; }
+@media (min-width: 640px) { .sheet-bg { place-items: center; } }
+.sheet {
+  background: var(--surface); border-radius: 14px 14px 0 0; width: min(520px, 100%); display: grid; gap: 12px;
+  padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+@media (min-width: 640px) { .sheet { border-radius: 14px; } }
+.sheet .actions { display: grid; gap: 8px; }
+.sheet .actions .btn { justify-content: center; padding: 11px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 50;
+  background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 14px; max-width: calc(100% - 32px);
+}
+.empty { text-align: center; padding: 28px 12px; display: grid; gap: 10px; justify-items: center; }
+.sample-tag { font: 600 12px var(--display); letter-spacing: .12em; text-transform: uppercase; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--muted); }
+.store-note { font-size: 12px; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .btn, .chip, .sess { transition: border-color .15s, background .15s; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">Physique Log<small>フィジークログ</small></div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="log">記録</button>
+      <button data-tab="compare">比較</button>
+      <button data-tab="trend">推移</button>
+      <button data-tab="profile">基準・補正</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="app"><div class="panel"><p class="muted">読み込み中…</p></div></main>
+<input type="file" id="file" accept="image/*" hidden>
+<div id="layer"></div>
+
+<script>
+'use strict';
+/* ====================== 定義 ====================== */
+const SLOTS = [
+  { k: 'q_front', g: 'qt', en: 'Front', name: '正面', measure: 'front' },
+  { k: 'q_right', g: 'qt', en: 'Right', name: '右向き（右側面）', measure: 'side' },
+  { k: 'q_back',  g: 'qt', en: 'Back',  name: '背面' },
+  { k: 'q_left',  g: 'qt', en: 'Left',  name: '左向き（左側面）', measure: 'side' },
+  { k: 'p_fdb', g: 'pose', en: '01', name: 'フロント・ダブルバイセップス' },
+  { k: 'p_fls', g: 'pose', en: '02', name: 'フロント・ラットスプレッド' },
+  { k: 'p_sc',  g: 'pose', en: '03', name: 'サイドチェスト' },
+  { k: 'p_bdb', g: 'pose', en: '04', name: 'バック・ダブルバイセップス' },
+  { k: 'p_bls', g: 'pose', en: '05', name: 'バック・ラットスプレッド' },
+  { k: 'p_st',  g: 'pose', en: '06', name: 'サイドトライセップス' },
+  { k: 'p_at',  g: 'pose', en: '07', name: 'アブドミナル・アンド・サイ' },
+];
+const SLOT = Object.fromEntries(SLOTS.map(s => [s.k, s]));
+
+// 2点で測る項目。head は全写真共通の物差し（頭頂〜あご先）
+const MARKS = {
+  head:      { name: '頭の高さ', hint: '頭のてっぺん → あごの先', why: 'すべての長さの物差しになります（脂肪で変わりにくい）' },
+  shoulder:  { name: '肩幅', hint: '左右の三角筋の一番外側', why: '腕を下ろしたリラックスの姿勢で' },
+  neck:      { name: '首の幅', hint: '首の一番細いところの左右端' },
+  chest:     { name: '胸の幅', hint: 'わきの下の高さで、胴体の左右端（広背筋まで含む）' },
+  arm:       { name: '上腕の幅', hint: '片方の上腕の一番太いところの左右端' },
+  forearm:   { name: '前腕の幅', hint: '片方の前腕の一番太いところの左右端' },
+  waist:     { name: 'ウエストの幅', hint: '胴の一番細いところの左右端' },
+  hip:       { name: 'ヒップの幅', hint: 'お尻（大転子）の一番幅の広いところ' },
+  thigh:     { name: '太ももの幅', hint: '片脚の太ももの一番太いところ（付け根の少し下）' },
+  calf:      { name: 'ふくらはぎの幅', hint: '片脚のふくらはぎの一番太いところ' },
+  neck_d:    { name: '首の厚み', hint: '首の一番細いところの前端 → 後端' },
+  chest_d:   { name: '胸の厚み', hint: '乳首の高さで、胸の前端 → 背中の後端' },
+  arm_d:     { name: '上腕の厚み', hint: '上腕の一番太いところの前端（二頭）→ 後端（三頭）' },
+  forearm_d: { name: '前腕の厚み', hint: '前腕の一番太いところの前端 → 後端' },
+  waist_d:   { name: 'ウエストの厚み', hint: '胴の一番細いところの腹側 → 背中側' },
+  hip_d:     { name: 'ヒップの厚み', hint: 'お尻の一番出ているところ → 下腹の前端' },
+  thigh_d:   { name: '太ももの厚み', hint: '太ももの一番太いところの前端 → 後端（ハム）' },
+  calf_d:    { name: 'ふくらはぎの厚み', hint: 'ふくらはぎの一番太いところの前端 → 後端' },
+};
+const MARKS_FOR = {
+  front: ['head', 'shoulder', 'neck', 'chest', 'arm', 'forearm', 'waist', 'hip', 'thigh', 'calf'],
+  side:  ['head', 'neck_d', 'chest_d', 'arm_d', 'forearm_d', 'waist_d', 'hip_d', 'thigh_d', 'calf_d'],
+  align: ['head'],
+};
+// 周囲長は 正面の幅 × 側面の厚み の楕円で近似する。厚みがないときは ratio（厚み/幅の目安）で補う
+const PARTS = [
+  { k: 'shoulder', name: '肩幅', short: '肩幅', type: 'width' },
+  { k: 'neck',    name: '首囲', short: '首', ratio: 1.0 },
+  { k: 'chest',   name: '胸囲', short: '胸囲', ratio: 0.72 },
+  { k: 'arm',     name: '上腕囲', short: '腕', ratio: 1.0 },
+  { k: 'forearm', name: '前腕囲', short: '前腕', ratio: 0.85 },
+  { k: 'waist',   name: 'ウエスト', short: 'ウエスト', ratio: 0.78, lowerBetter: true },
+  { k: 'hip',     name: 'ヒップ', short: 'ヒップ', ratio: 0.85 },
+  { k: 'thigh',   name: '太もも囲', short: '太もも', ratio: 1.0 },
+  { k: 'calf',    name: 'ふくらはぎ囲', short: 'ふくらはぎ', ratio: 1.0 },
+];
+const PART = Object.fromEntries(PARTS.map(p => [p.k, p]));
+const DEFAULT_HEAD_CM = 23;
+const HEADS_PER_HEIGHT = 7.6; // 成人男性の平均的な頭身
+
+/* ====================== ユーティリティ ====================== */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (v, d = 1) => (v == null || !isFinite(v)) ? '—' : v.toFixed(d);
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const fmtDate = s => { if (!s) return ''; const [y, m, d] = s.split('-'); return `${y}.${m}.${d}`; };
+const dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+function ellipsePerimeter(w, d) { // Ramanujan の近似
+  const a = w / 2, b = d / 2;
+  return Math.PI * (3 * (a + b) - Math.sqrt((3 * a + b) * (a + 3 * b)));
+}
+let toastTimer;
+function toast(msg) {
+  let t = $('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.append(t); }
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+function loadImage(url) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+}
+
+/* ====================== 保存先 ======================
+   claude.ai で開いたとき: 記録は db の本人専用領域（data/users/<id>/）、写真は assets。
+   それ以外（ファイルを直接開いたなど）: このブラウザの IndexedDB。 */
+const Store = {
+  mode: 'local',
+  async init() {
+    const cloud = await this.tryCloud();
+    if (cloud) { Object.assign(this, cloud); this.mode = 'cloud'; return; }
+    await Local.open();
+    Object.assign(this, Local.api); this.mode = 'local';
+  },
+  async tryCloud() {
+    if (!window.claude || !window.claude.use) return null;
+    try {
+      const [db, user, assets] = await Promise.all([claude.use('db'), claude.use('user'), claude.use('assets')]);
+      if (!db || !user || !assets) return null;
+      const id = await user.id();
+      if (!id) return null;
+      const col = db.collection('data/users/' + id);
+      return {
+        async listDocs() { const s = await col.get(); return s.docs.map(d => ({ id: d.id, ...d.data() })); },
+        async putDoc(doc) { const { id: k, ...body } = doc; await col.doc(k).set(JSON.parse(JSON.stringify(body))); },
+        async delDoc(k) { await col.doc(k).delete(); },
+        async putPhoto(blob) { const r = await assets.upload(blob, { type: 'image/jpeg' }); return 'a:' + r.id; },
+        async photoURL(ref) { return ref.startsWith('a:') ? '/_blob/' + ref.slice(2) : ''; },
+        async delPhoto(ref) { if (ref.startsWith('a:')) await assets.delete(ref.slice(2)); },
+      };
+    } catch (e) { console.warn(e); return null; }
+  },
+};
+const Local = {
+  db: null, urls: new Map(),
+  open() {
+    return new Promise((res, rej) => {
+      let req;
+      try { req = indexedDB.open('physique-log', 1); } catch (e) { return rej(e); }
+      req.onupgradeneeded = () => { req.result.createObjectStore('docs', { keyPath: 'id' }); req.result.createObjectStore('blobs'); };
+      req.onsuccess = () => { this.db = req.result; res(); };
+      req.onerror = () => rej(req.error);
+    });
+  },
+  tx(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode); const r = fn(t.objectStore(store));
+      t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error);
+    });
+  },
+  get api() {
+    const L = this;
+    return {
+      listDocs: () => L.tx('docs', 'readonly', s => s.getAll()),
+      putDoc: doc => L.tx('docs', 'readwrite', s => s.put(JSON.parse(JSON.stringify(doc)))),
+      delDoc: k => L.tx('docs', 'readwrite', s => s.delete(k)),
+      async putPhoto(blob) { const k = uid(); await L.tx('blobs', 'readwrite', s => s.put(blob, k)); return 'l:' + k; },
+      async photoURL(ref) {
+        if (L.urls.has(ref)) return L.urls.get(ref);
+        const blob = await L.tx('blobs', 'readonly', s => s.get(ref.slice(2)));
+        const url = blob ? URL.createObjectURL(blob) : '';
+        L.urls.set(ref, url); return url;
+      },
+      async delPhoto(ref) { await L.tx('blobs', 'readwrite', s => s.delete(ref.slice(2))); L.urls.delete(ref); },
+    };
+  },
+};
+
+/* ====================== 状態 ====================== */
+const S = {
+  sessions: [], profile: { id: 'profile', headCm: null, heightCm: null, calib: {} },
+  tab: 'log', view: { name: 'home' },
+  compare: { slot: 'q_front', a: null, b: null, mode: 'side', alpha: 0.5, split: 0.5 },
+  trend: { metric: 'weight' },
+  urls: {},
+};
+const sorted = () => [...S.sessions].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.createdAt || 0) - (b.createdAt || 0));
+const getSession = id => S.sessions.find(s => s.id === id);
+
+async function photoURL(ref) {
+  if (!ref) return '';
+  if (!S.urls[ref]) S.urls[ref] = await Store.photoURL(ref);
+  return S.urls[ref];
+}
+const saveTimers = {};
+function saveSession(s, delay = 500) {
+  s.updatedAt = Date.now();
+  clearTimeout(saveTimers[s.id]);
+  return new Promise(res => {
+    saveTimers[s.id] = setTimeout(async () => {
+      try { await Store.putDoc(s); } catch (e) { console.error(e); toast('保存できませんでした。通信状態を確かめてもう一度操作してください'); }
+      res();
+    }, delay);
+  });
+}
+async function saveProfile() {
+  try { await Store.putDoc(S.profile); } catch (e) { console.error(e); toast('保存できませんでした'); }
+}
+
+/* ====================== 計算 ====================== */
+function headBasis() {
+  const p = S.profile;
+  if (p.headCm > 0) return { cm: +p.headCm, label: `頭の高さ ${fmt(+p.headCm)}cm（入力値）` };
+  if (p.heightCm > 0) { const cm = p.heightCm / HEADS_PER_HEIGHT; return { cm, label: `身長 ${p.heightCm}cm ÷ ${HEADS_PER_HEIGHT}頭身 ≒ ${fmt(cm)}cm` }; }
+  return { cm: DEFAULT_HEAD_CM, label: `仮の値 ${DEFAULT_HEAD_CM}cm（「基準・補正」で設定できます）` };
+}
+// 1回分の記録から各部位を出す。単位は「頭の高さ」=1 と cm の両方
+function computeMetrics(s) {
+  const out = { parts: {}, hasFront: false, hasSide: false };
+  if (!s) return out;
+  const basis = headBasis();
+  const front = s.photos?.q_front, side = s.photos?.q_right?.marks?.head ? s.photos.q_right : s.photos?.q_left;
+  const len = (ph, k) => { const m = ph?.marks?.[k]; return m && m.length === 2 ? dist(m[0], m[1]) : null; };
+  const fh = len(front, 'head'), sh = len(side, 'head');
+  out.hasFront = !!fh; out.hasSide = !!sh;
+  if (!fh) return out;
+  for (const p of PARTS) {
+    const wpx = len(front, p.k);
+    if (!wpx) continue;
+    const wH = wpx / fh, wCm = wH * basis.cm;
+    if (p.type === 'width') { out.parts[p.k] = { wH, wCm, value: wCm, valueH: wH }; continue; }
+    const dpx = sh ? len(side, p.k + '_d') : null;
+    const dH = dpx ? dpx / sh : wH * p.ratio;
+    const factor = S.profile.calib?.[p.k] || 1;
+    const rawH = ellipsePerimeter(wH, dH);
+    out.parts[p.k] = { wH, wCm, dH, dCm: dH * basis.cm, depthEstimated: !dpx, factor, rawH, valueH: rawH * factor, value: rawH * factor * basis.cm };
+  }
+  if (out.parts.shoulder && out.parts.waist) out.vtaper = out.parts.shoulder.wH / out.parts.waist.wH;
+  return out;
+}
+function previousOf(s) {
+  const list = sorted(); const i = list.findIndex(x => x.id === s.id);
+  return i > 0 ? list.slice(0, i).reverse() : [];
+}
+function deltaInfo(cur, prev, lowerBetter) {
+  if (cur == null || prev == null) return { html: '<span class="d flat">—</span>' };
+  const d = cur - prev; const ad = Math.abs(d);
+  if (ad < 0.05) return { html: '<span class="d flat">±0.0</span>' };
+  const good = lowerBetter ? d < 0 : d > 0;
+  return { html: `<span class="d ${good ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${ad.toFixed(1)}</span>` };
+}
+
+/* ====================== 人体図 ======================
+   単位は頭の高さ。y=0 が頭頂、7.6 付近が足裏。測った幅で輪郭の太さが変わる */
+const FIG_DEFAULT = { neck: 0.55, shoulder: 2.45, chest: 1.75, arm: 0.62, forearm: 0.5, waist: 1.3, hip: 1.45, thigh: 0.82, calf: 0.56 };
+function smoothClosed(pts) {
+  const n = pts.length; const f = p => p[0].toFixed(3) + ' ' + p[1].toFixed(3);
+  let d = 'M' + f(pts[0]);
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ' C' + f(c1) + ' ' + f(c2) + ' ' + f(p2);
+  }
+  return d + 'Z';
+}
+function figureGeometry(widths) {
+  const w = { ...FIG_DEFAULT, ...widths };
+  const sh = w.shoulder / 2, ch = w.chest / 2, wa = w.waist / 2, hi = w.hip / 2, nk = w.neck / 2;
+  const legTop = 0.03 + w.thigh / 2, legBot = 0.3;
+  const lx = y => legTop + (legBot - legTop) * (y - 4.3) / (7.3 - 4.3);
+  const right = [
+    [nk * 0.95, 0.85], [nk, 1.15], [nk + (sh - nk) * 0.45, 1.36], [Math.max(ch + 0.1, sh - 0.35), 1.55], [ch, 1.98], [ch * 0.97, 2.25],
+    [wa, 2.95], [hi * 0.97, 3.35], [hi, 3.6], [lx(4.3) + w.thigh / 2, 4.3],
+    [lx(5.1) + 0.23, 5.1], [lx(5.4) + 0.2, 5.4], [lx(5.95) + w.calf * 0.55, 5.95], [lx(6.7) + 0.14, 6.7], [lx(7.3) + 0.11, 7.3], [lx(7.3) + 0.2, 7.62],
+    [lx(7.3) - 0.12, 7.65], [lx(7.3) - 0.1, 7.3], [lx(6.6) - 0.1, 6.6], [lx(6.0) - w.calf * 0.45, 6.0], [lx(5.4) - 0.19, 5.4], [lx(4.6) - w.thigh * 0.45, 4.6],
+    [0.0, 4.08],
+  ];
+  const left = right.slice(0, -1).reverse().map(([x, y]) => [-x, y]);
+  const body = smoothClosed([...right, ...left]);
+  // 腕（右側。左は鏡写し）
+  const xa = Math.max(sh - w.arm / 2, ch + w.arm / 2 + 0.03);
+  const xe = xa + 0.1, xf = xe + 0.04, xw = xf + 0.03;
+  const arm = [
+    [ch + 0.02, 1.92], [nk + (sh - nk) * 0.55, 1.4], [sh * 0.93, 1.5], [sh, 1.72], [xa + w.arm / 2, 2.35], [xe + 0.17, 2.95],
+    [xf + w.forearm / 2, 3.3], [xw + 0.13, 3.85], [xw + 0.16, 4.3], [xw, 4.45], [xw - 0.15, 4.3], [xw - 0.12, 3.85],
+    [xf - w.forearm / 2, 3.3], [xe - 0.15, 2.95], [xa - w.arm / 2, 2.4],
+  ];
+  const armR = smoothClosed(arm), armL = smoothClosed(arm.map(([x, y]) => [-x, y]));
+  // 測定線: [y, x1, x2]
+  const lines = {
+    neck: [1.12, -nk, nk], shoulder: [1.72, -sh, sh], chest: [2.02, -ch, ch], waist: [2.95, -wa, wa], hip: [3.6, -hi, hi],
+    arm: [2.35, xa - w.arm / 2, xa + w.arm / 2], forearm: [3.3, xf - w.forearm / 2, xf + w.forearm / 2],
+    thigh: [4.3, -(lx(4.3) + w.thigh / 2), -(lx(4.3) - w.thigh / 2)], calf: [5.95, -(lx(5.95) + w.calf * 0.55), -(lx(5.95) - w.calf * 0.45)],
+  };
+  return { body, armR, armL, lines };
+}
+function figureSVG(m, prevM, opts = {}) {
+  const widths = {}; const prevW = {};
+  for (const k in m?.parts || {}) widths[k] = m.parts[k].wH;
+  for (const k in prevM?.parts || {}) prevW[k] = prevM.parts[k].wH;
+  const g = figureGeometry(widths);
+  const pg = prevM && Object.keys(prevW).length ? figureGeometry(prevW) : null;
+  const leftSide = ['neck', 'shoulder', 'chest', 'waist', 'hip', 'thigh'];
+  const labels = PARTS.map(p => {
+    const ln = g.lines[p.k]; if (!ln) return '';
+    const part = m?.parts?.[p.k]; const has = !!part;
+    const [y, x1, x2] = ln; const onLeft = leftSide.includes(p.k);
+    const tx = onLeft ? -3.15 : 3.15, anchor = onLeft ? 'start' : 'end';
+    const ex = onLeft ? x1 : x2;
+    const val = has ? fmt(part.value) : '—';
+    const pv = prevM?.parts?.[p.k]?.value;
+    const dl = has && pv != null ? (part.value - pv) : null;
+    const dtxt = dl == null ? '' : (Math.abs(dl) < 0.05 ? '±0.0' : (dl > 0 ? '+' : '−') + Math.abs(dl).toFixed(1));
+    const good = dl == null ? null : (PART[p.k].lowerBetter ? dl < 0 : dl > 0);
+    const ly = y + ({ neck: -0.17, shoulder: -0.17, chest: 0.13, thigh: 0.05 }[p.k] || 0);
+    return `<g opacity="${has ? 1 : 0.45}">
+      <line x1="${x1}" x2="${x2}" y1="${y}" y2="${y}" stroke="var(--ink)" stroke-width="0.022" ${has ? '' : 'stroke-dasharray="0.05 0.05"'}/>
+      <circle cx="${x1}" cy="${y}" r="0.035" fill="var(--ink)"/><circle cx="${x2}" cy="${y}" r="0.035" fill="var(--ink)"/>
+      <line x1="${ex}" x2="${onLeft ? tx + 1.25 : tx - 1.25}" y1="${y}" y2="${ly}" stroke="var(--muted)" stroke-width="0.012"/>
+      <text x="${tx}" y="${ly - 0.06}" text-anchor="${anchor}" font-size="0.17" fill="var(--muted)" font-family="var(--body)">${esc(p.short)}</text>
+      <text x="${tx}" y="${ly + 0.19}" text-anchor="${anchor}" font-size="0.25" font-weight="700" fill="var(--ink)" font-family="var(--display)">${val}${has && dtxt ? `<tspan font-size="0.17" fill="${dl != null && Math.abs(dl) >= 0.05 ? (good ? 'var(--up)' : 'var(--down)') : 'var(--muted)'}" dx="0.06">${dtxt}</tspan>` : ''}</text>
+    </g>`;
+  }).join('');
+  const prevLayer = pg ? `<g fill="none" stroke="var(--prev)" stroke-width="0.025" stroke-dasharray="0.08 0.05">
+      <path d="${pg.body}"/><path d="${pg.armR}"/><path d="${pg.armL}"/></g>` : '';
+  return `<svg viewBox="-3.3 -0.15 6.6 7.95" role="img" aria-label="${esc(opts.aria || '推定した体型の図')}">
+    <g fill="var(--fig)" stroke="var(--fig-edge)" stroke-width="0.025">
+      <path d="${g.body}"/><path d="${g.armR}"/><path d="${g.armL}"/>
+      <ellipse cx="0" cy="0.5" rx="0.34" ry="0.5"/>
+    </g>
+    ${prevLayer}
+    <g>
+      <line x1="-0.5" x2="0.5" y1="0" y2="0" stroke="var(--accent)" stroke-width="0.02"/>
+      <line x1="-0.5" x2="0.5" y1="1" y2="1" stroke="var(--accent)" stroke-width="0.02"/>
+      <text x="0.56" y="0.56" font-size="0.15" fill="var(--accent)" font-family="var(--body)">基準</text>
+    </g>
+    ${labels}
+  </svg>`;
+}
+
+/* ====================== 画面 ====================== */
+const app = $('#app');
+function setTab(tab) {
+  S.tab = tab;
+  if (tab === 'log') S.view = { name: 'home' };
+  try { history.replaceState(null, '', '#' + tab); } catch (e) {}
+  render();
+  window.scrollTo(0, 0);
+}
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (b) setTab(b.dataset.tab); });
+window.addEventListener('hashchange', () => { const t = location.hash.slice(1); if (['log', 'compare', 'trend', 'profile'].includes(t) && t !== S.tab) setTab(t); });
+
+function render() {
+  for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-current', b.dataset.tab === S.tab ? 'page' : 'false');
+  if (S.tab === 'log') {
+    if (S.view.name === 'session') return renderSession();
+    if (S.view.name === 'measure') return renderMeasure();
+    return renderHome();
+  }
+  if (S.tab === 'compare') return renderCompare();
+  if (S.tab === 'trend') return renderTrend();
+  if (S.tab === 'profile') return renderProfile();
+}
+function storeNote() {
+  return Store.mode === 'cloud'
+    ? '写真と記録は claude.ai のあなた専用の保存領域に保存されます（どの端末からでも同じ記録が見られます）。'
+    : '写真と記録はこのブラウザの中だけに保存されます。claude.ai で公開したページから開くと、どの端末からでも同じ記録を使えます。';
+}
+
+/* ---------- 記録一覧 ---------- */
+async function renderHome() {
+  const list = sorted().reverse();
+  const latest = list[0];
+  const m = computeMetrics(latest);
+  const prev = latest ? previousOf(latest).find(x => computeMetrics(x).hasFront) : null;
+  const pm = prev ? computeMetrics(prev) : null;
+  let summary;
+  if (!latest) {
+    summary = `<section class="panel">
+      <div class="row between"><h2>はじめましょう</h2><span class="sample-tag">サンプル図</span></div>
+      <div class="result">
+        <div class="figure">${figureSVG(null, null, { aria: 'サンプルの体型図' })}</div>
+        <div style="display:grid;gap:12px;align-content:start">
+          <p>月に1回など決まったタイミングで、<b>クォーターターン4枚と規定7ポーズ</b>を撮って登録します。</p>
+          <p>正面と側面の写真で、頭のてっぺんとあご先、各部位の両端をタップすると、<b>頭の高さを物差しにして</b>肩幅・胸囲・腕・太ももなどを概算し、この図に描きます。</p>
+          <p class="small muted">左の図は計測前のサンプルです。数字はあなたの記録を登録すると入ります。</p>
+          <div><button class="btn primary" data-act="new">最初の記録を追加</button></div>
+        </div>
+      </div>
+    </section>`;
+  } else {
+    summary = `<section class="panel">
+      <div class="row between">
+        <div><div class="eyebrow">Latest</div><h2 class="num" style="font-size:30px">${fmtDate(latest.date)}</h2></div>
+        <div class="row"><button class="btn" data-act="open" data-id="${latest.id}">この記録を開く</button><button class="btn primary" data-act="new">記録を追加</button></div>
+      </div>
+      ${m.hasFront ? `<div class="result">
+        <div class="figure">${figureSVG(m, pm)}
+          <div class="legend"><span><i></i>${fmtDate(latest.date)}</span>${pm ? `<span><i class="prev"></i>${fmtDate(prev.date)}（前回）</span>` : ''}</div>
+        </div>
+        ${partsTable(latest, m, prev, pm)}
+      </div>` : `<p class="muted">正面の写真で「頭の高さ」を計測すると、ここに体型の図と各部位の推定値が出ます。</p>`}
+    </section>`;
+  }
+  const items = await Promise.all(list.map(async s => {
+    const ph = s.photos?.q_front || Object.values(s.photos || {})[0];
+    const url = ph ? await photoURL(ph.ref) : '';
+    const n = Object.keys(s.photos || {}).length;
+    const mm = computeMetrics(s);
+    return `<button class="sess" data-act="open" data-id="${s.id}">
+      <span class="thumb" style="${url ? `background-image:url('${url}')` : ''}"></span>
+      <span style="display:grid;gap:4px;min-width:0">
+        <span class="date">${fmtDate(s.date)}</span>
+        <span class="meta">${s.weight ? `<span class="num" style="font-size:16px;color:var(--ink)">${fmt(+s.weight)}</span> kg　` : ''}写真 ${n}/11 ${s.note ? '・' + esc(s.note.slice(0, 24)) : ''}</span>
+      </span>
+      <span class="pill ${mm.hasFront ? 'on' : ''}">${mm.hasFront ? '計測済み' : '未計測'}</span>
+    </button>`;
+  }));
+  app.innerHTML = summary + (list.length ? `<section class="panel"><h2>記録</h2><div class="sessions">${items.join('')}</div></section>` : '')
+    + `<p class="store-note">${storeNote()}</p>`;
+}
+function partsTable(s, m, prev, pm) {
+  const first = sorted().find(x => x.id !== s.id && x.date <= s.date && computeMetrics(x).hasFront);
+  const fm = first && first.id !== prev?.id ? computeMetrics(first) : null;
+  const rows = PARTS.map(p => {
+    const v = m.parts[p.k];
+    const est = v?.depthEstimated ? '<div class="est">厚みは目安値</div>' : (v?.factor && v.factor !== 1 ? '<div class="est">実測で補正</div>' : '');
+    return `<tr><td>${p.name}${est}</td><td class="v">${v ? fmt(v.value) : '—'}</td>
+      <td>${deltaInfo(v?.value, pm?.parts[p.k]?.value, p.lowerBetter).html}</td>
+      ${fm ? `<td>${deltaInfo(v?.value, fm.parts[p.k]?.value, p.lowerBetter).html}</td>` : ''}</tr>`;
+  }).join('');
+  const vt = m.vtaper != null ? `<tr><td>肩幅 ÷ ウエスト幅</td><td class="v">${m.vtaper.toFixed(2)}</td><td>${pm?.vtaper != null ? deltaRatio(m.vtaper, pm.vtaper) : '<span class="d flat">—</span>'}</td>${fm ? `<td>${fm.vtaper != null ? deltaRatio(m.vtaper, fm.vtaper) : '<span class="d flat">—</span>'}</td>` : ''}</tr>` : '';
+  const w = s.weight ? `<tr><td>体重 kg</td><td class="v">${fmt(+s.weight)}</td><td>${prev?.weight ? deltaPlain(+s.weight, +prev.weight) : '<span class="d flat">—</span>'}</td>${fm ? `<td>${first.weight ? deltaPlain(+s.weight, +first.weight) : '<span class="d flat">—</span>'}</td>` : ''}</tr>` : '';
+  return `<div style="display:grid;gap:8px;min-width:0">
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>部位（cm）</th><th>推定</th><th>前回比${prev ? `<br><span class="num">${fmtDate(prev.date)}</span>` : ''}</th>${fm ? `<th>初回比<br><span class="num">${fmtDate(first.date)}</span></th>` : ''}</tr></thead>
+      <tbody>${rows}${vt}${w}</tbody>
+    </table></div>
+    <p class="small muted">物差し: ${esc(headBasis().label)}。${m.hasSide ? '' : '側面の写真を計測すると、厚みを使って周囲長が正確になります。'}写真からの概算なので、撮影の距離・姿勢・パンプでも数cm動きます。同じ条件で撮った回どうしで比べてください。</p>
+  </div>`;
+}
+const deltaRatio = (a, b) => { const d = a - b; return Math.abs(d) < 0.005 ? '<span class="d flat">±0.00</span>' : `<span class="d ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲' : '▼'}${Math.abs(d).toFixed(2)}</span>`; };
+const deltaPlain = (a, b) => { const d = a - b; return Math.abs(d) < 0.05 ? '<span class="d flat">±0.0</span>' : `<span class="d flat">${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(1)}</span>`; };
+
+/* ---------- 1回分の記録 ---------- */
+async function renderSession() {
+  const s = getSession(S.view.id);
+  if (!s) { S.view = { name: 'home' }; return render(); }
+  const m = computeMetrics(s);
+  const prev = previousOf(s).find(x => computeMetrics(x).hasFront);
+  const pm = prev ? computeMetrics(prev) : null;
+  const slotCard = async sl => {
+    const ph = s.photos?.[sl.k];
+    let badge = '';
+    if (ph) {
+      const keys = MARKS_FOR[sl.measure || 'align'];
+      const done = keys.filter(k => ph.marks?.[k]?.length === 2).length;
+      badge = sl.measure ? `<span class="badge ${done === keys.length ? '' : 'todo'}">計測 ${done}/${keys.length}</span>`
+        : (done ? '<span class="badge">位置合わせ済</span>' : '');
+    }
+    const url = ph ? await photoURL(ph.ref) : '';
+    const busy = S.uploading === s.id + sl.k;
+    return `<button class="slot ${ph ? 'filled' : ''}" data-act="slot" data-slot="${sl.k}" aria-label="${esc(sl.name)}">
+      ${url ? `<img src="${url}" alt="" loading="lazy">` : `<span class="plus">${busy ? '…' : '+'}</span>`}
+      ${badge}
+      <span class="cap"><b>${sl.en}</b>${esc(sl.name)}${busy ? '<br>アップロード中…' : ''}</span>
+    </button>`;
+  };
+  const qt = await Promise.all(SLOTS.filter(x => x.g === 'qt').map(slotCard));
+  const poses = await Promise.all(SLOTS.filter(x => x.g === 'pose').map(slotCard));
+  app.innerHTML = `
+    <div class="row between">
+      <button class="btn ghost" data-act="home">← 記録一覧</button>
+      <button class="btn danger" data-act="delsession">この記録を削除</button>
+    </div>
+    <section class="panel">
+      <div class="fields">
+        <div class="field"><label for="f-date">撮影日</label><input id="f-date" type="date" value="${esc(s.date)}" data-field="date"></div>
+        <div class="field"><label for="f-weight">体重 kg</label><input id="f-weight" type="number" inputmode="decimal" step="0.1" value="${esc(s.weight ?? '')}" data-field="weight"></div>
+        <div class="field"><label for="f-bf">体脂肪率 %（任意）</label><input id="f-bf" type="number" inputmode="decimal" step="0.1" value="${esc(s.bodyFat ?? '')}" data-field="bodyFat"></div>
+      </div>
+      <div class="field"><label for="f-note">メモ（時期・コンディションなど）</label><textarea id="f-note" data-field="note" placeholder="例: 減量8週目、朝・空腹、パンプなし">${esc(s.note ?? '')}</textarea></div>
+    </section>
+    <section class="panel">
+      <div class="group-title"><h2>クォーターターン</h2><span class="small muted">正面と側面は計測に使います</span></div>
+      <div class="slots">${qt.join('')}</div>
+      <div class="group-title"><h2>規定7ポーズ</h2><span class="small muted">頭の位置を合わせておくと比較で大きさがそろいます</span></div>
+      <div class="slots">${poses.join('')}</div>
+    </section>
+    <section class="panel">
+      <div class="row between"><h2>推定サイズ</h2>${s.photos?.q_front ? `<button class="btn" data-act="measure" data-slot="q_front">正面を計測</button>` : ''}</div>
+      ${m.hasFront ? `<div class="result">
+        <div class="figure">${figureSVG(m, pm)}
+          <div class="legend"><span><i></i>${fmtDate(s.date)}</span>${pm ? `<span><i class="prev"></i>${fmtDate(prev.date)}（前回）</span>` : ''}</div>
+        </div>
+        ${partsTable(s, m, prev, pm)}
+      </div>` : `<p class="muted">${s.photos?.q_front ? '正面の写真で「頭の高さ」と各部位の幅をタップすると、推定サイズが出ます。' : 'まず正面（クォーターターン）の写真を追加してください。'}</p>`}
+    </section>`;
+}
+app.addEventListener('input', e => {
+  const f = e.target.dataset.field; if (!f) return;
+  const s = getSession(S.view.id); if (!s) return;
+  let v = e.target.value;
+  if (f === 'weight' || f === 'bodyFat') v = v === '' ? null : +v;
+  if (f === 'date' && !v) return;
+  s[f] = v; saveSession(s, 800);
+});
+
+app.addEventListener('click', async e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'new') return newSession();
+  if (act === 'open') { S.tab = 'log'; S.view = { name: 'session', id: b.dataset.id }; render(); window.scrollTo(0, 0); return; }
+  if (act === 'home') { S.view = { name: 'home' }; render(); return; }
+  if (act === 'slot') return slotMenu(b.dataset.slot);
+  if (act === 'measure') { S.view = { name: 'measure', id: S.view.id, slot: b.dataset.slot }; render(); window.scrollTo(0, 0); return; }
+  if (act === 'delsession') {
+    const s = getSession(S.view.id);
+    if (await confirmSheet(`${fmtDate(s.date)} の記録を削除しますか？`, '写真もすべて削除され、元に戻せません。', '削除する')) {
+      for (const ph of Object.values(s.photos || {})) { try { await Store.delPhoto(ph.ref); } catch (err) { console.warn(err); } }
+      await Store.delDoc(s.id);
+      S.sessions = S.sessions.filter(x => x.id !== s.id);
+      S.view = { name: 'home' }; render(); toast('削除しました');
+    }
+  }
+});
+async function newSession() {
+  const s = { id: 's_' + uid(), date: today(), weight: null, bodyFat: null, note: '', photos: {}, createdAt: Date.now() };
+  const last = sorted().pop();
+  if (last?.weight) s.weight = last.weight;
+  S.sessions.push(s);
+  await saveSession(s, 0);
+  S.tab = 'log'; S.view = { name: 'session', id: s.id }; render(); window.scrollTo(0, 0);
+}
+
+/* ---------- 写真の追加・差し替え ---------- */
+const fileInput = $('#file');
+let pendingSlot = null;
+function pickPhoto(slot) { pendingSlot = slot; fileInput.value = ''; fileInput.click(); }
+fileInput.addEventListener('change', async () => {
+  const file = fileInput.files[0]; const s = getSession(S.view.id);
+  if (!file || !s || !pendingSlot) return;
+  const slot = pendingSlot; pendingSlot = null;
+  S.uploading = s.id + slot; render();
+  try {
+    const { blob, w, h } = await shrink(file);
+    const ref = await Store.putPhoto(blob);
+    const old = s.photos[slot];
+    s.photos[slot] = { ref, w, h, marks: {} };
+    await saveSession(s, 0);
+    if (old) { try { await Store.delPhoto(old.ref); } catch (err) { console.warn(err); } }
+    toast(`${SLOT[slot].name} を追加しました`);
+  } catch (err) {
+    console.error(err);
+    const code = err?.code;
+    toast(code === 'quota_or_state' ? '保存容量がいっぱいです。古い記録を削除してから追加してください'
+      : code === 'too_large' ? '写真が大きすぎます' : '写真を追加できませんでした。JPEG か PNG の写真で試してください');
+  }
+  S.uploading = null; render();
+});
+async function shrink(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(url);
+    const max = 2000, sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * sc), h = Math.round(img.naturalHeight * sc);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.88));
+    if (!blob) throw new Error('encode failed');
+    return { blob, w, h };
+  } finally { URL.revokeObjectURL(url); }
+}
+async function slotMenu(slot) {
+  const s = getSession(S.view.id); const ph = s.photos?.[slot]; const sl = SLOT[slot];
+  if (!ph) return pickPhoto(slot);
+  const choice = await sheet(`<h3>${esc(sl.name)}</h3>`, [
+    { v: 'measure', label: sl.measure ? '計測する' : '頭の位置を合わせる（比較用）', cls: 'primary' },
+    { v: 'replace', label: '写真を差し替える' },
+    { v: 'delete', label: 'この写真を削除', cls: 'danger' },
+    { v: null, label: '閉じる', cls: 'ghost' },
+  ]);
+  if (choice === 'measure') { S.view = { name: 'measure', id: s.id, slot }; render(); window.scrollTo(0, 0); }
+  if (choice === 'replace') pickPhoto(slot);
+  if (choice === 'delete' && await confirmSheet(`${sl.name} の写真を削除しますか？`, '計測した点も消えます。', '削除する')) {
+    delete s.photos[slot]; await saveSession(s, 0);
+    try { await Store.delPhoto(ph.ref); } catch (err) { console.warn(err); }
+    render();
+  }
+}
+function sheet(head, buttons) {
+  return new Promise(res => {
+    const layer = $('#layer');
+    layer.innerHTML = `<div class="sheet-bg"><div class="sheet" role="dialog" aria-modal="true">${head}<div class="actions">
+      ${buttons.map((b, i) => `<button class="btn ${b.cls || ''}" data-i="${i}">${esc(b.label)}</button>`).join('')}</div></div></div>`;
+    const close = v => { layer.innerHTML = ''; res(v); };
+    layer.querySelector('.sheet-bg').addEventListener('click', e => {
+      if (e.target.classList.contains('sheet-bg')) return close(null);
+      const b = e.target.closest('[data-i]'); if (b) close(buttons[+b.dataset.i].v);
+    });
+    layer.querySelector('[data-i]').focus();
+  });
+}
+const confirmSheet = (title, body, ok) => sheet(`<h3>${esc(title)}</h3><p class="muted" style="margin:0">${esc(body)}</p>`,
+  [{ v: true, label: ok, cls: 'primary' }, { v: false, label: 'やめる' }]);
+
+/* ---------- 計測（点を打つ） ---------- */
+let ED = null;
+async function renderMeasure() {
+  const s = getSession(S.view.id); const slot = S.view.slot; const ph = s?.photos?.[slot];
+  if (!ph) { S.view = { name: 'session', id: S.view.id }; return render(); }
+  const sl = SLOT[slot]; const keys = MARKS_FOR[sl.measure || 'align'];
+  const url = await photoURL(ph.ref);
+  ph.marks = ph.marks || {};
+  ED = { s, ph, keys, cur: keys.find(k => ph.marks[k]?.length !== 2) || keys[0], zoom: 1, img: null };
+  const otherSide = sl.measure === 'side' ? (slot === 'q_right' ? 'q_left' : 'q_right') : null;
+  app.innerHTML = `<div class="editor">
+    <div class="row between">
+      <button class="btn ghost" data-ed="back">← 戻る</button>
+      <div class="row">
+        ${sl.measure === 'front' && s.photos.q_right ? '<button class="btn" data-ed="go" data-slot="q_right">側面へ →</button>' : ''}
+        ${sl.measure === 'front' && !s.photos.q_right && s.photos.q_left ? '<button class="btn" data-ed="go" data-slot="q_left">側面へ →</button>' : ''}
+        ${otherSide && s.photos[otherSide] ? `<button class="btn" data-ed="go" data-slot="${otherSide}">${SLOT[otherSide].name.slice(0, 3)}で測る</button>` : ''}
+      </div>
+    </div>
+    <div><div class="eyebrow">${sl.en} · ${fmtDate(s.date)}</div><h2>${esc(sl.name)}${sl.measure ? 'を計測' : 'の頭の位置'}</h2></div>
+    <div class="chips" id="ed-chips"></div>
+    <div class="hint" id="ed-hint"></div>
+    <div class="zoombar">
+      <button class="btn" data-ed="zoom" data-z="-1" aria-label="縮小">−</button>
+      <span class="num" id="ed-zoom" style="min-width:3em;text-align:center">100%</span>
+      <button class="btn" data-ed="zoom" data-z="1" aria-label="拡大">＋</button>
+      <button class="btn" data-ed="clear">この項目をやり直す</button>
+      <span class="small muted">点はドラッグで動かせます。拡大すると細かく合わせられます</span>
+    </div>
+    <div class="stage" id="ed-stage"><div class="canvas" id="ed-canvas">
+      <img id="ed-img" src="${url}" alt="${esc(sl.name)}の写真">
+      <svg id="ed-svg" viewBox="0 0 ${ph.w} ${ph.h}" preserveAspectRatio="none"></svg>
+    </div></div>
+  </div>`;
+  ED.img = $('#ed-img');
+  if (!ED.img.complete) await new Promise(r => { ED.img.onload = r; ED.img.onerror = r; });
+  layoutEditor(); drawEditor();
+}
+function layoutEditor() {
+  const stage = $('#ed-stage'); if (!stage || !ED) return;
+  const { w, h } = ED.ph;
+  const fit = Math.min(stage.clientWidth / w, stage.clientHeight / h);
+  const c = $('#ed-canvas');
+  c.style.width = (w * fit * ED.zoom) + 'px'; c.style.height = (h * fit * ED.zoom) + 'px';
+  ED.pxPerUnit = fit * ED.zoom; // 画面px / 画像px
+  $('#ed-zoom').textContent = Math.round(ED.zoom * 100) + '%';
+}
+function drawEditor() {
+  if (!ED) return;
+  const { ph, keys, cur } = ED;
+  $('#ed-chips').innerHTML = keys.map(k => `<button class="chip ${ph.marks[k]?.length === 2 ? 'done' : ''}" data-ed="pick" data-k="${k}" aria-pressed="${k === cur}">${esc(MARKS[k].name)}</button>`).join('');
+  const mk = MARKS[cur]; const n = ph.marks[cur]?.length || 0;
+  $('#ed-hint').innerHTML = `<b>${esc(mk.name)}：${esc(mk.hint)}</b>
+    <span class="muted small">${n === 0 ? '1点目をタップ' : n === 1 ? '2点目をタップ' : '設定済み。点をドラッグして調整できます'}${mk.why ? '　' + esc(mk.why) : ''}</span>`;
+  const u = 1 / ED.pxPerUnit; // 画面1pxを画像単位に
+  let out = '';
+  for (const k of keys) {
+    const pts = ph.marks[k]; if (!pts?.length) continue;
+    const active = k === cur;
+    const col = active ? '#ff9a4d' : '#ffffff';
+    if (pts.length === 2) {
+      out += `<line x1="${pts[0][0]}" y1="${pts[0][1]}" x2="${pts[1][0]}" y2="${pts[1][1]}" stroke="#000" stroke-opacity=".5" stroke-width="${4 * u}"/>`;
+      out += `<line x1="${pts[0][0]}" y1="${pts[0][1]}" x2="${pts[1][0]}" y2="${pts[1][1]}" stroke="${col}" stroke-width="${2 * u}"/>`;
+      const mx = (pts[0][0] + pts[1][0]) / 2, my = (pts[0][1] + pts[1][1]) / 2;
+      out += `<text x="${mx + 8 * u}" y="${my - 8 * u}" font-size="${13 * u}" fill="${col}" stroke="#000" stroke-width="${3 * u}" paint-order="stroke" font-family="sans-serif">${esc(MARKS[k].name.replace(/の(幅|厚み|高さ)$/, ''))}</text>`;
+    }
+    pts.forEach((p, i) => {
+      out += `<circle cx="${p[0]}" cy="${p[1]}" r="${(active ? 7 : 5) * u}" fill="${col}" stroke="#000" stroke-width="${1.5 * u}"/>`;
+      out += `<circle class="handle" data-k="${k}" data-i="${i}" cx="${p[0]}" cy="${p[1]}" r="${16 * u}" fill="transparent"/>`;
+    });
+  }
+  $('#ed-svg').innerHTML = out;
+}
+function svgPoint(e) {
+  const r = $('#ed-svg').getBoundingClientRect();
+  return [+((e.clientX - r.left) / r.width * ED.ph.w).toFixed(1), +((e.clientY - r.top) / r.height * ED.ph.h).toFixed(1)];
+}
+function advance() {
+  const next = ED.keys.find(k => ED.ph.marks[k]?.length !== 2);
+  if (next) ED.cur = next;
+}
+app.addEventListener('click', e => {
+  if (!ED || S.view.name !== 'measure') return;
+  const b = e.target.closest('[data-ed]');
+  if (b) {
+    const a = b.dataset.ed;
+    if (a === 'back') { ED = null; S.view = { name: 'session', id: S.view.id }; render(); return; }
+    if (a === 'go') { S.view = { ...S.view, slot: b.dataset.slot }; render(); return; }
+    if (a === 'pick') { ED.cur = b.dataset.k; drawEditor(); return; }
+    if (a === 'clear') { delete ED.ph.marks[ED.cur]; saveSession(ED.s); drawEditor(); return; }
+    if (a === 'zoom') { zoomBy(+b.dataset.z); return; }
+    return;
+  }
+  if (e.target.closest('#ed-svg') && !e.target.classList.contains('handle')) {
+    if (ED.dragged) { ED.dragged = false; return; }
+    if (ED.ph.marks[ED.cur]?.length === 2) { advance(); if (ED.ph.marks[ED.cur]?.length === 2) return; } // 済んだ項目なら次の未計測へ
+    const pts = ED.ph.marks[ED.cur] || (ED.ph.marks[ED.cur] = []);
+    pts.push(svgPoint(e));
+    if (pts.length === 2) { saveSession(ED.s); advance(); }
+    drawEditor();
+  }
+});
+function zoomBy(dir) {
+  const stage = $('#ed-stage');
+  const cx = (stage.scrollLeft + stage.clientWidth / 2) / ED.pxPerUnit, cy = (stage.scrollTop + stage.clientHeight / 2) / ED.pxPerUnit;
+  const steps = [1, 1.5, 2, 3, 4, 6];
+  const i = Math.max(0, Math.min(steps.length - 1, steps.indexOf(ED.zoom) + dir));
+  ED.zoom = steps[i]; layoutEditor(); drawEditor();
+  stage.scrollLeft = cx * ED.pxPerUnit - stage.clientWidth / 2; stage.scrollTop = cy * ED.pxPerUnit - stage.clientHeight / 2;
+}
+window.addEventListener('resize', () => { if (ED && S.view.name === 'measure') { layoutEditor(); drawEditor(); } });
+
+// ドラッグで点を動かす。指で隠れないように、上にルーペを出す
+let loupe = null;
+app.addEventListener('pointerdown', e => {
+  const h = e.target.closest?.('.handle'); if (!h || !ED) return;
+  e.preventDefault();
+  const k = h.dataset.k, i = +h.dataset.i;
+  ED.drag = { k, i, id: e.pointerId, moved: false };
+  $('#ed-svg').setPointerCapture(e.pointerId); // 点は描き直すたびに作り直すので、消えない svg 側で受ける
+  showLoupe(e);
+});
+app.addEventListener('pointermove', e => {
+  const d = ED?.drag; if (!d || d.id !== e.pointerId) return;
+  if (!d.moved) { d.moved = true; ED.cur = d.k; }
+  ED.ph.marks[d.k][d.i] = svgPoint(e);
+  drawEditor(); showLoupe(e);
+});
+const endDrag = e => {
+  const d = ED?.drag; if (!d || d.id !== e.pointerId) return;
+  ED.drag = null; if (d.moved) { ED.dragged = true; setTimeout(() => { if (ED) ED.dragged = false; }, 0); saveSession(ED.s); }
+  hideLoupe(); drawEditor();
+};
+app.addEventListener('pointerup', endDrag);
+app.addEventListener('pointercancel', endDrag);
+function showLoupe(e) {
+  if (!loupe) { loupe = document.createElement('canvas'); loupe.className = 'loupe'; loupe.width = 264; loupe.height = 264; document.body.append(loupe); }
+  const size = 132, mag = 3;
+  let lx = e.clientX - size / 2, ly = e.clientY - size - 40;
+  if (ly < 8) ly = e.clientY + 40;
+  lx = Math.max(8, Math.min(window.innerWidth - size - 8, lx));
+  loupe.style.left = lx + 'px'; loupe.style.top = ly + 'px';
+  const ctx = loupe.getContext('2d'); const [x, y] = svgPoint(e);
+  const span = size / (ED.pxPerUnit * mag); // 画像単位での表示範囲
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 264, 264);
+  ctx.drawImage(ED.img, x - span / 2, y - span / 2, span, span, 0, 0, 264, 264);
+  ctx.strokeStyle = '#ff9a4d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(132, 100); ctx.lineTo(132, 164); ctx.moveTo(100, 132); ctx.lineTo(164, 132); ctx.stroke();
+}
+function hideLoupe() { if (loupe) { loupe.remove(); loupe = null; } }
+
+/* ---------- 比較 ---------- */
+async function renderCompare() {
+  ED = null;
+  const C = S.compare;
+  const withSlot = sorted().filter(s => s.photos?.[C.slot]);
+  if (!withSlot.find(s => s.id === C.a)) C.a = withSlot[0]?.id ?? null;
+  if (!withSlot.find(s => s.id === C.b)) C.b = withSlot[withSlot.length - 1]?.id ?? null;
+  const opts = sel => withSlot.map(s => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${fmtDate(s.date)}${s.weight ? `（${fmt(+s.weight)}kg）` : ''}</option>`).join('');
+  const A = getSession(C.a), B = getSession(C.b);
+  const aligned = A?.photos[C.slot]?.marks?.head && B?.photos[C.slot]?.marks?.head;
+  app.innerHTML = `<section class="panel">
+    <h2>写真を並べて比べる</h2>
+    <div class="fields">
+      <div class="field"><label for="c-slot">ポーズ</label><select id="c-slot">${SLOTS.map(s => `<option value="${s.k}" ${s.k === C.slot ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="c-a">前</label><select id="c-a">${opts(C.a)}</select></div>
+      <div class="field"><label for="c-b">後</label><select id="c-b">${opts(C.b)}</select></div>
+    </div>
+    <div class="row">
+      <div class="seg" role="group" aria-label="表示">
+        ${[['side', '並べる'], ['blend', '重ねる'], ['wipe', 'スライド']].map(([v, l]) => `<button data-cmode="${v}" aria-pressed="${C.mode === v}">${l}</button>`).join('')}
+      </div>
+      ${C.mode === 'blend' ? `<label class="small muted" for="c-alpha" style="flex:1;min-width:160px">後の写真の濃さ<input id="c-alpha" type="range" min="0" max="1" step="0.01" value="${C.alpha}"></label>` : ''}
+      ${C.mode === 'wipe' ? `<label class="small muted" for="c-split" style="flex:1;min-width:160px">境目の位置<input id="c-split" type="range" min="0" max="1" step="0.01" value="${C.split}"></label>` : ''}
+    </div>
+    ${withSlot.length < 2 ? `<p class="muted">このポーズの写真が2回分そろうと比べられます（いま ${withSlot.length} 回分）。</p>` : `
+    <div class="cmp ${C.mode === 'side' ? '' : 'single'}" id="c-out"></div>
+    <p class="small muted">${aligned ? '両方の写真の「頭の高さ」をそろえて、同じ縮尺で表示しています。' : '頭の位置を合わせていない写真があるので、枠に収めて表示しています。写真をタップして「頭の位置を合わせる」と、同じ縮尺で比べられます。'}</p>`}
+  </section>`;
+  if (withSlot.length >= 2) drawCompare();
+}
+async function drawCompare() {
+  const C = S.compare; const out = $('#c-out'); if (!out) return;
+  const A = getSession(C.a), B = getSession(C.b);
+  const [ia, ib] = await Promise.all([A, B].map(async s => loadImage(await photoURL(s.photos[C.slot].ref)).catch(() => null)));
+  const W = 600, H = 900;
+  const both = A.photos[C.slot].marks?.head && B.photos[C.slot].marks?.head;
+  const place = (ctx, img, ph) => {
+    if (!img) return;
+    const hm = both ? ph.marks.head : null;
+    if (hm) { // 頭の高さを 0.1H に、頭頂を上から 0.07H、頭の中心を左右中央に
+      const s = (H * 0.1) / dist(hm[0], hm[1]);
+      const top = hm[0][1] < hm[1][1] ? hm[0] : hm[1];
+      const cx = (hm[0][0] + hm[1][0]) / 2;
+      ctx.drawImage(img, W / 2 - cx * s, H * 0.07 - top[1] * s, img.naturalWidth * s, img.naturalHeight * s);
+    } else {
+      const s = Math.min(W / img.naturalWidth, H / img.naturalHeight);
+      ctx.drawImage(img, (W - img.naturalWidth * s) / 2, (H - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
+    }
+  };
+  const cap = s => `<figcaption><span class="num">${fmtDate(s.date)}</span>${s.weight ? `<span class="muted">${fmt(+s.weight)} kg</span>` : ''}</figcaption>`;
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  out.innerHTML = '';
+  if (C.mode === 'side') {
+    for (const [s, img] of [[A, ia], [B, ib]]) {
+      const f = document.createElement('figure'); const c = mk(); const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0d0f12'; ctx.fillRect(0, 0, W, H); place(ctx, img, s.photos[C.slot]);
+      f.append(c); f.insertAdjacentHTML('beforeend', cap(s)); out.append(f);
+    }
+    return;
+  }
+  const f = document.createElement('figure'); const c = mk(); const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0d0f12'; ctx.fillRect(0, 0, W, H);
+  place(ctx, ia, A.photos[C.slot]);
+  if (C.mode === 'blend') { ctx.globalAlpha = C.alpha; place(ctx, ib, B.photos[C.slot]); ctx.globalAlpha = 1; }
+  else {
+    ctx.save(); ctx.beginPath(); ctx.rect(W * C.split, 0, W, H); ctx.clip();
+    ctx.fillStyle = '#0d0f12'; ctx.fillRect(0, 0, W, H); place(ctx, ib, B.photos[C.slot]); ctx.restore();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(W * C.split - 1, 0, 2, H);
+  }
+  f.append(c);
+  f.insertAdjacentHTML('beforeend', `<figcaption><span class="num">${fmtDate(A.date)}</span><span class="muted">${C.mode === 'wipe' ? '左' : '下'}</span>　<span class="num">${fmtDate(B.date)}</span><span class="muted">${C.mode === 'wipe' ? '右' : '上'}</span></figcaption>`);
+  out.append(f);
+}
+app.addEventListener('change', e => {
+  if (S.tab !== 'compare') return;
+  const id = e.target.id;
+  if (id === 'c-slot') { S.compare.slot = e.target.value; S.compare.a = S.compare.b = null; renderCompare(); }
+  if (id === 'c-a') { S.compare.a = e.target.value; renderCompare(); }
+  if (id === 'c-b') { S.compare.b = e.target.value; renderCompare(); }
+});
+app.addEventListener('input', e => {
+  if (S.tab !== 'compare') return;
+  if (e.target.id === 'c-alpha') { S.compare.alpha = +e.target.value; drawCompare(); }
+  if (e.target.id === 'c-split') { S.compare.split = +e.target.value; drawCompare(); }
+});
+app.addEventListener('click', e => {
+  const b = e.target.closest('[data-cmode]'); if (!b || S.tab !== 'compare') return;
+  S.compare.mode = b.dataset.cmode; renderCompare();
+});
+
+/* ---------- 推移 ---------- */
+const TREND_METRICS = [
+  { k: 'weight', name: '体重', unit: 'kg', get: s => s.weight ?? null },
+  { k: 'bodyFat', name: '体脂肪率', unit: '%', get: s => s.bodyFat ?? null },
+  ...PARTS.map(p => ({ k: p.k, name: p.name, unit: 'cm', get: (s, m) => m.parts[p.k]?.value ?? null })),
+  { k: 'vtaper', name: '肩幅÷ウエスト幅', unit: '', digits: 2, get: (s, m) => m.vtaper ?? null },
+];
+function renderTrend() {
+  ED = null;
+  const T = S.trend; const def = TREND_METRICS.find(x => x.k === T.metric) || TREND_METRICS[0];
+  const pts = sorted().map(s => ({ s, v: def.get(s, computeMetrics(s)) })).filter(p => p.v != null && isFinite(p.v));
+  const d = def.digits ?? 1;
+  app.innerHTML = `<section class="panel">
+    <h2>推移</h2>
+    <div class="metric-chips">${TREND_METRICS.map(x => `<button class="chip" data-metric="${x.k}" aria-pressed="${x.k === def.k}">${esc(x.name)}</button>`).join('')}</div>
+    ${pts.length ? `
+      <div class="row" style="gap:18px;align-items:baseline">
+        <div><div class="eyebrow">${esc(def.name)}${def.unit ? ' · ' + def.unit : ''}</div><div class="num" style="font-size:40px;font-weight:700;line-height:1">${pts[pts.length - 1].v.toFixed(d)}</div></div>
+        ${pts.length > 1 ? `<div class="small muted">初回 ${fmtDate(pts[0].s.date)} から <span class="num" style="font-size:20px;color:var(--ink)">${(pts[pts.length - 1].v - pts[0].v >= 0 ? '+' : '−') + Math.abs(pts[pts.length - 1].v - pts[0].v).toFixed(d)}</span> ${def.unit}</div>` : ''}
+      </div>
+      <div class="chart" id="t-chart"></div>
+      <div class="tbl-wrap"><table><thead><tr><th>撮影日</th><th>${esc(def.name)}</th><th>前回比</th></tr></thead><tbody>
+        ${pts.map((p, i) => `<tr><td class="num">${fmtDate(p.s.date)}</td><td class="v">${p.v.toFixed(d)}</td><td>${i ? (def.digits ? deltaRatio(p.v, pts[i - 1].v) : deltaInfo(p.v, pts[i - 1].v, PART[def.k]?.lowerBetter).html) : '<span class="d flat">—</span>'}</td></tr>`).reverse().join('')}
+      </tbody></table></div>` : `<p class="muted">${esc(def.name)}の記録がまだありません。${PART[def.k] ? '正面の写真で計測すると出ます。' : ''}</p>`}
+    <p class="small muted">部位のサイズは写真からの概算です。1〜2cm の上下は撮影条件の差の範囲と考えて、数か月の流れで見てください。</p>
+  </section>`;
+  if (pts.length) drawChart(pts, def);
+}
+function drawChart(pts, def) {
+  const el = $('#t-chart'); const W = Math.max(300, el.clientWidth || 640), H = 260;
+  const m = { l: 44, r: 16, t: 16, b: 30 };
+  const t = pts.map(p => new Date(p.s.date + 'T00:00:00').getTime());
+  let t0 = Math.min(...t), t1 = Math.max(...t); if (t0 === t1) { t0 -= 864e5 * 15; t1 += 864e5 * 15; }
+  let v0 = Math.min(...pts.map(p => p.v)), v1 = Math.max(...pts.map(p => p.v));
+  const pad = (v1 - v0) * 0.15 || Math.abs(v1) * 0.02 || 1; v0 -= pad; v1 += pad;
+  const step = niceStep((v1 - v0) / 4); const ticks = [];
+  for (let v = Math.ceil(v0 / step) * step; v <= v1 + 1e-9; v += step) ticks.push(+v.toFixed(6));
+  const X = x => m.l + (x - t0) / (t1 - t0) * (W - m.l - m.r), Y = v => m.t + (1 - (v - v0) / (v1 - v0)) * (H - m.t - m.b);
+  const d = def.digits ?? 1; const td = step < 0.1 ? 2 : step < 1 ? 1 : 0;
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${X(t[i]).toFixed(1)} ${Y(p.v).toFixed(1)}`).join(' ');
+  const area = pts.length > 1 ? `${line} L${X(t[t.length - 1]).toFixed(1)} ${H - m.b} L${X(t[0]).toFixed(1)} ${H - m.b} Z` : '';
+  const months = monthTicks(t0, t1);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(def.name)}の推移">
+    ${ticks.map(v => `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/>
+      <text x="${m.l - 8}" y="${Y(v) + 4}" text-anchor="end" font-size="12" fill="var(--muted)" font-family="var(--display)">${v.toFixed(td)}</text>`).join('')}
+    ${months.map(x => `<text x="${X(x)}" y="${H - 8}" text-anchor="middle" font-size="12" fill="var(--muted)" font-family="var(--display)">${new Date(x).getFullYear() % 100}/${new Date(x).getMonth() + 1}</text>`).join('')}
+    ${area ? `<path d="${area}" fill="var(--accent)" fill-opacity=".1"/>` : ''}
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    ${pts.map((p, i) => `<circle cx="${X(t[i])}" cy="${Y(p.v)}" r="${i === pts.length - 1 ? 5 : 4}" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`).join('')}
+    <line id="t-cross" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>
+    <rect x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent" id="t-hit"/>
+  </svg><div class="tip" id="t-tip" hidden></div>`;
+  const hit = $('#t-hit'), tip = $('#t-tip'), cross = $('#t-cross');
+  const move = e => {
+    const r = el.querySelector('svg').getBoundingClientRect(); const sx = (e.clientX - r.left) / r.width * W;
+    let bi = 0; t.forEach((x, i) => { if (Math.abs(X(x) - sx) < Math.abs(X(t[bi]) - sx)) bi = i; });
+    const px = X(t[bi]) / W * r.width, py = Y(pts[bi].v) / H * r.height;
+    cross.setAttribute('x1', X(t[bi])); cross.setAttribute('x2', X(t[bi])); cross.setAttribute('visibility', 'visible');
+    tip.hidden = false; tip.style.left = Math.max(60, Math.min(r.width - 60, px)) + 'px'; tip.style.top = (py - 12) + 'px';
+    tip.innerHTML = `${fmtDate(pts[bi].s.date)}<br><b>${pts[bi].v.toFixed(d)}</b> ${def.unit}`;
+  };
+  hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move);
+  hit.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+}
+function niceStep(raw) { const p = Math.pow(10, Math.floor(Math.log10(raw))); const f = raw / p; return (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p; }
+function monthTicks(t0, t1) {
+  const out = []; const d = new Date(t0); d.setDate(1); d.setHours(0, 0, 0, 0); d.setMonth(d.getMonth() + 1);
+  const months = (t1 - t0) / (864e5 * 30); const every = months > 18 ? 3 : months > 8 ? 2 : 1;
+  for (; d.getTime() <= t1; d.setMonth(d.getMonth() + every)) out.push(d.getTime());
+  return out;
+}
+app.addEventListener('click', e => {
+  const b = e.target.closest('[data-metric]'); if (!b || S.tab !== 'trend') return;
+  S.trend.metric = b.dataset.metric; renderTrend();
+});
+
+/* ---------- 基準・補正 ---------- */
+function renderProfile() {
+  ED = null;
+  const p = S.profile; const basis = headBasis();
+  const measured = sorted().filter(s => computeMetrics(s).hasFront).reverse();
+  const calibRows = PARTS.filter(x => x.type !== 'width').map(x => {
+    const f = p.calib?.[x.k];
+    return `<tr><td>${x.name}</td><td class="num">${f ? '× ' + f.toFixed(3) : '—'}</td><td>${f ? `<button class="btn ghost small" data-uncal="${x.k}">元に戻す</button>` : ''}</td></tr>`;
+  }).join('');
+  app.innerHTML = `<section class="panel">
+    <h2>物差し（頭の高さ）</h2>
+    <p class="small muted" style="margin:0">頭頂からあご先までの長さは、増量・減量でほとんど変わりません。写真の中の頭の大きさを物差しにして、ほかの部位を cm に直します。分かる方を入れてください（頭の高さが優先）。</p>
+    <div class="fields">
+      <div class="field"><label for="p-head">頭の高さ cm（頭頂〜あご先）</label><input id="p-head" type="number" step="0.1" inputmode="decimal" value="${esc(p.headCm ?? '')}" placeholder="例: 23.5"></div>
+      <div class="field"><label for="p-height">身長 cm</label><input id="p-height" type="number" step="0.1" inputmode="decimal" value="${esc(p.heightCm ?? '')}" placeholder="例: 172"></div>
+    </div>
+    <p class="small">いまの物差し: <b>${esc(basis.label)}</b></p>
+    <p class="small muted" style="margin:0">頭の高さの測り方: 壁に背をつけて立ち、頭頂に定規を水平に当てて壁に印をつけます。あご先も同じようにして、2つの印の間を測ります。この値が多少ずれても、全部の部位が同じ割合でずれるだけなので、月ごとの変化の比較には影響しません。</p>
+  </section>
+  <section class="panel">
+    <h2>メジャーで測った値で補正</h2>
+    <p class="small muted" style="margin:0">周囲長は「正面の幅 × 側面の厚み」の楕円で近似しています。一度メジャーで実測した値を入れると、その部位はその比率で補正されます（同じ日の写真で計測した記録を選んでください）。</p>
+    ${measured.length ? `<div class="fields">
+      <div class="field"><label for="k-session">記録</label><select id="k-session">${measured.map(s => `<option value="${s.id}">${fmtDate(s.date)}</option>`).join('')}</select></div>
+      <div class="field"><label for="k-part">部位</label><select id="k-part">${PARTS.filter(x => x.type !== 'width').map(x => `<option value="${x.k}">${x.name}</option>`).join('')}</select></div>
+      <div class="field"><label for="k-tape">メジャーの値 cm</label><input id="k-tape" type="number" step="0.1" inputmode="decimal" placeholder="例: 42.0"></div>
+      <div class="field" style="align-content:end"><button class="btn primary" data-act-cal="1">補正する</button></div>
+    </div>` : '<p class="muted">正面を計測した記録ができると補正できます。</p>'}
+    <div class="tbl-wrap"><table><thead><tr><th>部位</th><th>補正</th><th></th></tr></thead><tbody>${calibRows}</tbody></table></div>
+  </section>
+  <section class="panel">
+    <h2>撮影のコツ</h2>
+    <ul class="small" style="margin:0;padding-left:1.2em;display:grid;gap:4px">
+      <li>カメラは毎回同じ距離・同じ高さ（へそ〜胸の高さ）に固定し、レンズを体に正対させる。広角で近づくと、頭と体の大きさの比率が変わります</li>
+      <li>全身が入る距離で、頭頂と足先まで写す。ズームしすぎない</li>
+      <li>計測に使う正面と側面は、腕を軽く体から離したリラックスの姿勢で</li>
+      <li>時間帯・食事・パンプの有無をそろえ、メモに残す</li>
+    </ul>
+    <p class="store-note" style="margin:0">${storeNote()}</p>
+  </section>`;
+}
+app.addEventListener('change', e => {
+  if (S.tab !== 'profile') return;
+  if (e.target.id === 'p-head') { S.profile.headCm = e.target.value === '' ? null : +e.target.value; saveProfile(); renderProfile(); }
+  if (e.target.id === 'p-height') { S.profile.heightCm = e.target.value === '' ? null : +e.target.value; saveProfile(); renderProfile(); }
+});
+app.addEventListener('click', e => {
+  if (S.tab !== 'profile') return;
+  const un = e.target.closest('[data-uncal]');
+  if (un) { delete S.profile.calib[un.dataset.uncal]; saveProfile(); renderProfile(); return; }
+  if (e.target.closest('[data-act-cal]')) {
+    const s = getSession($('#k-session').value), k = $('#k-part').value, tape = +$('#k-tape').value;
+    const part = computeMetrics(s).parts[k];
+    if (!part) return toast(`その記録では${PART[k].name}の幅がまだ計測されていません`);
+    if (!(tape > 0)) return toast('メジャーの値を cm で入れてください');
+    const raw = part.rawH * headBasis().cm;
+    S.profile.calib = { ...S.profile.calib, [k]: tape / raw };
+    saveProfile(); renderProfile(); toast(`${PART[k].name}を × ${(tape / raw).toFixed(3)} で補正します`);
+  }
+});
+
+/* ====================== 起動 ====================== */
+(async function start() {
+  try { await Store.init(); }
+  catch (e) {
+    console.error(e);
+    app.innerHTML = '<div class="panel"><h2>記録を保存できません</h2><p>このブラウザでは保存領域が使えません。プライベートブラウズを解除するか、claude.ai で公開したページから開いてください。</p></div>';
+    return;
+  }
+  try {
+    const docs = await Store.listDocs();
+    for (const d of docs) {
+      if (d.id === 'profile') S.profile = { ...S.profile, ...d, calib: d.calib || {} };
+      else if (d.id?.startsWith('s_')) S.sessions.push({ photos: {}, ...d });
+    }
+  } catch (e) { console.error(e); toast('記録を読み込めませんでした。ページを開き直してください'); }
+  const t = location.hash.slice(1);
+  if (['log', 'compare', 'trend', 'profile'].includes(t)) S.tab = t;
+  render();
+})();
+</script>
