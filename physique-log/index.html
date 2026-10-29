@@ -211,6 +211,12 @@ input[type="range"] { accent-color: var(--accent); width: 100%; }
   position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 50;
   background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 14px; max-width: calc(100% - 32px);
 }
+.slot.sel { outline: 3px solid var(--accent); outline-offset: 2px; }
+.slot.keep img { opacity: .35; }
+.slot .tag { position: absolute; top: 6px; left: 6px; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: rgba(0,0,0,.6); color: #fff; }
+.tray { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.tray .slot { aspect-ratio: 3 / 4; }
+.bulkbar { position: sticky; bottom: 0; z-index: 4; background: var(--surface); border-top: 1px solid var(--line); padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
 .empty { text-align: center; padding: 28px 12px; display: grid; gap: 10px; justify-items: center; }
 .sample-tag { font: 600 12px var(--display); letter-spacing: .12em; text-transform: uppercase; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--muted); }
 .store-note { font-size: 12px; color: var(--muted); }
@@ -230,6 +236,7 @@ input[type="range"] { accent-color: var(--accent); width: 100%; }
 </header>
 <main class="wrap" id="app"><div class="panel"><p class="muted">読み込み中…</p></div></main>
 <input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="files" accept="image/*" multiple hidden>
 <div id="layer"></div>
 
 <script>
@@ -560,6 +567,7 @@ function render() {
   if (S.tab === 'log') {
     if (S.view.name === 'session') return renderSession();
     if (S.view.name === 'measure') return renderMeasure();
+    if (S.view.name === 'bulk') return renderBulk();
     return renderHome();
   }
   if (S.tab === 'compare') return renderCompare();
@@ -687,6 +695,10 @@ async function renderSession() {
       <div class="field"><label for="f-note">メモ（時期・コンディションなど）</label><textarea id="f-note" data-field="note" placeholder="例: 減量8週目、朝・空腹、パンプなし">${esc(s.note ?? '')}</textarea></div>
     </section>
     <section class="panel">
+      <div class="row between">
+        <div style="display:grid;gap:2px;min-width:0;flex:1 1 220px"><b>写真をまとめて追加</b><span class="small muted">撮った順（クォーターターン → 規定7ポーズ）に振り分けます。あとで入れ替えられます</span></div>
+        <button class="btn primary" data-act="bulk">写真を選ぶ</button>
+      </div>
       <div class="group-title"><h2>クォーターターン</h2><span class="small muted">正面と側面は計測に使います</span></div>
       <div class="slots">${qt.join('')}</div>
       <div class="group-title"><h2>規定7ポーズ</h2><span class="small muted">頭の位置を合わせておくと比較で大きさがそろいます</span></div>
@@ -718,6 +730,7 @@ app.addEventListener('click', async e => {
   if (act === 'open') { S.tab = 'log'; S.view = { name: 'session', id: b.dataset.id }; render(); window.scrollTo(0, 0); return; }
   if (act === 'home') { S.view = { name: 'home' }; render(); return; }
   if (act === 'slot') return slotMenu(b.dataset.slot);
+  if (act === 'bulk') { filesInput.value = ''; filesInput.click(); return; }
   if (act === 'measure') { S.view = { name: 'measure', id: S.view.id, slot: b.dataset.slot }; render(); window.scrollTo(0, 0); return; }
   if (act === 'delsession') {
     const s = getSession(S.view.id);
@@ -763,6 +776,109 @@ fileInput.addEventListener('change', async () => {
   }
   S.uploading = null; render();
 });
+/* ---------- まとめて追加：撮った順に振り分けて、確認してから保存 ---------- */
+const filesInput = $('#files');
+let BULK = null; // { id, items: [{file, url}], pos: [slot順の item 番号 | null], sel, saving }
+const natural = new Intl.Collator('ja', { numeric: true, sensitivity: 'base' });
+function shootingOrder(files) {
+  // カメラのファイル名（IMG_1234 など）は撮影順の連番。番号のない名前が混ざるときは選んだ順のまま
+  const names = files.map(f => f.name);
+  const numbered = names.every(n => /\d/.test(n)) && new Set(names).size === names.length;
+  return numbered ? [...files].sort((a, b) => natural.compare(a.name, b.name)) : files;
+}
+filesInput.addEventListener('change', () => {
+  const s = getSession(S.view.id); const files = [...filesInput.files];
+  if (!s || !files.length) return;
+  const items = shootingOrder(files).map(file => ({ file, url: URL.createObjectURL(file) }));
+  // 写真がまだない記録は全枠に、すでにある記録は空いている枠に、順番に入れる
+  const targets = SLOTS.map((sl, i) => i).filter(i => !Object.keys(s.photos || {}).length || !s.photos[SLOTS[i].k]);
+  const pos = SLOTS.map(() => null);
+  targets.forEach((slotIdx, n) => { if (n < items.length) pos[slotIdx] = n; });
+  BULK = { id: s.id, items, pos, sel: null, saving: null };
+  S.view = { name: 'bulk', id: s.id }; render(); window.scrollTo(0, 0);
+});
+function closeBulk() {
+  if (BULK) for (const it of BULK.items) URL.revokeObjectURL(it.url);
+  const id = BULK?.id; BULK = null; S.view = { name: 'session', id }; render();
+}
+async function renderBulk() {
+  const s = getSession(S.view.id);
+  if (!s || !BULK) { S.view = { name: 'session', id: S.view.id }; return render(); }
+  const used = new Set(BULK.pos.filter(x => x != null));
+  const tray = BULK.items.map((it, i) => i).filter(i => !used.has(i));
+  const isSel = (t, k) => BULK.sel && BULK.sel.t === t && BULK.sel.k === k;
+  const cell = async (sl, i) => {
+    const n = BULK.pos[i]; const ph = s.photos?.[sl.k];
+    const url = n != null ? BULK.items[n].url : ph ? await photoURL(ph.ref) : '';
+    const tag = n != null ? (ph ? '<span class="tag">差し替え</span>' : '') : ph ? '<span class="tag">今の写真のまま</span>' : '';
+    return `<button class="slot ${url ? 'filled' : ''} ${n == null && ph ? 'keep' : ''} ${isSel('slot', i) ? 'sel' : ''}" data-bk="slot" data-i="${i}" aria-label="${esc(sl.name)}" aria-pressed="${isSel('slot', i)}">
+      ${url ? `<img src="${url}" alt="">` : '<span class="plus">−</span>'}${tag}
+      <span class="cap"><b>${sl.en}</b>${esc(sl.name)}</span></button>`;
+  };
+  const cells = await Promise.all(SLOTS.map(cell));
+  if (!BULK || S.view.name !== 'bulk') return; // 待っている間に保存が終わって閉じた
+  const count = BULK.pos.filter(x => x != null).length;
+  const saving = BULK.saving;
+  app.innerHTML = `
+    <div class="row between"><button class="btn ghost" data-bk="cancel" ${saving ? 'disabled' : ''}>← やめる</button></div>
+    <section class="panel">
+      <div><div class="eyebrow">${fmtDate(s.date)}</div><h2>振り分けの確認</h2></div>
+      <p class="small muted" style="margin:0">${BULK.items.length}枚を撮った順に入れました。違うところは、<b>入れ替えたい2枚を順にタップ</b>すると入れ替わります。枠を外したい写真は「使わない写真」とタップで入れ替えてください。</p>
+      <div class="group-title"><h2>クォーターターン</h2></div>
+      <div class="slots">${cells.slice(0, 4).join('')}</div>
+      <div class="group-title"><h2>規定7ポーズ</h2></div>
+      <div class="slots">${cells.slice(4).join('')}</div>
+      <div class="group-title"><h2>使わない写真</h2><span class="small muted">${tray.length ? 'タップしてから枠をタップすると入ります' : 'ここに置いた写真は保存しません'}</span></div>
+      <div class="tray">
+        ${tray.map(i => `<button class="slot filled ${isSel('tray', i) ? 'sel' : ''}" data-bk="tray" data-i="${i}" aria-label="使わない写真" aria-pressed="${isSel('tray', i)}"><img src="${BULK.items[i].url}" alt=""></button>`).join('')}
+        <button class="slot ${isSel('tray', -1) ? 'sel' : ''}" data-bk="tray" data-i="-1" aria-label="ここに外す"><span class="small">ここに<br>外す</span></button>
+      </div>
+    </section>
+    <div class="bulkbar"><div class="row between">
+      <span class="small muted">${saving ? `保存中… ${saving.done}/${saving.total}` : `${count}枚を保存します`}</span>
+      <button class="btn primary" data-bk="save" ${saving || !count ? 'disabled' : ''}>この振り分けで保存</button>
+    </div></div>`;
+}
+app.addEventListener('click', async e => {
+  if (S.view.name !== 'bulk' || !BULK) return;
+  const b = e.target.closest('[data-bk]'); if (!b || BULK.saving) return;
+  const a = b.dataset.bk;
+  if (a === 'cancel') return closeBulk();
+  if (a === 'save') return saveBulk();
+  const cur = { t: a, k: +b.dataset.i };
+  const prev = BULK.sel;
+  if (!prev) { if (!(cur.t === 'tray' && cur.k === -1)) BULK.sel = cur; return renderBulk(); }
+  BULK.sel = null;
+  if (prev.t === cur.t && prev.k === cur.k) return renderBulk();
+  if (prev.t === 'slot' && cur.t === 'slot') { [BULK.pos[prev.k], BULK.pos[cur.k]] = [BULK.pos[cur.k], BULK.pos[prev.k]]; }
+  else if (prev.t !== cur.t) {
+    const slotSel = prev.t === 'slot' ? prev : cur, traySel = prev.t === 'tray' ? prev : cur;
+    BULK.pos[slotSel.k] = traySel.k === -1 ? null : traySel.k; // 枠にあった写真は「使わない写真」へ
+  } else BULK.sel = cur; // 使わない写真どうしは選び直し
+  renderBulk();
+});
+async function saveBulk() {
+  const s = getSession(BULK.id);
+  const jobs = BULK.pos.map((n, i) => n == null ? null : { slot: SLOTS[i].k, file: BULK.items[n].file }).filter(Boolean);
+  BULK.saving = { done: 0, total: jobs.length }; renderBulk();
+  let failed = 0;
+  for (const job of jobs) {
+    try {
+      const { blob, w, h } = await shrink(job.file);
+      const ref = await Store.putPhoto(blob);
+      const old = s.photos[job.slot];
+      s.photos[job.slot] = { ref, w, h, marks: {} };
+      await saveSession(s, 0);
+      if (old) { try { await Store.delPhoto(old.ref); } catch (err) { console.warn(err); } }
+    } catch (err) {
+      console.error(err); failed++;
+      if (err?.code === 'quota_or_state') { toast('保存容量がいっぱいです。古い記録を削除してから追加してください'); break; }
+    }
+    BULK.saving.done++; renderBulk();
+  }
+  closeBulk();
+  toast(failed ? `${jobs.length - failed}枚を保存しました（${failed}枚は保存できませんでした）` : `${jobs.length}枚を保存しました`);
+}
 async function shrink(file) {
   const url = URL.createObjectURL(file);
   try {
