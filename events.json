@@ -682,7 +682,15 @@
           "minute": 0
         }
       ],
-      "lobby": null,
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 11,
+        "day": 3,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
