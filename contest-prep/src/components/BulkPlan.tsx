@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { BodyRecord, Profile } from '../types';
+import type { BodyRecord, BulkSettings, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf } from '../lib/analysis';
 import { weeklyRows, type ContestPlan, type PlanDay, type PlanState } from '../lib/bulk';
@@ -7,6 +7,7 @@ import { contestRange, ffmi, formatContestRange } from '../lib/navy';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 import { Chart } from './Chart';
 import { CalibrationCard, NavyForm } from './Plan';
+import { MiniCutCard } from './MiniCutCard';
 
 interface Props {
   profile: Profile;
@@ -17,6 +18,7 @@ interface Props {
   onSaveSizes: (sizes: Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>) => void;
   onSwitchToCut: () => void;
   onApplyTdee: (kcal: number) => void;
+  onSaveBulk: (s: BulkSettings) => void;
 }
 
 const STATE_LABEL: Record<PlanState, string> = {
@@ -35,7 +37,7 @@ const EVENT_TEXT: Record<PlanState, string> = {
 };
 
 /** 増量期の計画：上限・戻す線、増量とプチダイエットの波、大会に向けた減量に入る時期 */
-export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, onSwitchToCut, onApplyTdee }: Props) {
+export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, onSwitchToCut, onApplyTdee, onSaveBulk }: Props) {
   const st = t.bulk!;
   const s = profile.bulk;
   const lim = st.limits;
@@ -67,6 +69,8 @@ export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, 
           </p>
         )}
       </section>
+
+      <MiniCutCard key={`${st.state}-${st.since}-${st.exitKg}`} profile={profile} targets={t} today={today} onSaveBulk={onSaveBulk} />
 
       {st.calibration && <CalibrationCard targets={t} onApply={onApplyTdee} />}
 
@@ -248,14 +252,14 @@ export function PhaseLine({ targets: t, profile }: { targets: Targets; profile: 
     return (
       <p className="phase-line">
         <span className="pill calibrate">維持カロリーの確認中</span> 維持カロリーで食べる期間 あと{t.calibration?.daysLeft ?? 0}日
-        （終わったらプチダイエット）
+        （終わったらプチダイエット{st.exitKg !== null ? ` ${st.exitKg.toFixed(1)} kg まで` : ''}）
       </p>
     );
   }
   return (
     <p className="phase-line">
       <span className="pill minicut">プチダイエット中 {st.weeksInPhase + 1}週目</span> 維持 {st.adjustKcal} kcal/日
-      {st.limits && `（${st.limits.lowerKg.toFixed(1)} kg まで）`}
+      {st.exitKg !== null && `（${st.exitKg.toFixed(1)} kg まで）`}
     </p>
   );
 }

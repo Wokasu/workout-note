@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyRecord, Profile } from '../types';
-import { bulkLimits, bulkStatus, bulkSurplus, defaultBulkSettings, findPrepStart, miniCutDeficit, paceSurplus, planAhead, weeklyRows } from './bulk';
+import { bulkLimits, bulkStatus, bulkSurplus, defaultBulkSettings, findPrepStart, miniCutDeficit, paceSurplus, planAhead, retargetCut, startManualCut, stopCut, weeklyRows } from './bulk';
 import { seriesOf } from './analysis';
 import { addDays } from './date';
 import { calcTargets } from './nutrition';
@@ -245,5 +245,93 @@ describe('calibration in calcTargets', () => {
     const t = calcTargets({ ...cut, calibrationDays: 0 }, days('2026-09-20', [80, 80]), new Map(), '2026-10-05');
     expect(t.calibration).toBeNull();
     expect(t.deficit).toBeGreaterThan(0);
+  });
+});
+
+describe('manual mini cut', () => {
+  // 上限 81.6 に届かない 79kg 台で、9/10 に自分でプチダイエットを始める
+  const flat = (n: number) => Array.from({ length: n }, () => 79);
+  const withCut = (cut: { start: string; targetKg: number; end: string | null }, cal = 0): Profile => ({
+    ...profile,
+    calibrationDays: cal,
+    bulk: { ...settings, manualCuts: [cut] },
+  });
+
+  it('starts a mini cut below the ceiling and ends at its own target', () => {
+    const p = withCut({ start: '2026-09-10', targetKg: 77, end: null });
+    const before = bulkStatus(p, days('2026-09-01', flat(9)), 79, '2026-09-09');
+    expect(before.state).toBe('bulk');
+    const during = bulkStatus(p, days('2026-09-01', flat(15)), 79, '2026-09-15');
+    expect(during.state).toBe('minicut');
+    expect(during.since).toBe('2026-09-10');
+    expect(during.exitKg).toBe(77);
+    expect(during.manual?.targetKg).toBe(77);
+    // 戻す線（78.6）より下でも、自分で決めた 77kg までは続ける
+    const down = Array.from({ length: 30 }, (_, i) => 79 - i * 0.1);
+    const body = days('2026-09-01', [...flat(9), ...down]);
+    expect(bulkStatus(p, body, 78, addDays('2026-09-10', 18)).state).toBe('minicut');
+    const back = bulkStatus(p, body, 76.5, addDays('2026-09-10', 29));
+    expect(back.state).toBe('bulk');
+    expect(back.manual).toBeNull();
+  });
+
+  it('goes through calibration first when it is on', () => {
+    const p = withCut({ start: '2026-09-10', targetKg: 77, end: null }, 14);
+    const st = bulkStatus(p, days('2026-09-01', flat(15)), 79, '2026-09-15');
+    expect(st.state).toBe('calibrate');
+    expect(st.calibration).toEqual({ start: '2026-09-10', end: '2026-09-24' });
+  });
+
+  it('goes back to bulk on the day it was stopped', () => {
+    const p = withCut({ start: '2026-09-10', targetKg: 77, end: '2026-09-14' });
+    const st = bulkStatus(p, days('2026-09-01', flat(20)), 79, '2026-09-20');
+    expect(st.state).toBe('bulk');
+    expect(st.since).toBe('2026-09-14');
+  });
+
+  it('projects the cut down to its target, then bulks again', () => {
+    const p = withCut({ start: '2026-09-03', targetKg: 77, end: null });
+    const status = bulkStatus(p, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
+    const { days: d } = planAhead({ s: p.bulk, calibrationDays: 0, status, currentKg: 79, tdee: 2800, kcalPerKg: 15.5, today: '2026-09-03' }, 26);
+    const firstBulk = d.findIndex((x) => x.state === 'bulk');
+    expect(d[0].state).toBe('minicut');
+    expect(d[firstBulk - 1].weightKg).toBeLessThanOrEqual(77.1);
+  });
+});
+
+describe('manual cut helpers', () => {
+  const body = days('2026-09-01', Array.from({ length: 20 }, () => 79));
+  const status = (s: typeof settings) => bulkStatus({ ...profile, bulk: s }, body, 79, '2026-09-20');
+
+  it('starts, retargets and stops', () => {
+    let s = startManualCut(settings, '2026-09-15', 77);
+    expect(status(s).state).toBe('minicut');
+    s = retargetCut(s, status(s), 76);
+    expect(status(s).exitKg).toBe(76);
+    s = stopCut(s, status(s), '2026-09-20');
+    expect(status(s).state).toBe('bulk');
+    expect(s.manualCuts).toEqual([{ start: '2026-09-15', targetKg: 76, end: '2026-09-20' }]);
+  });
+
+  it('can restart on the day it was stopped', () => {
+    let s = startManualCut(settings, '2026-09-10', 77);
+    s = stopCut(s, status(s), '2026-09-15');
+    s = startManualCut(s, '2026-09-15', 76);
+    const st = status(s);
+    expect(st.state).toBe('minicut');
+    expect(st.since).toBe('2026-09-15');
+    expect(st.exitKg).toBe(76);
+  });
+
+  it('stops an automatic mini cut too', () => {
+    const up = Array.from({ length: 20 }, (_, i) => 80 + i * 0.1);
+    const flat = Array.from({ length: 10 }, () => 82);
+    const b = days('2026-09-01', [...up, ...flat]);
+    const st = bulkStatus(profile, b, 82, '2026-09-28');
+    expect(st.state).toBe('minicut');
+    const s = stopCut(settings, st, '2026-09-28');
+    const after = bulkStatus({ ...profile, bulk: s }, b, 82, '2026-09-29');
+    expect(after.state).toBe('bulk');
+    expect(after.holdAuto).toBe(true);
   });
 });

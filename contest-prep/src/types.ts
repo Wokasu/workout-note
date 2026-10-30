@@ -61,6 +61,16 @@ export interface BulkSettings {
   /** 大会に向けた減量のペースの幅（kg/月）。減量に入る時期の計算に使う */
   prepPaceMinKg: number;
   prepPaceMaxKg: number;
+  /** 自分で始めた・やめたプチダイエット（日付順）。上限に届かなくても始められる */
+  manualCuts: ManualCut[];
+}
+
+/** 手動のプチダイエット。start はこの日から（維持確認があればそこから）、end は増量に戻した日 */
+export interface ManualCut {
+  start: string;
+  /** ここまで落としたら増量に戻る（7日平均） */
+  targetKg: number;
+  end: string | null;
 }
 
 export interface Macros {

@@ -137,6 +137,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
       gainKgPerMonth: bn('gainKgPerMonth'),
       prepPaceMinKg: bn('prepPaceMinKg'),
       prepPaceMaxKg: bn('prepPaceMaxKg'),
+      manualCuts: bulkInit.manualCuts,
     };
   }
   const valid =

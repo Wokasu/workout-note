@@ -149,6 +149,7 @@ export function App() {
         {tab === 'plan' && profile.phase === 'bulk' && (
           <BulkPlan
             onApplyTdee={applyTdee}
+            onSaveBulk={(bulk) => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, bulk } }))}
             plan={bulkPlan!}
             onSwitchToCut={switchToCut}
             profile={profile}
