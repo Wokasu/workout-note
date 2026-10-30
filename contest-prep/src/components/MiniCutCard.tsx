@@ -2,12 +2,14 @@ import { useState } from 'react';
 import type { BulkSettings, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { miniCutDeficit, retargetCut, startManualCut, stopCut } from '../lib/bulk';
+import { CutStartChoice, quickDiffers, type CutStartMode } from './CutStart';
 
 interface Props {
   profile: Profile;
   targets: Targets;
   today: string;
   onSaveBulk: (s: BulkSettings) => void;
+  onApplyTdee: (kcal: number) => void;
 }
 
 function parseKg(text: string): number {
@@ -15,7 +17,7 @@ function parseKg(text: string): number {
 }
 
 /** プチダイエットを自分で始める・目標を変える・やめる */
-export function MiniCutCard({ profile, targets: t, today, onSaveBulk }: Props) {
+export function MiniCutCard({ profile, targets: t, today, onSaveBulk, onApplyTdee }: Props) {
   const st = t.bulk!;
   const s = profile.bulk;
   const cutting = st.state !== 'bulk';
@@ -26,6 +28,9 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk }: Props) {
   const valid = text.trim() !== '' && kg >= 30 && kg < t.currentKg;
   const weeks = valid ? Math.ceil((t.currentKg - kg) / ((t.currentKg * s.miniCutPct) / 100)) : null;
   const cal = profile.calibrationDays;
+  const [mode, setMode] = useState<CutStartMode>('calibrate');
+  const [useQuick, setUseQuick] = useState(true);
+  const calibrate = cal > 0 && mode === 'calibrate';
 
   if (!cutting) {
     return (
@@ -41,13 +46,21 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk }: Props) {
         {valid ? (
           <p className="muted">
             今の7日平均 {t.currentKg.toFixed(1)} kg から −{(t.currentKg - kg).toFixed(1)} kg。週 {s.miniCutPct}%（1日 −{miniCutDeficit(s, t.currentKg)} kcal）で
-            {cal > 0 ? `、最初の${cal}日は維持カロリーの確認、その後` : ''} 約{weeks}週間の見込み。
+            {calibrate ? `、最初の${cal}日は維持カロリーの確認、その後` : ''} 約{weeks}週間の見込み。
           </p>
         ) : (
           <p className="status warn">今の7日平均（{t.currentKg.toFixed(1)} kg）より軽い体重を入れてください。</p>
         )}
-        <button className="primary wide" disabled={!valid} onClick={() => onSaveBulk(startManualCut(s, today, Math.round(kg * 10) / 10))}>
-          今日からプチダイエット{cal > 0 ? `（まず${cal}日 維持）` : ''}
+        <CutStartChoice targets={t} calibrationDays={cal} mode={mode} onMode={setMode} useQuick={useQuick} onUseQuick={setUseQuick} />
+        <button
+          className="primary wide"
+          disabled={!valid}
+          onClick={() => {
+            if (!calibrate && useQuick && t.quick && quickDiffers(t)) onApplyTdee(t.quick.tdee);
+            onSaveBulk(startManualCut(s, today, Math.round(kg * 10) / 10, calibrate));
+          }}
+        >
+          今日からプチダイエット{calibrate ? `（まず${cal}日 維持）` : ''}
         </button>
         {st.holdAuto && <p className="muted">自分で増量に戻したので、上限を一度下回るまでは自動ではプチダイエットに入りません。</p>}
       </section>

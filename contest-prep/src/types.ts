@@ -30,6 +30,8 @@ export interface Profile {
   tdeeMode: 'auto' | 'formula' | 'manual';
   /** 「反映する」を押した推定値と、その日 */
   manualTdee: { kcal: number; date: string } | null;
+  /** コンテスト減量の維持カロリー確認を切り上げた（またはとらなかった）日 */
+  calibrationSkippedOn: string | null;
   /** 減量（コンテスト減量・プチダイエット）に入る前に、維持カロリーで食べて実際の維持カロリーを測る日数（0 でなし） */
   calibrationDays: number;
   /** コーチ等から指定された PFC を使う場合 */
@@ -71,6 +73,10 @@ export interface ManualCut {
   /** ここまで落としたら増量に戻る（7日平均） */
   targetKg: number;
   end: string | null;
+  /** 最初に維持カロリーの確認期間をとるか（false なら今の推定値ですぐ赤字。古い記録は true 扱い） */
+  calibrate?: boolean;
+  /** 確認期間を切り上げて赤字に入った日 */
+  cutFrom?: string | null;
 }
 
 export interface Macros {

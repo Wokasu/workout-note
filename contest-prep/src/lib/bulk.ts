@@ -143,14 +143,21 @@ export function bulkStatus(
   let manual = null as ManualCut | null;
   // 自分でやめたあとは、上限を一度下回るまで自動ではプチダイエットに入らない
   let holdAuto = false;
-  const enterCut = (date: string) => {
-    state = cal > 0 ? 'calibrate' : 'minicut';
+  const enterCut = (date: string, withCal = cal > 0) => {
+    state = withCal ? 'calibrate' : 'minicut';
     since = date;
-    calibration = cal > 0 ? { start: date, end: addDays(date, cal) } : null;
+    calibration = withCal ? { start: date, end: addDays(date, cal) } : null;
   };
   // 上限に届いたら、キャリブレーション（あれば）→ プチダイエット → 戻す線で増量に戻る
   const finishCalibration = (date: string) => {
-    if (state === 'calibrate' && daysBetween(since, date) >= cal) {
+    if (state !== 'calibrate') return;
+    const cutFrom = manual?.cutFrom;
+    if (cutFrom && date >= cutFrom && daysBetween(since, cutFrom) < cal) {
+      // 途中で切り上げたので、測れた分は実測値として使わない
+      state = 'minicut';
+      since = cutFrom;
+      calibration = null;
+    } else if (daysBetween(since, date) >= cal) {
       state = 'minicut';
       since = addDays(since, cal);
     }
@@ -170,8 +177,8 @@ export function bulkStatus(
       const e = events[next];
       finishCalibration(e.date);
       if (e.start && state === 'bulk') {
-        enterCut(e.date);
         manual = e.cut;
+        enterCut(e.date, cal > 0 && e.cut.calibrate !== false);
       } else if (!e.start && state !== 'bulk') {
         state = 'bulk';
         since = e.date;
@@ -218,9 +225,19 @@ export function bulkStatus(
   };
 }
 
-/** プチダイエットを今日から始める（維持確認の設定があればそこから） */
-export function startManualCut(s: BulkSettings, today: string, targetKg: number): BulkSettings {
-  return { ...s, manualCuts: [...s.manualCuts.filter((c) => c.end !== null), { start: today, targetKg, end: null }] };
+/** プチダイエットを今日から始める。calibrate なら維持カロリーの確認から、そうでなければ今の推定値ですぐ赤字 */
+export function startManualCut(s: BulkSettings, today: string, targetKg: number, calibrate = true): BulkSettings {
+  return { ...s, manualCuts: [...s.manualCuts.filter((c) => c.end !== null), { start: today, targetKg, end: null, calibrate }] };
+}
+
+/** 維持カロリーの確認を切り上げて、今日から赤字に入る */
+export function skipCutCalibration(s: BulkSettings, st: BulkStatus, today: string): BulkSettings {
+  const open = openManualCut(s);
+  if (open) return { ...s, manualCuts: [...s.manualCuts.slice(0, -1), { ...open, cutFrom: today }] };
+  return {
+    ...s,
+    manualCuts: [...s.manualCuts, { start: st.calibration?.start ?? st.since, targetKg: st.exitKg ?? 0, end: null, cutFrom: today }],
+  };
 }
 
 /** 今のプチダイエット（自動で入ったものも）の目標体重を変える */

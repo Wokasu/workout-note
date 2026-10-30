@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyRecord, Profile } from '../types';
-import { bulkLimits, bulkStatus, bulkSurplus, defaultBulkSettings, findPrepStart, miniCutDeficit, paceSurplus, planAhead, retargetCut, startManualCut, stopCut, weeklyRows } from './bulk';
+import { bulkLimits, bulkStatus, bulkSurplus, defaultBulkSettings, findPrepStart, miniCutDeficit, paceSurplus, planAhead, retargetCut, skipCutCalibration, startManualCut, stopCut, weeklyRows } from './bulk';
 import { seriesOf } from './analysis';
 import { addDays } from './date';
 import { calcTargets } from './nutrition';
@@ -26,6 +26,7 @@ const profile: Profile = {
   manualMacros: null,
   calibrationDays: 0,
   manualTdee: null,
+  calibrationSkippedOn: null,
 };
 
 /** 除脂肪 68kg（体重 × (1 - 体脂肪率) が 68 になるよう体脂肪率も入れる） */
@@ -310,7 +311,7 @@ describe('manual cut helpers', () => {
     expect(status(s).exitKg).toBe(76);
     s = stopCut(s, status(s), '2026-09-20');
     expect(status(s).state).toBe('bulk');
-    expect(s.manualCuts).toEqual([{ start: '2026-09-15', targetKg: 76, end: '2026-09-20' }]);
+    expect(s.manualCuts).toEqual([{ start: '2026-09-15', targetKg: 76, end: '2026-09-20', calibrate: true }]);
   });
 
   it('can restart on the day it was stopped', () => {
@@ -333,5 +334,48 @@ describe('manual cut helpers', () => {
     const after = bulkStatus({ ...profile, bulk: s }, b, 82, '2026-09-29');
     expect(after.state).toBe('bulk');
     expect(after.holdAuto).toBe(true);
+  });
+});
+
+describe('choosing between maintenance first and cutting on the estimate', () => {
+  const withCal: Profile = { ...profile, calibrationDays: 14 };
+  const body = days('2026-09-01', Array.from({ length: 20 }, () => 79));
+  const status = (s: typeof settings) => bulkStatus({ ...withCal, bulk: s }, body, 79, '2026-09-20');
+
+  it('cuts right away on the estimate when chosen', () => {
+    const st = status(startManualCut(settings, '2026-09-15', 77, false));
+    expect(st.state).toBe('minicut');
+    expect(st.since).toBe('2026-09-15');
+    expect(st.calibration).toBeNull();
+    expect(st.adjustKcal).toBeLessThan(0);
+  });
+
+  it('can cut a running maintenance check short', () => {
+    let s = startManualCut(settings, '2026-09-12', 77, true);
+    expect(status(s).state).toBe('calibrate');
+    s = skipCutCalibration(s, status(s), '2026-09-20');
+    const st = status(s);
+    expect(st.state).toBe('minicut');
+    expect(st.since).toBe('2026-09-20');
+    expect(st.calibration).toBeNull();
+  });
+
+  it('can cut an automatic maintenance check short', () => {
+    const up = Array.from({ length: 20 }, (_, i) => 80 + i * 0.1);
+    const b = days('2026-09-01', [...up, ...Array.from({ length: 10 }, () => 82)]);
+    const st = bulkStatus(withCal, b, 82, '2026-09-25');
+    expect(st.state).toBe('calibrate');
+    const s = skipCutCalibration(settings, st, '2026-09-25');
+    const after = bulkStatus({ ...withCal, bulk: s }, b, 82, '2026-09-26');
+    expect(after.state).toBe('minicut');
+    expect(after.exitKg).toBe(st.exitKg);
+  });
+
+  it('skips the contest cut calibration in calcTargets', () => {
+    const cut: Profile = { ...profile, phase: 'cut', calibrationDays: 14, prepStartDate: '2026-10-01', contestDate: '2027-01-14', targetWeightKg: 72 };
+    const b = days('2026-09-20', Array.from({ length: 16 }, () => 80));
+    const skipped = calcTargets({ ...cut, calibrationSkippedOn: '2026-10-05' }, b, new Map(), '2026-10-05');
+    expect(skipped.calibration).toBeNull();
+    expect(skipped.deficit).toBeGreaterThan(0);
   });
 });

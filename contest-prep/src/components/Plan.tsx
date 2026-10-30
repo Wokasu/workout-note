@@ -4,6 +4,7 @@ import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf, valueAtOrBefore } from '../lib/analysis';
 import { contestRange, ffmi, formatContestRange, navyBodyFat, navySeries, targetOptions } from '../lib/navy';
 import { TargetGuide } from './TargetGuide';
+import { EstimateNote, quickDiffers } from './CutStart';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   onSaveSizes: (sizes: Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>) => void;
   onSetTarget: (weightKg: number) => void;
   onApplyTdee: (kcal: number) => void;
+  onSkipCalibration: () => void;
 }
 
 interface Milestone {
@@ -28,7 +30,7 @@ interface Milestone {
 
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
-export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarget, onApplyTdee }: Props) {
+export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarget, onApplyTdee, onSkipCalibration }: Props) {
   const navy = useMemo(() => navySeries(body, profile), [body, profile]);
   const latestNavy = navy.at(-1);
   const latestScale = seriesOf(body, 'bodyFatPct').at(-1);
@@ -131,7 +133,7 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
         <TargetEditor profile={profile} targets={t} onSetTarget={onSetTarget} />
       </section>
 
-      <CalibrationCard targets={t} onApply={onApplyTdee} />
+      <CalibrationCard targets={t} onApply={onApplyTdee} onSkip={onSkipCalibration} />
 
       <NavyForm profile={profile} today={today} body={body} weightKg={t.currentKg} onSave={onSaveSizes} />
 
@@ -175,9 +177,21 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
 }
 
 /** 減量前に維持カロリーで食べる期間の状態と、そこで測った維持カロリー */
-export function CalibrationCard({ targets: t, onApply }: { targets: Targets; onApply: (kcal: number) => void }) {
+export function CalibrationCard({
+  targets: t,
+  onApply,
+  onSkip,
+}: {
+  targets: Targets;
+  onApply: (kcal: number) => void;
+  /** 確認期間を切り上げて（とらずに）推定値で減量に入る */
+  onSkip?: () => void;
+}) {
   const c = t.calibration;
+  const [skipping, setSkipping] = useState(false);
+  const [useQuick, setUseQuick] = useState(true);
   if (!c || c.status === 'expired') return null;
+  const canSkip = !!onSkip && (c.status === 'active' || c.status === 'upcoming');
   return (
     <section className="card">
       <h3>維持カロリーの確認期間</h3>
@@ -192,6 +206,31 @@ export function CalibrationCard({ targets: t, onApply }: { targets: Targets; onA
           確認中 · あと{c.daysLeft}日。推定の維持カロリー {t.tdee} kcal で食べ、食事を毎日記録してください。終わったら実際の体重の動きから維持カロリーを測り、それを基準に赤字を決めます。
         </p>
       )}
+      {canSkip &&
+        (skipping ? (
+          <div className="form">
+            <EstimateNote targets={t} useQuick={useQuick} onUseQuick={setUseQuick} />
+            <div className="row">
+              <button className="ghost grow" onClick={() => setSkipping(false)}>
+                確認を続ける
+              </button>
+              <button
+                className="primary grow"
+                onClick={() => {
+                  if (useQuick && t.quick && quickDiffers(t)) onApply(t.quick.tdee);
+                  onSkip!();
+                  setSkipping(false);
+                }}
+              >
+                {c.status === 'upcoming' ? '確認なしで減量する' : '今日から減量に入る'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button className="ghost wide" onClick={() => setSkipping(true)}>
+            {c.status === 'upcoming' ? '確認期間をとらず、推定値で減量する' : '確認を切り上げて、推定値で減量に入る'}
+          </button>
+        ))}
       {c.status === 'done' && c.result && (
         <ul className="kv">
           <li>

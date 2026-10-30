@@ -30,6 +30,7 @@ const profile: Profile = {
   manualMacros: null,
   calibrationDays: 0,
   manualTdee: null,
+  calibrationSkippedOn: null,
 };
 
 /** start から毎日 perDay kg ずつ変わる体重 */

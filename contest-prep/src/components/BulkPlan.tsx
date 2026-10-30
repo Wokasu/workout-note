@@ -1,13 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { BodyRecord, BulkSettings, Profile } from '../types';
 import type { Targets } from '../lib/nutrition';
 import { movingAverage, seriesOf } from '../lib/analysis';
-import { weeklyRows, type ContestPlan, type PlanDay, type PlanState } from '../lib/bulk';
+import { skipCutCalibration, weeklyRows, type ContestPlan, type PlanDay, type PlanState } from '../lib/bulk';
 import { contestRange, ffmi, formatContestRange } from '../lib/navy';
 import { addDays, daysBetween, formatJa } from '../lib/date';
 import { Chart } from './Chart';
 import { CalibrationCard, NavyForm } from './Plan';
 import { MiniCutCard } from './MiniCutCard';
+import { CutStartChoice, quickDiffers, type CutStartMode } from './CutStart';
 
 interface Props {
   profile: Profile;
@@ -16,7 +17,7 @@ interface Props {
   body: BodyRecord[];
   today: string;
   onSaveSizes: (sizes: Pick<BodyRecord, 'waistCm' | 'neckCm' | 'hipCm'>) => void;
-  onSwitchToCut: () => void;
+  onSwitchToCut: (calibrate: boolean) => void;
   onApplyTdee: (kcal: number) => void;
   onSaveBulk: (s: BulkSettings) => void;
 }
@@ -52,7 +53,7 @@ export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, 
 
   return (
     <div className="stack">
-      <ContestTimingCard profile={profile} plan={plan} today={today} hasLimits={!!lim} onSwitchToCut={onSwitchToCut} />
+      <ContestTimingCard profile={profile} targets={t} plan={plan} today={today} hasLimits={!!lim} onSwitchToCut={onSwitchToCut} onApplyTdee={onApplyTdee} />
 
       <section className="card">
         <h3>増量期の状態</h3>
@@ -70,9 +71,9 @@ export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, 
         )}
       </section>
 
-      <MiniCutCard key={`${st.state}-${st.since}-${st.exitKg}`} profile={profile} targets={t} today={today} onSaveBulk={onSaveBulk} />
+      <MiniCutCard key={`${st.state}-${st.since}-${st.exitKg}`} profile={profile} targets={t} today={today} onSaveBulk={onSaveBulk} onApplyTdee={onApplyTdee} />
 
-      {st.calibration && <CalibrationCard targets={t} onApply={onApplyTdee} />}
+      {st.calibration && <CalibrationCard targets={t} onApply={onApplyTdee} onSkip={() => onSaveBulk(skipCutCalibration(s, st, today))} />}
 
       <section className="card">
         <h3>{plan.contest ? '大会までの見込み' : 'これから26週の見込み'}</h3>
@@ -153,18 +154,26 @@ export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, 
 /** 大会に向けた減量に入る時期（月2〜3kg で落とす場合） */
 function ContestTimingCard({
   profile,
+  targets: t,
   plan,
   today,
   hasLimits,
   onSwitchToCut,
+  onApplyTdee,
 }: {
   profile: Profile;
+  targets: Targets;
   plan: Props['plan'];
   today: string;
   hasLimits: boolean;
-  onSwitchToCut: () => void;
+  onSwitchToCut: (calibrate: boolean) => void;
+  onApplyTdee: (kcal: number) => void;
 }) {
   const s = profile.bulk;
+  const [mode, setMode] = useState<CutStartMode>('calibrate');
+  const [useQuick, setUseQuick] = useState(true);
+  const cal = profile.calibrationDays;
+  const calibrate = cal > 0 && mode === 'calibrate';
   const c = plan.contest;
   if (!c) {
     return (
@@ -219,9 +228,18 @@ function ContestTimingCard({
         <p className="status warn">減量に入る時期です（遅くとも {formatJa(c.late.date)} まで）。</p>
       ) : null}
       {(due || c.late.overdue) && (
-        <button className="primary wide" onClick={onSwitchToCut}>
-          コンテスト減量に切り替える
-        </button>
+        <div className="form">
+          <CutStartChoice targets={t} calibrationDays={cal} mode={mode} onMode={setMode} useQuick={useQuick} onUseQuick={setUseQuick} />
+          <button
+            className="primary wide"
+            onClick={() => {
+              if (!calibrate && useQuick && t.quick && quickDiffers(t)) onApplyTdee(t.quick.tdee);
+              onSwitchToCut(calibrate);
+            }}
+          >
+            コンテスト減量に切り替える{calibrate ? `（まず${cal}日 維持）` : ''}
+          </button>
+        </div>
       )}
       <p className="muted">
         見込みどおり増量したときの体重から、維持カロリーの確認{profile.calibrationDays > 0 ? `（${profile.calibrationDays}日）` : ''}

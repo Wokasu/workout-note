@@ -185,6 +185,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         calibrationDays: Math.round(num('calibrationDays')),
         tdeeMode,
         manualTdee: initial?.manualTdee ?? null,
+        calibrationSkippedOn: initial?.calibrationSkippedOn ?? null,
         manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
       },
       sizes,

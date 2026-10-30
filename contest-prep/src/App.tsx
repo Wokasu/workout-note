@@ -97,10 +97,23 @@ export function App() {
     setData((d) => ({ ...d, profile: d.profile && { ...d.profile, tdeeMode: 'manual', manualTdee: { kcal, date: today } } }));
   const useFormula = () => setData((d) => ({ ...d, profile: d.profile && { ...d.profile, tdeeMode: 'formula' } }));
   // 増量期から大会に向けた減量へ：今日を減量開始日にして、目標体重は設定画面で決め直す
-  const switchToCut = () =>
+  const switchToCut = (calibrate: boolean) =>
     setData((d) => ({
       ...d,
-      profile: d.profile && { ...d.profile, phase: 'cut', prepStartDate: today, startWeightKg: targets.currentKg, targetWeightKg: 0 },
+      profile: d.profile && {
+        ...d.profile,
+        phase: 'cut',
+        prepStartDate: today,
+        startWeightKg: targets.currentKg,
+        targetWeightKg: 0,
+        calibrationSkippedOn: calibrate ? null : today,
+      },
+    }));
+  // コンテスト減量の確認期間を切り上げる（始まる前なら開始日から確認なし）
+  const skipPrepCalibration = () =>
+    setData((d) => ({
+      ...d,
+      profile: d.profile && { ...d.profile, calibrationSkippedOn: d.profile.prepStartDate > today ? d.profile.prepStartDate : today },
     }));
   const rate = recentRate(weights, today);
   const eaten = sumMacros(logs.filter((l) => l.date === today));
@@ -162,6 +175,7 @@ export function App() {
         {tab === 'plan' && profile.phase === 'cut' && (
           <Plan
             onApplyTdee={applyTdee}
+            onSkipCalibration={skipPrepCalibration}
             profile={profile}
             targets={targets}
             body={body}

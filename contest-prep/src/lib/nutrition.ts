@@ -86,6 +86,12 @@ export function macrosFor(kcal: number, weightKg: number, proteinPerKg: number, 
   return { p, f, c };
 }
 
+/** コンテスト減量の確認期間を、とらなかった・途中で切り上げた */
+function cutShort(p: Pick<Profile, 'calibrationSkippedOn' | 'prepStartDate' | 'calibrationDays'>): boolean {
+  const d = p.calibrationSkippedOn;
+  return !!d && d >= p.prepStartDate && d < addDays(p.prepStartDate, p.calibrationDays);
+}
+
 export function calcTargets(
   profile: Profile,
   body: BodyRecord[],
@@ -113,7 +119,7 @@ export function calcTargets(
   // 減量の前に維持カロリーで食べる期間（コンテスト減量は開始日から、増量期は上限に届いたとき）
   const window = bulk
     ? bulk.calibration
-    : profile.calibrationDays > 0
+    : profile.calibrationDays > 0 && !cutShort(profile)
       ? { start: profile.prepStartDate, end: addDays(profile.prepStartDate, profile.calibrationDays) }
       : null;
   const calibrating = bulk ? bulk.state === 'calibrate' : !!window && today >= window.start && today < window.end;
