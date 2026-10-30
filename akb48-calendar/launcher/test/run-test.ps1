@@ -27,6 +27,12 @@ foreach ($e in @(
 )) {
   if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
 }
+# 本物の公演一覧（GitHub）をネットから読み込めること
+$out = & "$dir\launcher.ps1" -Mode apply -DryRun -NoWait -Select '1' -LocalState "$dir\test\Local State" *>&1 | Out-String -Width 1000
+Write-Host $out
+if (-not $out.Contains('秒で読み込みました')) { throw '公演一覧をネットから読み込めませんでした' }
+if (-not (Test-Path "$dir\links-cache.json")) { throw '前回の一覧（links-cache.json）が保存されていません' }
+
 # 申込状況・キャンセルモード（全アカウントで一度に開く）
 $out = & "$dir\launcher.ps1" -Mode applications -DryRun -NoWait -LocalState "$dir\test\Local State" *>&1 | Out-String -Width 1000
 Write-Host $out
