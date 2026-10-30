@@ -18,7 +18,8 @@ param(
   [string]$ProfilePrefix = 'AKB',
   [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
   [string]$ApplicationsUrl = 'https://zaiko.io/account/applications',
-  [string]$ChromePath
+  [string]$ChromePath,
+  [switch]$UseSystemProxy   # 会社などでプロキシ経由でしかネットにつながらないときだけ付ける
 )
 
 $ErrorActionPreference = 'Stop'
@@ -69,10 +70,30 @@ function Get-Shows {
   }
   if (Test-Path $Links) {
     $json = Get-Content -Raw -Encoding UTF8 $Links
-  } else {
-    $client = New-Object Net.WebClient
-    $client.Encoding = [Text.Encoding]::UTF8
-    $json = $client.DownloadString("$Links`?t=$([DateTime]::Now.Ticks)")
+    return @($json | ConvertFrom-Json)
+  }
+  # 前回読めた一覧を残しておき、読み込めなかったときに使う
+  $cache = Join-Path $here 'links-cache.json'
+  Write-Host '公演の一覧を読み込んでいます…'
+  $watch = [Diagnostics.Stopwatch]::StartNew()
+  try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    $request = [Net.HttpWebRequest]::Create("$Links`?t=$([DateTime]::Now.Ticks)")
+    # Windows のプロキシ自動検出（WPAD）に毎回数十秒かかることがあるので、ふだんはプロキシを使わない
+    if (-not $UseSystemProxy) { $request.Proxy = $null }
+    $request.Timeout = 20000
+    $request.ReadWriteTimeout = 20000
+    $response = $request.GetResponse()
+    try {
+      $reader = New-Object IO.StreamReader($response.GetResponseStream(), [Text.Encoding]::UTF8)
+      $json = $reader.ReadToEnd()
+    } finally { $response.Close() }
+    Write-Host ("  {0:N1} 秒で読み込みました" -f $watch.Elapsed.TotalSeconds) -ForegroundColor DarkGray
+    try { [IO.File]::WriteAllText($cache, $json, (New-Object Text.UTF8Encoding($false))) } catch {}
+  } catch {
+    if (-not (Test-Path $cache)) { throw }
+    Write-Host "  読み込めなかったので、前回の一覧を使います（$((Get-Item $cache).LastWriteTime.ToString('M/d HH:mm')) 時点）: $($_.Exception.Message)" -ForegroundColor Yellow
+    $json = Get-Content -Raw -Encoding UTF8 $cache
   }
   return @($json | ConvertFrom-Json)
 }
