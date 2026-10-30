@@ -19,7 +19,7 @@ param(
   [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
   [string]$ApplicationsUrl = 'https://zaiko.io/account/applications',
   [string]$ChromePath,
-  [switch]$UseSystemProxy   # 会社などでプロキシ経由でしかネットにつながらないときだけ付ける
+  [switch]$UseSystemProxy   # 最初から Windows のプロキシ設定を使って読み込む
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,6 +58,42 @@ function Get-Profiles {
     Sort-Object Name
 }
 
+# URL の中身を文字列で読む。
+# まず直接つなぎ（8秒で打ち切り）、つながらなければ Windows のプロキシ設定を使う（60秒まで待つ）。
+# プロキシ設定の自動検出は時間がかかるので、見つかったプロキシは launcher-proxy.txt に覚えて次から直接使う
+function Get-Text([string]$url) {
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  $proxyFile = Join-Path $here 'launcher-proxy.txt'
+  $saved = if (Test-Path $proxyFile) { (Get-Content -Raw $proxyFile).Trim() } else { '' }
+  $read = {
+    param($proxy, [int]$timeout)
+    $request = [Net.HttpWebRequest]::Create($url)
+    $request.Proxy = $proxy
+    $request.Timeout = $timeout
+    $request.ReadWriteTimeout = $timeout
+    $response = $request.GetResponse()
+    try { (New-Object IO.StreamReader($response.GetResponseStream(), [Text.Encoding]::UTF8)).ReadToEnd() } finally { $response.Close() }
+  }
+  if ($saved -and $saved -ne 'direct') {
+    try { return & $read (New-Object Net.WebProxy($saved)) 20000 } catch { Write-Host "  覚えていたプロキシ（$saved）でつながりませんでした" -ForegroundColor DarkGray }
+  }
+  if (-not $UseSystemProxy) {
+    try {
+      $text = & $read $null 8000
+      if ($saved -ne 'direct') { Set-Content -Path $proxyFile -Value 'direct' -Encoding ASCII }
+      return $text
+    } catch { Write-Host '  直接つながらないので、Windows のプロキシ設定で読み込みます（少し時間がかかります）…' -ForegroundColor DarkGray }
+  }
+  $system = [Net.WebRequest]::GetSystemWebProxy()
+  $system.Credentials = [Net.CredentialCache]::DefaultCredentials
+  $text = & $read $system 60000
+  try {
+    $via = $system.GetProxy([Uri]$url)
+    Set-Content -Path $proxyFile -Value $(if ($via.Host -eq ([Uri]$url).Host) { 'direct' } else { $via.AbsoluteUri }) -Encoding ASCII
+  } catch {}
+  return $text
+}
+
 # 申込する公演の一覧。urls.txt があればそちらを優先（1行に1つURL）
 function Get-Shows {
   $manual = Join-Path $here 'urls.txt'
@@ -77,17 +113,7 @@ function Get-Shows {
   Write-Host '公演の一覧を読み込んでいます…'
   $watch = [Diagnostics.Stopwatch]::StartNew()
   try {
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    $request = [Net.HttpWebRequest]::Create("$Links`?t=$([DateTime]::Now.Ticks)")
-    # Windows のプロキシ自動検出（WPAD）に毎回数十秒かかることがあるので、ふだんはプロキシを使わない
-    if (-not $UseSystemProxy) { $request.Proxy = $null }
-    $request.Timeout = 20000
-    $request.ReadWriteTimeout = 20000
-    $response = $request.GetResponse()
-    try {
-      $reader = New-Object IO.StreamReader($response.GetResponseStream(), [Text.Encoding]::UTF8)
-      $json = $reader.ReadToEnd()
-    } finally { $response.Close() }
+    $json = Get-Text "$Links`?t=$([DateTime]::Now.Ticks)"
     Write-Host ("  {0:N1} 秒で読み込みました" -f $watch.Elapsed.TotalSeconds) -ForegroundColor DarkGray
     try { [IO.File]::WriteAllText($cache, $json, (New-Object Text.UTF8Encoding($false))) } catch {}
   } catch {
