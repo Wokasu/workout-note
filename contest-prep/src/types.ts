@@ -135,4 +135,14 @@ export interface AppData {
   logs: FoodLog[];
   body: BodyRecord[];
   myFoods: Food[];
+  /** いつものセット（よく食べる組み合わせをまとめて記録する） */
+  mealSets: MealSet[];
+}
+
+export type MealItem = Omit<FoodLog, 'id' | 'date' | 'slot'>;
+
+export interface MealSet {
+  id: string;
+  name: string;
+  items: MealItem[];
 }

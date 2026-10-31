@@ -1,4 +1,4 @@
-import type { AppData, BodyRecord, Food, FoodLog, Profile } from '../types';
+import type { AppData, BodyRecord, Food, FoodLog, MealSet, Profile } from '../types';
 
 /**
  * claude.ai の公開ページで動いているときに使える保存領域（db）との同期。
@@ -6,7 +6,7 @@ import type { AppData, BodyRecord, Food, FoodLog, Profile } from '../types';
  *
  * 保存のしかた（所有者だけが読み書きできるルールで公開する）：
  *   prep/profile   { profile }
- *   prep/foods     { items: Food[] }
+ *   prep/foods     { items: Food[], sets: MealSet[] }  マイ食品といつものセット
  *   logs/YYYY-MM   { items: FoodLog[] }   1か月分の食事
  *   body/YYYY      { items: BodyRecord[] } 1年分の身体データ
  */
@@ -72,7 +72,7 @@ function group<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
 export function toDocs(data: AppData): Map<string, string> {
   const docs = new Map<string, string>();
   docs.set('prep/profile', canon({ profile: data.profile }));
-  docs.set('prep/foods', canon({ items: data.myFoods }));
+  docs.set('prep/foods', canon({ items: data.myFoods, sets: data.mealSets }));
   for (const [month, items] of group(data.logs, (l) => l.date.slice(0, 7))) docs.set(`logs/${month}`, canon({ items }));
   const body = [...data.body].sort((a, b) => a.date.localeCompare(b.date));
   for (const [year, items] of group(body, (r) => r.date.slice(0, 4))) docs.set(`body/${year}`, canon({ items }));
@@ -89,6 +89,7 @@ export function fromDocs(docs: Map<string, string>): AppData {
   return {
     profile: (parse('prep/profile')?.profile as Profile | null | undefined) ?? null,
     myFoods: (parse('prep/foods')?.items as Food[] | undefined) ?? [],
+    mealSets: (parse('prep/foods')?.sets as MealSet[] | undefined) ?? [],
     logs: itemsOf<FoodLog>('logs/'),
     body: itemsOf<BodyRecord>('body/'),
   };

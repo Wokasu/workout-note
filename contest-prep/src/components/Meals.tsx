@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { Food, FoodLog, Macros } from '../types';
+import type { Food, FoodLog, Macros, MealItem, MealSet } from '../types';
 import { FOOD_GROUPS, PRESET_FOODS, groupOf, type FoodGroup } from '../lib/foods';
 import { kcalOf, scaleMacros, sumMacros } from '../lib/macros';
 import { addDays, formatJa } from '../lib/date';
@@ -19,13 +19,16 @@ interface Props {
   onRemove: (id: string) => void;
   onAddFood: (food: Omit<Food, 'id'>) => void;
   onRemoveFood: (id: string) => void;
+  mealSets: MealSet[];
+  onSaveSet: (name: string, items: MealItem[]) => void;
+  onRemoveSet: (id: string) => void;
 }
 
 function pfc(m: Macros): string {
   return `P${m.p} F${m.f} C${m.c}`;
 }
 
-export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood, onRemoveFood }: Props) {
+export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood, onRemoveFood, mealSets, onSaveSet, onRemoveSet }: Props) {
   const [date, setDate] = useState(today);
   const [slot, setSlot] = useState(1);
   const [mode, setMode] = useState<'text' | 'pick' | 'manual'>('pick');
@@ -48,6 +51,14 @@ export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood
   const addOne = (name: string, amount: string, m: Macros) => onAdd([{ date, slot, name, amount, ...m }]);
 
   const copyPrevDay = () => onAdd(prevDayLogs.map(({ id: _id, ...l }) => ({ ...l, date })));
+
+  const [added, setAdded] = useState<string | null>(null);
+  const addSet = (set: MealSet) => {
+    onAdd(set.items.map((i) => ({ ...i, date, slot })));
+    setAdded(`「${set.name}」（${set.items.length}品）を${slot}食目に追加しました`);
+  };
+  const [editingSets, setEditingSets] = useState(false);
+  const [savingSlot, setSavingSlot] = useState<number | null>(null);
 
   return (
     <div className="stack">
@@ -78,6 +89,35 @@ export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood
             </button>
           ))}
         </div>
+
+        {mealSets.length > 0 && (
+          <>
+            <div className="label-row">
+              <div className="label">いつものセット</div>
+              <button type="button" className="link" onClick={() => setEditingSets(!editingSets)}>
+                {editingSets ? '完了' : '編集'}
+              </button>
+            </div>
+            <div className="chips">
+              {mealSets.map((set) => {
+                const m = sumMacros(set.items);
+                return editingSets ? (
+                  <span key={set.id} className="chip set-chip editing">
+                    {set.name}
+                    <button type="button" className="icon" onClick={() => onRemoveSet(set.id)} aria-label={`${set.name}を削除`}>
+                      ×
+                    </button>
+                  </span>
+                ) : (
+                  <button type="button" key={set.id} className="chip set-chip" onClick={() => addSet(set)} title={set.items.map((i) => i.name).join('・')}>
+                    {set.name} <small>{set.items.length}品 · {kcalOf(m)}kcal</small>
+                  </button>
+                );
+              })}
+            </div>
+            {added && <p className="status ok">{added}</p>}
+          </>
+        )}
 
         {recent.length > 0 && (
           <>
@@ -114,15 +154,39 @@ export function Meals({ today, logs, myFoods, target, onAdd, onRemove, onAddFood
 
       <section className="card">
         {dayLogs.length === 0 && <p className="muted">まだ記録がありません</p>}
+        {dayLogs.length > 0 && mealSets.length === 0 && (
+          <p className="muted">よく食べる組み合わせは、各食事の「セットに保存」で次からワンタップで記録できます。</p>
+        )}
         {SLOTS.map((s) => {
           const list = dayLogs.filter((l) => l.slot === s);
           if (list.length === 0) return null;
           const t = sumMacros(list);
           return (
             <div key={s} className="meal-group">
-              <h4>
-                {s}食目 <span className="muted">{kcalOf(t)} kcal · {pfc(t)}</span>
+              <h4 className="meal-head">
+                <span>
+                  {s}食目 <span className="muted">{kcalOf(t)} kcal · {pfc(t)}</span>
+                </span>
+                {savingSlot !== s && (
+                  <button type="button" className="link" onClick={() => setSavingSlot(s)}>
+                    セットに保存
+                  </button>
+                )}
               </h4>
+              {savingSlot === s && (
+                <SaveSetForm
+                  items={list}
+                  existing={mealSets.map((x) => x.name)}
+                  onCancel={() => setSavingSlot(null)}
+                  onSave={(name) => {
+                    onSaveSet(
+                      name,
+                      list.map(({ name, amount, p, f, c }) => ({ name, amount, p, f, c })),
+                    );
+                    setSavingSlot(null);
+                  }}
+                />
+              )}
               <ul className="list">
                 {list.map((l) => (
                   <li key={l.id}>
@@ -317,6 +381,38 @@ function ManualEntry({
       <button type="submit" className="primary wide" disabled={!ok}>
         追加（{kcalOf(m)} kcal）
       </button>
+    </form>
+  );
+}
+
+/** 1回の食事を名前をつけてセットとして保存する */
+function SaveSetForm({ items, existing, onSave, onCancel }: { items: FoodLog[]; existing: string[]; onSave: (name: string) => void; onCancel: () => void }) {
+  const [name, setName] = useState(items.length <= 2 ? items.map((i) => i.name).join('・') : `${items[0].name}ほか${items.length - 1}品`);
+  const trimmed = name.trim();
+  return (
+    <form
+      className="save-set"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (trimmed) onSave(trimmed);
+      }}
+    >
+      <label>
+        セットの名前
+        <input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="例：朝の定番" />
+      </label>
+      <p className="muted">
+        {items.map((i) => `${i.name}${i.amount ? ` ${i.amount}` : ''}`).join('、')}
+        {existing.includes(trimmed) && '（同じ名前のセットを上書きします）'}
+      </p>
+      <div className="row">
+        <button type="button" className="ghost grow" onClick={onCancel}>
+          やめる
+        </button>
+        <button type="submit" className="primary grow" disabled={!trimmed}>
+          保存
+        </button>
+      </div>
     </form>
   );
 }

@@ -5,7 +5,7 @@ import { defaultBulkSettings } from './bulk';
 
 const KEY = 'contest-prep:v1';
 
-export const EMPTY: AppData = { profile: null, logs: [], body: [], myFoods: [] };
+export const EMPTY: AppData = { profile: null, logs: [], body: [], myFoods: [], mealSets: [] };
 
 /** 後から増えた設定項目の初期値（古い保存データを読むときに補う） */
 const PROFILE_DEFAULTS: Pick<Profile, 'bodyFatSource' | 'phase' | 'calibrationDays' | 'manualTdee' | 'calibrationSkippedOn' | 'readyDaysBefore'> = {
@@ -36,6 +36,7 @@ export function normalizeData(raw: unknown): AppData {
     logs: Array.isArray(d.logs) ? d.logs : [],
     body: Array.isArray(d.body) ? d.body : [],
     myFoods: Array.isArray(d.myFoods) ? d.myFoods : [],
+    mealSets: Array.isArray(d.mealSets) ? d.mealSets : [],
   };
 }
 

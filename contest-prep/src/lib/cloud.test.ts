@@ -63,6 +63,7 @@ const tick = () => new Promise((r) => setTimeout(r, 5));
 const sample: AppData = {
   profile: null,
   myFoods: [{ id: 'f1', name: 'チキン', base: 100, unit: 'g', p: 23, f: 2, c: 0 }],
+  mealSets: [{ id: 's1', name: '朝の定番', items: [{ name: 'オートミール', amount: '60g', p: 8, f: 4, c: 36 }] }],
   logs: [
     { id: 'a', date: '2026-09-30', slot: 1, name: '米', amount: '200g', p: 5, f: 0.6, c: 74 },
     { id: 'b', date: '2026-10-01', slot: 1, name: '卵', amount: '1個', p: 6, f: 5, c: 0.2 },
@@ -108,7 +109,7 @@ describe('CloudSync', () => {
     const db = new FakeDb();
     for (const [p, body] of toDocs(sample)) db.docs.set(p, JSON.parse(body));
     const { sync, received } = setup(db);
-    expect(await sync.start({ profile: null, myFoods: [], logs: [], body: [] })).toBe(false);
+    expect(await sync.start({ profile: null, myFoods: [], mealSets: [], logs: [], body: [] })).toBe(false);
     await tick();
     expect(received[0].logs).toHaveLength(2);
     // 受け取ったデータをそのまま戻しても書き込みは起きない（キー順の違いも無視）

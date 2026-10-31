@@ -1046,3 +1046,51 @@ label.check.small {
   flex-direction: column;
   gap: 2px;
 }
+
+/* いつものセット */
+.label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+button.link {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+.chip.set-chip {
+  background: var(--tint);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.chip.set-chip small {
+  font-weight: 400;
+}
+.chip.set-chip.editing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 4px;
+}
+.chip.set-chip.editing .icon {
+  min-width: 24px;
+  min-height: 24px;
+}
+.meal-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.save-set {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: var(--bg);
+}

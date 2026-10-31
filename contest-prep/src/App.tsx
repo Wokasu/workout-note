@@ -39,7 +39,7 @@ export function App() {
   const [data, setData, sync] = useAppData();
   const [tab, setTab] = useState<Tab>('meals');
   const today = todayKey();
-  const { profile, logs, body, myFoods } = data;
+  const { profile, logs, body, myFoods, mealSets } = data;
 
   const intake = useMemo(() => kcalByDate(logs), [logs]);
   const weights = useMemo(() => seriesOf(body, 'weightKg'), [body]);
@@ -148,6 +148,11 @@ export function App() {
               setData((d) => ({ ...d, myFoods: [{ ...f, id: newId() }, ...d.myFoods.filter((x) => x.name !== f.name)] }))
             }
             onRemoveFood={(id) => setData((d) => ({ ...d, myFoods: d.myFoods.filter((f) => f.id !== id) }))}
+            mealSets={mealSets}
+            onSaveSet={(name, items) =>
+              setData((d) => ({ ...d, mealSets: [{ id: newId(), name, items }, ...d.mealSets.filter((x) => x.name !== name)] }))
+            }
+            onRemoveSet={(id) => setData((d) => ({ ...d, mealSets: d.mealSets.filter((x) => x.id !== id) }))}
           />
         )}
         {tab === 'body' && (
