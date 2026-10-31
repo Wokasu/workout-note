@@ -109,6 +109,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const bulkOk =
     !bulking ||
     (b.startDate !== '' &&
+      b.startDate <= today &&
       bn('stageBodyFatPct') >= 3 &&
       bn('stageBodyFatPct') <= 30 &&
       bn('ceilingMarginKg') > 0 &&
@@ -199,7 +200,15 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         <button type="button" className={phase === 'cut' ? 'on' : ''} onClick={() => setPhase('cut')}>
           コンテスト減量
         </button>
-        <button type="button" className={phase === 'bulk' ? 'on' : ''} onClick={() => setPhase('bulk')}>
+        <button
+          type="button"
+          className={phase === 'bulk' ? 'on' : ''}
+          onClick={() => {
+            setPhase('bulk');
+            // 増量を始めた日が未来（減量開始日の名残り）なら今日にする
+            setB((v) => (v.startDate === '' || v.startDate > today ? { ...v, startDate: today } : v));
+          }}
+        >
           増量期（オフ）
         </button>
       </div>
@@ -341,12 +350,13 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
             </label>
           </div>
           <p className="muted">上の「次の大会」の日付から、このペースで落とすとしたら減量にいつ入ればよいかを計画タブに出します。</p>
-          <details className="advanced">
+          <details className="advanced" open={b.startDate > today || undefined}>
             <summary>増量の進め方</summary>
             <label>
               増量を始めた日
-              <input type="date" value={b.startDate} onChange={setBulk('startDate')} />
+              <input type="date" value={b.startDate} max={today} onChange={setBulk('startDate')} />
             </label>
+            {b.startDate > today && <p className="status warn">増量を始めた日が未来になっています。今日以前の日付にしてください。</p>}
             <div className="row">
               <label className="grow">
                 最初の余剰 (kcal/日)

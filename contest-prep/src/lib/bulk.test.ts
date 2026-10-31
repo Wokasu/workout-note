@@ -311,7 +311,7 @@ describe('manual cut helpers', () => {
     expect(status(s).exitKg).toBe(76);
     s = stopCut(s, status(s), '2026-09-20');
     expect(status(s).state).toBe('bulk');
-    expect(s.manualCuts).toEqual([{ start: '2026-09-15', targetKg: 76, end: '2026-09-20', calibrate: true }]);
+    expect(s.manualCuts).toEqual([{ start: '2026-09-15', targetKg: 76, end: '2026-09-20', calibrate: true, pct: 0.75 }]);
   });
 
   it('can restart on the day it was stopped', () => {
@@ -377,5 +377,32 @@ describe('choosing between maintenance first and cutting on the estimate', () =>
     const skipped = calcTargets({ ...cut, calibrationSkippedOn: '2026-10-05' }, b, new Map(), '2026-10-05');
     expect(skipped.calibration).toBeNull();
     expect(skipped.deficit).toBeGreaterThan(0);
+  });
+});
+
+describe('mini cut pace and odd start dates', () => {
+  // 体脂肪率なし（上限なし）で、自動のプチダイエットには入らない
+  const body: BodyRecord[] = Array.from({ length: 31 }, (_, i) => ({ date: addDays('2026-10-01', i), weightKg: 84 }));
+
+  it('starts a cut even when the bulk start date is in the future (old data)', () => {
+    // 実際にあったデータ：増量開始日に減量開始日（来年2月）が入っていた
+    const p: Profile = { ...profile, calibrationDays: 14, bulk: startManualCut({ ...settings, startDate: '2027-02-28' }, '2026-10-31', 80, false) };
+    const st = bulkStatus(p, body, 84, '2026-10-31');
+    expect(st.state).toBe('minicut');
+    expect(st.exitKg).toBe(80);
+    expect(st.adjustKcal).toBe(-miniCutDeficit(settings, 84));
+  });
+
+  it('uses the pace chosen for the cut, and can change it later', () => {
+    const p: Profile = { ...profile, bulk: startManualCut(settings, '2026-10-20', 80, false, 1) };
+    const st = bulkStatus(p, body, 84, '2026-10-31');
+    expect(st.cutPct).toBe(1);
+    expect(st.adjustKcal).toBe(-miniCutDeficit(settings, 84, 1));
+    const slower = bulkStatus({ ...p, bulk: retargetCut(p.bulk, st, 80, 0.5) }, body, 84, '2026-10-31');
+    expect(slower.adjustKcal).toBe(-miniCutDeficit(settings, 84, 0.5));
+    // 見込みも選んだペースで落ちる
+    const plan = (x: typeof st) => planAhead({ s: settings, calibrationDays: 0, status: x, currentKg: 84, tdee: 2900, kcalPerKg: 15.5, today: '2026-10-31' }, 26).days;
+    const reach = (d: ReturnType<typeof plan>) => d.findIndex((x) => x.state === 'bulk');
+    expect(reach(plan(st))).toBeLessThan(reach(plan(slower)));
   });
 });

@@ -77,6 +77,8 @@ export interface ManualCut {
   calibrate?: boolean;
   /** 確認期間を切り上げて赤字に入った日 */
   cutFrom?: string | null;
+  /** このプチダイエットの減量ペース（体重の %/週）。なければ設定の値 */
+  pct?: number;
 }
 
 export interface Macros {

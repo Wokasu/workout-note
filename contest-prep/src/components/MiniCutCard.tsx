@@ -26,7 +26,8 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk, onApplyTde
   const [confirmStop, setConfirmStop] = useState(false);
   const kg = parseKg(text);
   const valid = text.trim() !== '' && kg >= 30 && kg < t.currentKg;
-  const weeks = valid ? Math.ceil((t.currentKg - kg) / ((t.currentKg * s.miniCutPct) / 100)) : null;
+  const [pct, setPct] = useState(st.cutPct ?? s.miniCutPct);
+  const weeks = valid ? Math.ceil((t.currentKg - kg) / ((t.currentKg * pct) / 100)) : null;
   const cal = profile.calibrationDays;
   const [mode, setMode] = useState<CutStartMode>('calibrate');
   const [useQuick, setUseQuick] = useState(true);
@@ -45,19 +46,20 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk, onApplyTde
         </label>
         {valid ? (
           <p className="muted">
-            今の7日平均 {t.currentKg.toFixed(1)} kg から −{(t.currentKg - kg).toFixed(1)} kg。週 {s.miniCutPct}%（1日 −{miniCutDeficit(s, t.currentKg)} kcal）で
+            今の7日平均 {t.currentKg.toFixed(1)} kg から −{(t.currentKg - kg).toFixed(1)} kg。週 {pct}%（1日 −{miniCutDeficit(s, t.currentKg, pct)} kcal）で
             {calibrate ? `、最初の${cal}日は維持カロリーの確認、その後` : ''} 約{weeks}週間の見込み。
           </p>
         ) : (
           <p className="status warn">今の7日平均（{t.currentKg.toFixed(1)} kg）より軽い体重を入れてください。</p>
         )}
+        <PaceStepper pct={pct} defaultPct={s.miniCutPct} weightKg={t.currentKg} deficit={miniCutDeficit(s, t.currentKg, pct)} onChange={setPct} />
         <CutStartChoice targets={t} calibrationDays={cal} mode={mode} onMode={setMode} useQuick={useQuick} onUseQuick={setUseQuick} />
         <button
           className="primary wide"
           disabled={!valid}
           onClick={() => {
             if (!calibrate && useQuick && t.quick && quickDiffers(t)) onApplyTdee(t.quick.tdee);
-            onSaveBulk(startManualCut(s, today, Math.round(kg * 10) / 10, calibrate));
+            onSaveBulk(startManualCut(s, today, Math.round(kg * 10) / 10, calibrate, pct));
           }}
         >
           今日からプチダイエット{calibrate ? `（まず${cal}日 維持）` : ''}
@@ -67,7 +69,7 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk, onApplyTde
     );
   }
 
-  const changed = valid && kg !== st.exitKg;
+  const changed = valid && (kg !== st.exitKg || pct !== st.cutPct);
   return (
     <section className="card form">
       <h3>{st.state === 'calibrate' ? 'プチダイエット前の維持確認' : 'プチダイエット'}</h3>
@@ -80,10 +82,12 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk, onApplyTde
           目標（kg）
           <input type="text" inputMode="decimal" value={text} onChange={(e) => setText(e.target.value)} />
         </label>
-        <button className="ghost" disabled={!changed} onClick={() => onSaveBulk(retargetCut(s, st, Math.round(kg * 10) / 10))}>
-          変更
-        </button>
       </div>
+      <PaceStepper pct={pct} defaultPct={s.miniCutPct} weightKg={t.currentKg} deficit={miniCutDeficit(s, t.currentKg, pct)} onChange={setPct} />
+      {valid && weeks !== null && <p className="muted">このペースだと目標まで約{weeks}週間（維持確認中ならその後）。</p>}
+      <button className="primary wide" disabled={!changed} onClick={() => onSaveBulk(retargetCut(s, st, Math.round(kg * 10) / 10, pct))}>
+        目標とペースを変更
+      </button>
       {confirmStop ? (
         <div className="row">
           <button className="ghost grow" onClick={() => setConfirmStop(false)}>
@@ -105,5 +109,47 @@ export function MiniCutCard({ profile, targets: t, today, onSaveBulk, onApplyTde
         </button>
       )}
     </section>
+  );
+}
+
+const PCT_MIN = 0.25;
+const PCT_MAX = 1.5;
+const PCT_STEP = 0.25;
+
+/** 減量ペース（体重の %/週）を少しずつ上げ下げする */
+function PaceStepper({
+  pct,
+  defaultPct,
+  weightKg,
+  deficit,
+  onChange,
+}: {
+  pct: number;
+  defaultPct: number;
+  weightKg: number;
+  deficit: number;
+  onChange: (pct: number) => void;
+}) {
+  const step = (d: number) => onChange(Math.round(Math.min(PCT_MAX, Math.max(PCT_MIN, pct + d)) * 100) / 100);
+  const label = pct === defaultPct ? '標準' : pct > defaultPct ? '速め' : 'ゆっくり';
+  return (
+    <div className="pace">
+      <div className="label">減量ペース</div>
+      <div className="pace-row">
+        <button type="button" className="ghost" onClick={() => step(-PCT_STEP)} disabled={pct <= PCT_MIN} aria-label="ゆっくりにする">
+          −
+        </button>
+        <div className="pace-value">
+          <b>週 {pct}%</b> <span className={`pill ${pct > defaultPct ? 'conf-low' : ''}`}>{label}</span>
+          <small className="muted">
+            約 {((weightKg * pct) / 100).toFixed(2)} kg/週 · 1日 −{deficit} kcal
+          </small>
+        </div>
+        <button type="button" className="ghost" onClick={() => step(PCT_STEP)} disabled={pct >= PCT_MAX} aria-label="速くする">
+          ＋
+        </button>
+      </div>
+      {pct > 1 && <p className="status warn">週1%を超えると筋肉も落ちやすくなります。短期間にとどめるのがおすすめです。</p>}
+    </div>
   );
 }

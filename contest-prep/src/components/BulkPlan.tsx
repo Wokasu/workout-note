@@ -71,7 +71,7 @@ export function BulkPlan({ profile, targets: t, plan, body, today, onSaveSizes, 
         )}
       </section>
 
-      <MiniCutCard key={`${st.state}-${st.since}-${st.exitKg}`} profile={profile} targets={t} today={today} onSaveBulk={onSaveBulk} onApplyTdee={onApplyTdee} />
+      <MiniCutCard key={`${st.state}-${st.since}-${st.exitKg}-${st.cutPct}`} profile={profile} targets={t} today={today} onSaveBulk={onSaveBulk} onApplyTdee={onApplyTdee} />
 
       {st.calibration && <CalibrationCard targets={t} onApply={onApplyTdee} onSkip={() => onSaveBulk(skipCutCalibration(s, st, today))} />}
 
@@ -277,7 +277,7 @@ export function PhaseLine({ targets: t, profile }: { targets: Targets; profile: 
   return (
     <p className="phase-line">
       <span className="pill minicut">プチダイエット中 {st.weeksInPhase + 1}週目</span> 維持 {st.adjustKcal} kcal/日
-      {st.exitKg !== null && `（${st.exitKg.toFixed(1)} kg まで）`}
+      {st.exitKg !== null && `（${st.exitKg.toFixed(1)} kg まで・週 ${st.cutPct}%）`}
     </p>
   );
 }

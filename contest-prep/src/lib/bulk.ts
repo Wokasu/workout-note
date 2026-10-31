@@ -54,8 +54,8 @@ export function paceSurplus(s: BulkSettings): number {
 }
 
 /** プチダイエットの1日の赤字 */
-export function miniCutDeficit(s: BulkSettings, weightKg: number): number {
-  return Math.round((((weightKg * s.miniCutPct) / 100) * KCAL_PER_KG) / 7);
+export function miniCutDeficit(s: BulkSettings, weightKg: number, pct = s.miniCutPct): number {
+  return Math.round((((weightKg * pct) / 100) * KCAL_PER_KG) / 7);
 }
 
 /** 余剰カロリーを今週どうしたか */
@@ -104,6 +104,8 @@ export interface BulkStatus {
   calibration: { start: string; end: string } | null;
   /** 自分でやめたので、上限を下回るまで自動のプチダイエットを止めている */
   holdAuto: boolean;
+  /** 今のプチダイエットのペース（体重の %/週）。増量中は null */
+  cutPct: number | null;
   /** プチダイエットをどこまで続けるか（7日平均がこの体重以下で増量に戻る）。増量中は null */
   exitKg: number | null;
   /** 今のプチダイエット（維持確認を含む）を自分で始めたもの。上限で自動に入ったときは null */
@@ -135,10 +137,13 @@ export function bulkStatus(
     return l ? bulkLimits(l.value, s) : null;
   };
   const weights = seriesOf(body, 'weightKg');
+  // 増量を始めた日が未来になっている（古いデータで減量開始日が入っていた）ときは、
+  // 手動のプチダイエットの最初の日か今日から数える
+  const start = s.startDate <= today ? s.startDate : ([...s.manualCuts.map((c) => c.start), today].filter((d) => d <= today).sort()[0] ?? today);
 
   const cal = profile.calibrationDays;
   let state = 'bulk' as BulkState;
-  let since = s.startDate;
+  let since = start;
   let calibration: BulkStatus['calibration'] = null;
   let manual = null as ManualCut | null;
   // 自分でやめたあとは、上限を一度下回るまで自動ではプチダイエットに入らない
@@ -168,7 +173,7 @@ export function bulkStatus(
       { date: c.start, cut: c, start: true },
       ...(c.end ? [{ date: c.end, cut: c, start: false }] : []),
     ])
-    .filter((e) => e.date >= s.startDate && e.date <= today)
+    .filter((e) => e.date >= start && e.date <= today)
     // 同じ日は記録した順（やめた日にまた始めたときも順に処理する）
     .sort((a, b) => a.date.localeCompare(b.date));
   let next = 0;
@@ -188,7 +193,7 @@ export function bulkStatus(
     }
   };
   for (const p of movingAverage(weights)) {
-    if (p.date < s.startDate || p.date > today) continue;
+    if (p.date < start || p.date > today) continue;
     applyEvents(p.date);
     finishCalibration(p.date);
     const lim = limitsAt(p.date);
@@ -215,19 +220,22 @@ export function bulkStatus(
     since,
     weeksInPhase,
     limits,
-    adjustKcal: surplus ? surplus.kcal : state === 'calibrate' ? 0 : -miniCutDeficit(s, currentKg),
+    adjustKcal: surplus ? surplus.kcal : state === 'calibrate' ? 0 : -miniCutDeficit(s, currentKg, current?.pct ?? s.miniCutPct),
     surplusMove: surplus?.move ?? null,
     roomKg: limits ? Math.round((limits.ceilingKg - currentKg) * 10) / 10 : null,
     calibration,
     holdAuto,
+    cutPct: state === 'bulk' ? null : (current?.pct ?? s.miniCutPct),
     exitKg: state === 'bulk' ? null : current ? current.targetKg : (limits?.lowerKg ?? null),
     manual: current,
   };
 }
 
 /** プチダイエットを今日から始める。calibrate なら維持カロリーの確認から、そうでなければ今の推定値ですぐ赤字 */
-export function startManualCut(s: BulkSettings, today: string, targetKg: number, calibrate = true): BulkSettings {
-  return { ...s, manualCuts: [...s.manualCuts.filter((c) => c.end !== null), { start: today, targetKg, end: null, calibrate }] };
+export function startManualCut(s: BulkSettings, today: string, targetKg: number, calibrate = true, pct = s.miniCutPct): BulkSettings {
+  const cut: ManualCut = { start: today, targetKg, end: null, calibrate };
+  if (pct !== s.miniCutPct) cut.pct = pct;
+  return { ...s, manualCuts: [...s.manualCuts.filter((c) => c.end !== null), cut] };
 }
 
 /** 維持カロリーの確認を切り上げて、今日から赤字に入る */
@@ -240,11 +248,11 @@ export function skipCutCalibration(s: BulkSettings, st: BulkStatus, today: strin
   };
 }
 
-/** 今のプチダイエット（自動で入ったものも）の目標体重を変える */
-export function retargetCut(s: BulkSettings, st: BulkStatus, targetKg: number): BulkSettings {
+/** 今のプチダイエット（自動で入ったものも）の目標体重とペースを変える */
+export function retargetCut(s: BulkSettings, st: BulkStatus, targetKg: number, pct = st.cutPct ?? s.miniCutPct): BulkSettings {
   const open = openManualCut(s);
-  if (open) return { ...s, manualCuts: [...s.manualCuts.slice(0, -1), { ...open, targetKg }] };
-  return { ...s, manualCuts: [...s.manualCuts, { start: st.calibration?.start ?? st.since, targetKg, end: null }] };
+  if (open) return { ...s, manualCuts: [...s.manualCuts.slice(0, -1), { ...open, targetKg, pct }] };
+  return { ...s, manualCuts: [...s.manualCuts, { start: st.calibration?.start ?? st.since, targetKg, end: null, pct }] };
 }
 
 /** プチダイエット（維持確認中も）をやめて今日から増量に戻る */
@@ -300,6 +308,7 @@ function simulate(o: SimOptions): PlanDay[] {
   let surplus = status.state === 'bulk' ? status.adjustKcal : s.startSurplusKcal;
   // 今のプチダイエットは決めた体重まで、その先（上限で入るもの）は戻す線まで
   let exitKg = status.exitKg ?? status.limits?.lowerKg ?? null;
+  let cutPct = status.cutPct ?? s.miniCutPct;
   let holdAuto = status.holdAuto;
   for (let date = today; date < o.until; date = addDays(date, 1)) {
     const maintenance = tdee + kcalPerKg * (w - currentKg);
@@ -321,7 +330,7 @@ function simulate(o: SimOptions): PlanDay[] {
     }
     let adjust = 0;
     if (state === 'bulk') adjust = surplus;
-    else if (state === 'minicut') adjust = -miniCutDeficit(s, w);
+    else if (state === 'minicut') adjust = -miniCutDeficit(s, w, cutPct);
     else if (state === 'prep' && o.contestDate && o.contestKg !== undefined) {
       // 大会当日にコンテスト体重になるよう、残りの日数で割った赤字
       const left = Math.max(1, daysBetween(date, o.contestDate));
@@ -335,6 +344,7 @@ function simulate(o: SimOptions): PlanDay[] {
       state = cal > 0 ? 'calibrate' : 'minicut';
       since = addDays(date, 1);
       exitKg = status.limits.lowerKg;
+      cutPct = s.miniCutPct;
     } else if (state === 'minicut' && exitKg !== null && w <= exitKg) {
       state = 'bulk';
       since = addDays(date, 1);
