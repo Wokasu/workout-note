@@ -191,7 +191,12 @@ export function App() {
         )}
         {tab === 'analysis' && <Analysis onApplyTdee={applyTdee} onUseFormula={useFormula} profile={profile} targets={targets} targetWeightKg={profile.phase === 'cut' ? targets.targetWeightKg : null} body={body} logs={logs} today={today} />}
         {tab === 'settings' && (
-          <Settings data={data} sync={sync} today={today} currentKg={targets.currentKg} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
+          <Settings
+            data={data}
+            sync={sync}
+            today={today}
+            currentKg={targets.currentKg}
+            targetKcal={targets.bulk ? targets.tdee + targets.bulk.adjustKcal : targets.tdee - targets.deficit} onSaveProfile={saveProfile} onRestore={setData} onReset={() => setData(EMPTY)} />
         )}
       </main>
       <nav className="tabbar">

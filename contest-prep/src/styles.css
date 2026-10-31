@@ -1094,3 +1094,31 @@ button.link {
   border-radius: 12px;
   background: var(--bg);
 }
+
+/* PFC のバランスの見本 */
+.pfc-preview {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--bg);
+}
+.pfc-preview p {
+  margin: 6px 0 0;
+  font-size: 14px;
+}
+.pfc-preview b.p { color: var(--p); }
+.pfc-preview b.f { color: var(--f); }
+.pfc-preview b.c { color: var(--c); }
+.pfc-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.pfc-bar .p { background: var(--p); }
+.pfc-bar .f { background: var(--f); }
+.pfc-bar .c { background: var(--c); }
+.problems {
+  margin: 0;
+  padding-left: 28px;
+}

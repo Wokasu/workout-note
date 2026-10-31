@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { BodyFatSource, BodyRecord, BulkSettings, Profile, Sex } from '../types';
-import { ACTIVITY_OPTIONS } from '../lib/nutrition';
+import { ACTIVITY_OPTIONS, macrosFor } from '../lib/nutrition';
+import { kcalOf } from '../lib/macros';
 import { seriesOf, valueAtOrBefore } from '../lib/analysis';
 import { contestRange, ffmi, formatContestRange, navyBodyFat, targetOptions } from '../lib/navy';
 import { addDays, daysBetween, formatJa } from '../lib/date';
@@ -16,6 +17,8 @@ interface Props {
   body: BodyRecord[];
   /** 今の体重（7日平均）。まだ記録がなければ null で、入力した体重を使う */
   currentKg: number | null;
+  /** 今の目標カロリー（PFC のバランスの見本に使う） */
+  targetKcal?: number | null;
   /** sizes は海軍式のサイズを入力し直したときだけ渡す（今日の記録に保存する） */
   onSave: (p: Profile, sizes: NavySizes | null) => void;
   submitLabel: string;
@@ -43,7 +46,7 @@ type Form = Record<
   string
 >;
 
-export function ProfileForm({ initial, today, body, currentKg, onSave, submitLabel }: Props) {
+export function ProfileForm({ initial, today, body, currentKg, targetKcal = null, onSave, submitLabel }: Props) {
   const latestWeight = seriesOf(body, 'weightKg').at(-1)?.value;
   // 首とウエストを測った一番新しい記録をサイズの初期値にする
   const lastSizes = [...body].reverse().find((r) => r.waistCm !== undefined && r.neckCm !== undefined);
@@ -54,7 +57,12 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const [tdeeMode, setTdeeMode] = useState<Profile['tdeeMode']>(initial?.tdeeMode ?? 'formula');
   const [useManual, setUseManual] = useState(initial?.manualMacros != null);
   const [phase, setPhase] = useState<Profile['phase']>(initial?.phase ?? 'cut');
-  const bulkInit = initial?.bulk ?? defaultBulkSettings(initial?.sex ?? 'male', today);
+  const savedBulk = initial?.bulk ?? defaultBulkSettings(initial?.sex ?? 'male', today);
+  // 古いデータで増量を始めた日が未来（減量開始日の名残り）なら、手動のプチダイエットの最初の日か今日にしておく
+  const bulkInit =
+    savedBulk.startDate > today
+      ? { ...savedBulk, startDate: [...savedBulk.manualCuts.map((c) => c.start), today].filter((d) => d <= today).sort()[0] ?? today }
+      : savedBulk;
   const [b, setB] = useState<Record<keyof BulkSettings, string>>(
     Object.fromEntries(Object.entries(bulkInit).map(([k, v]) => [k, String(v)])) as Record<keyof BulkSettings, string>,
   );
@@ -161,6 +169,35 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
     num('calibrationDays') >= 0 &&
     num('calibrationDays') <= 42 &&
     manualOk;
+
+  // 保存できない理由（ボタンが押せないときに表示する）
+  const problems = [
+    !bulking && !(f.contestDate > f.prepStartDate) && '大会日は減量開始日より後にしてください',
+    bulking && b.startDate > today && '増量を始めた日が未来になっています（増量の進め方）',
+    bulking && !bulkOk && !(b.startDate > today) && '増量の設定に範囲外の値があります',
+    !(num('age') >= 10 && num('age') <= 100) && '年齢を入れてください',
+    !(num('heightCm') >= 120 && num('heightCm') <= 230) && '身長を入れてください（120〜230cm）',
+    !(num('startWeightKg') >= 30) && '体重を入れてください',
+    !bulking && !(num('targetWeightKg') >= 30) && '目標体重を入れてください',
+    !(num('proteinPerKg') > 0) && 'たんぱく質（g/体重kg）を入れてください',
+    !(num('fatPct') >= 10 && num('fatPct') <= 50) && '脂質は10〜50%にしてください',
+    !(num('maxWeeklyLossPct') > 0) && '減量ペースの上限を入れてください',
+    !(f.calibrationDays !== '' && num('calibrationDays') >= 0 && num('calibrationDays') <= 42) && '維持カロリーの確認日数は0〜42日にしてください',
+    !manualOk && 'コーチ指定の PFC を P・F・C すべて入れてください',
+  ].filter((x): x is string => !!x);
+
+  // 今の目標カロリーと体重で、この設定だと PFC がどうなるかの見本
+  const preview = (() => {
+    const m = useManual
+      ? manualOk ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null
+      : targetKcal && currentKg && num('proteinPerKg') > 0 && num('fatPct') > 0
+        ? macrosFor(targetKcal, currentKg, num('proteinPerKg'), num('fatPct'))
+        : null;
+    if (!m) return null;
+    const kcal = kcalOf(m);
+    const pct = (g: number, per: number) => (kcal > 0 ? Math.round(((g * per) / kcal) * 100) : 0);
+    return { ...m, kcal, pp: pct(m.p, 4), fp: pct(m.f, 9), cp: pct(m.c, 4) };
+  })();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -465,6 +502,15 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
             <input type="number" inputMode="numeric" value={f.fatPct} onChange={set('fatPct')} />
           </label>
         </div>
+        {!useManual && (
+          <div className="chips">
+            {[15, 20, 25, 30].map((v) => (
+              <button type="button" key={v} className={`chip ${num('fatPct') === v ? 'on' : ''}`} onClick={() => setF((x) => ({ ...x, fatPct: String(v) }))}>
+                脂質 {v}%{v === 15 ? '（炭水化物多め）' : v === 30 ? '（脂質多め）' : ''}
+              </button>
+            ))}
+          </div>
+        )}
         <label>
           減量ペースの上限（体重の %/週）
           <input type="number" inputMode="decimal" step="0.1" value={f.maxWeeklyLossPct} onChange={set('maxWeeklyLossPct')} />
@@ -495,6 +541,20 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
           <input type="checkbox" checked={useManual} onChange={(e) => setUseManual(e.target.checked)} />
           コーチ指定の PFC を使う
         </label>
+        {preview && (
+          <div className="pfc-preview">
+            <div className="label">{useManual ? 'コーチ指定の PFC' : `この設定だと（目標 ${targetKcal} kcal・体重 ${currentKg} kg）`}</div>
+            <div className="pfc-bar" aria-hidden>
+              <span className="p" style={{ flex: preview.pp }} />
+              <span className="f" style={{ flex: preview.fp }} />
+              <span className="c" style={{ flex: preview.cp }} />
+            </div>
+            <p>
+              <b className="p">P {preview.p}g</b>（{preview.pp}%）· <b className="f">F {preview.f}g</b>（{preview.fp}%）· <b className="c">C {preview.c}g</b>（{preview.cp}%）
+              {useManual && ` = ${preview.kcal} kcal`}
+            </p>
+          </div>
+        )}
         {useManual && (
           <div className="row">
             <label className="grow">
@@ -513,6 +573,13 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         )}
       </details>
 
+      {problems.length > 0 && (
+        <ul className="status warn problems">
+          {problems.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      )}
       <button type="submit" className="primary wide" disabled={!valid}>
         {submitLabel}
       </button>

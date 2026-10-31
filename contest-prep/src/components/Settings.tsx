@@ -21,12 +21,14 @@ interface Props {
   sync: SyncState;
   today: string;
   currentKg: number;
+  /** PFC の見本に使う目標カロリー（コーチ指定の PFC を使う前の値） */
+  targetKcal: number | null;
   onSaveProfile: (p: Profile, sizes: NavySizes | null) => void;
   onRestore: (d: AppData) => void;
   onReset: () => void;
 }
 
-export function Settings({ data, sync, today, currentKg, onSaveProfile, onRestore, onReset }: Props) {
+export function Settings({ data, sync, today, currentKg, targetKcal, onSaveProfile, onRestore, onReset }: Props) {
   const [saved, setSaved] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [message, setMessage] = useState('');
@@ -71,6 +73,7 @@ export function Settings({ data, sync, today, currentKg, onSaveProfile, onRestor
         today={today}
         body={data.body}
         currentKg={currentKg}
+        targetKcal={targetKcal}
         submitLabel={saved ? '保存しました' : '保存'}
         onSave={(p, sizes) => {
           onSaveProfile(p, sizes);
