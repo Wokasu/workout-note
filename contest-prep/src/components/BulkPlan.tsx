@@ -28,6 +28,7 @@ const STATE_LABEL: Record<PlanState, string> = {
   minicut: 'プチダイエット',
   prepCalibrate: '維持（確認）',
   prep: '大会減量',
+  ready: '調整（体重キープ）',
 };
 const EVENT_TEXT: Record<PlanState, string> = {
   bulk: '増量を再開',
@@ -35,6 +36,7 @@ const EVENT_TEXT: Record<PlanState, string> = {
   minicut: 'プチダイエット開始',
   prepCalibrate: '大会に向けた減量を開始（まず維持カロリーの確認）',
   prep: '大会に向けた減量（赤字）開始',
+  ready: 'コンテスト体重に到達（大会まで調整）',
 };
 
 /** 増量期の計画：上限・戻す線、増量とプチダイエットの波、大会に向けた減量に入る時期 */
@@ -209,6 +211,14 @@ function ContestTimingCard({
             {profile.contestName || '大会'} {formatJa(c.contestDate)}
           </span>
         </li>
+        {c.readyDate < c.contestDate && (
+          <li>
+            <span>コンテスト体重に届く日</span>
+            <span>
+              {formatJa(c.readyDate)} <small>大会の{daysBetween(c.readyDate, c.contestDate) / 7}週間前（そこから大会までは調整）</small>
+            </span>
+          </li>
+        )}
         <li>
           <span>開始時の見込み体重</span>
           <span>
@@ -243,7 +253,7 @@ function ContestTimingCard({
       )}
       <p className="muted">
         見込みどおり増量したときの体重から、維持カロリーの確認{profile.calibrationDays > 0 ? `（${profile.calibrationDays}日）` : ''}
-        を含めて逆算しています。早めの日に始めれば月{s.prepPaceMinKg}kg、遅い方の日なら月{s.prepPaceMaxKg}kg のペースで間に合います。
+        を含めて、大会の{profile.readyDaysBefore / 7}週間前にコンテスト体重に届くよう逆算しています。早めの日に始めれば月{s.prepPaceMinKg}kg、遅い方の日なら月{s.prepPaceMaxKg}kg のペースで間に合います。
       </p>
     </section>
   );

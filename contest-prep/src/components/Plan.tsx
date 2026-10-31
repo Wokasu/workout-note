@@ -42,21 +42,21 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
 
   const milestones = useMemo<Milestone[]>(() => {
     const ma = movingAverage(seriesOf(body, 'weightKg'));
-    // 確認期間は体重を保ち、その後大会まで落としていく
+    // 確認期間は体重を保ち、その後は目標の日（大会の数週間前）まで落として、そこからは保つ
     const calEnd = addDays(profile.prepStartDate, profile.calibrationDays);
-    const lossFrom = calEnd < profile.contestDate ? calEnd : profile.prepStartDate;
-    const total = Math.max(1, daysBetween(lossFrom, profile.contestDate));
+    const lossFrom = calEnd < t.readyDate ? calEnd : profile.prepStartDate;
+    const total = Math.max(1, daysBetween(lossFrom, t.readyDate));
     const dates: string[] = [];
     for (let d = profile.prepStartDate; d < profile.contestDate; d = addDays(d, 7)) dates.push(d);
+    if (t.readyDate > profile.prepStartDate && !dates.includes(t.readyDate)) dates.push(t.readyDate);
     dates.push(profile.contestDate);
+    dates.sort();
     return dates.map((date) => {
       const past = date <= today;
       // 過去は開始時に立てた計画線、これからは今の体重から上限ペース内で引き直した線
       const plan = past
-        ? profile.startWeightKg + ((t.targetWeightKg - profile.startWeightKg) * Math.max(0, daysBetween(lossFrom, date))) / total
-        : date === profile.contestDate
-          ? t.projectedKg
-          : Math.max(t.targetWeightKg, t.currentKg - (t.plannedKgPerWeek * Math.max(0, daysBetween(today > lossFrom ? today : lossFrom, date))) / 7);
+        ? profile.startWeightKg + ((t.targetWeightKg - profile.startWeightKg) * Math.min(1, Math.max(0, daysBetween(lossFrom, date)) / total))
+        : Math.max(t.targetWeightKg, t.currentKg - (t.plannedKgPerWeek * Math.max(0, daysBetween(today > lossFrom ? today : lossFrom, date))) / 7);
       const point = past ? valueAtOrBefore(ma, date) : undefined;
       const actual = point && point.date >= addDays(date, -3) ? point.value : null;
       const w = actual ?? plan;
@@ -124,13 +124,15 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
             </span>
           </li>
           <li>
-            <span>当日の見込み</span>
-            <span>{t.projectedKg.toFixed(1)} kg</span>
+            <span>目標体重の期限</span>
+            <span>
+              {formatJa(t.readyDate)} <small>大会の{profile.readyDaysBefore / 7}週間前 · 見込み {t.projectedKg.toFixed(1)} kg</small>
+            </span>
           </li>
         </ul>
-        {t.tooFast && <p className="status warn">上限ペースでは大会までに目標に届きません。大会日・目標・上限ペースの見直しを検討してください。</p>}
+        {t.tooFast && <p className="status warn">上限ペースでは期限までに目標に届きません。目標・上限ペース・期限（設定の「目標体重に届く日」）の見直しを検討してください。</p>}
         <p className="muted">除脂肪体重が変わらない前提の計算です。減量中は筋量も多少落ちるため、実際の大会時体重はこれより軽くなることが多いです。</p>
-        <TargetEditor profile={profile} targets={t} onSetTarget={onSetTarget} />
+        <TargetEditor profile={profile} targets={t} today={today} onSetTarget={onSetTarget} />
       </section>
 
       <CalibrationCard targets={t} onApply={onApplyTdee} onSkip={onSkipCalibration} />
@@ -156,7 +158,7 @@ export function Plan({ profile, targets: t, body, today, onSaveSizes, onSetTarge
                 const diff = m.actual !== null ? r1(m.actual - m.plan) : null;
                 return (
                   <tr key={m.date} className={m.isThisWeek ? 'current' : m.past ? '' : 'future'}>
-                    <td>{m.date === profile.contestDate ? `🏆 ${formatJa(m.date)}` : formatJa(m.date)}</td>
+                    <td>{m.date === profile.contestDate ? `🏆 ${formatJa(m.date)}` : m.date === t.readyDate ? `🎯 ${formatJa(m.date)}` : formatJa(m.date)}</td>
                     <td>{m.weeksOut > 0 ? `${m.weeksOut}週` : '当日'}</td>
                     <td>{m.plan.toFixed(1)}</td>
                     <td>{m.actual !== null ? m.actual.toFixed(1) : '—'}</td>
@@ -264,7 +266,7 @@ export function CalibrationCard({
 }
 
 /** 今の除脂肪体重から出した目安を見ながら、目標体重を変える */
-function TargetEditor({ profile, targets: t, onSetTarget }: { profile: Profile; targets: Targets; onSetTarget: (kg: number) => void }) {
+function TargetEditor({ profile, targets: t, today, onSetTarget }: { profile: Profile; targets: Targets; today: string; onSetTarget: (kg: number) => void }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(String(t.targetWeightKg));
   if (!open) {
@@ -275,7 +277,8 @@ function TargetEditor({ profile, targets: t, onSetTarget }: { profile: Profile; 
     );
   }
   const kg = Number(value);
-  const options = t.leanKg !== null ? targetOptions(profile.sex, t.leanKg, t.currentKg, t.daysLeft, profile.maxWeeklyLossPct) : [];
+  const options =
+    t.leanKg !== null ? targetOptions(profile.sex, t.leanKg, t.currentKg, Math.max(0, daysBetween(today, t.readyDate)), profile.maxWeeklyLossPct) : [];
   return (
     <form
       className="form target-editor"

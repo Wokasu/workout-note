@@ -27,6 +27,7 @@ const profile: Profile = {
   calibrationDays: 0,
   manualTdee: null,
   calibrationSkippedOn: null,
+  readyDaysBefore: 0,
 };
 
 /** 除脂肪 68kg（体重 × (1 - 体脂肪率) が 68 になるよう体脂肪率も入れる） */
@@ -404,5 +405,23 @@ describe('mini cut pace and odd start dates', () => {
     const plan = (x: typeof st) => planAhead({ s: settings, calibrationDays: 0, status: x, currentKg: 84, tdee: 2900, kcalPerKg: 15.5, today: '2026-10-31' }, 26).days;
     const reach = (d: ReturnType<typeof plan>) => d.findIndex((x) => x.state === 'bulk');
     expect(reach(plan(st))).toBeLessThan(reach(plan(slower)));
+  });
+});
+
+describe('reaching the contest weight weeks before the contest', () => {
+  it('plans the cut to end 4 weeks out, then holds until the contest', () => {
+    const st = bulkStatus(profile, days('2026-09-01', [79, 79, 79]), 79, '2026-09-03');
+    const base = { s: settings, calibrationDays: 14, status: st, currentKg: 79, tdee: 2800, kcalPerKg: 15.5, today: '2026-09-03', contestDate: '2027-06-01', contestKg: 71.6 };
+    const now = planAhead({ ...base, readyDate: '2027-05-04' });
+    const sameDay = planAhead(base);
+    // 4週間前に届くよう、減量に入る日も早くなる
+    expect(now.contest!.early.date < sameDay.contest!.early.date).toBe(true);
+    const ready = now.days.find((d) => d.state === 'ready')!;
+    expect(ready.date).toBe('2027-05-04');
+    expect(ready.weightKg).toBeCloseTo(71.6, 0);
+    // 調整期間は体重を保つ
+    expect(now.days.at(-1)!.weightKg).toBeCloseTo(ready.weightKg, 1);
+    // 到達したあとは大会まで調整のまま（減量をやり直さない）
+    expect(now.days.filter((d) => d.date >= ready.date).every((d) => d.state === 'ready')).toBe(true);
   });
 });

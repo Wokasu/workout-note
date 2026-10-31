@@ -30,6 +30,8 @@ export interface Profile {
   tdeeMode: 'auto' | 'formula' | 'manual';
   /** 「反映する」を押した推定値と、その日 */
   manualTdee: { kcal: number; date: string } | null;
+  /** 目標体重に届いておく日（大会の何日前）。そこから大会までは調整に使う */
+  readyDaysBefore: number;
   /** コンテスト減量の維持カロリー確認を切り上げた（またはとらなかった）日 */
   calibrationSkippedOn: string | null;
   /** 減量（コンテスト減量・プチダイエット）に入る前に、維持カロリーで食べて実際の維持カロリーを測る日数（0 でなし） */

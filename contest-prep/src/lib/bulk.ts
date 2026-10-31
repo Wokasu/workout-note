@@ -266,7 +266,7 @@ export function stopCut(s: BulkSettings, st: BulkStatus, today: string): BulkSet
 }
 
 /** 見込みの状態：増量期の3つに、大会前の維持確認と大会減量を加えたもの */
-export type PlanState = BulkState | 'prepCalibrate' | 'prep';
+export type PlanState = BulkState | 'prepCalibrate' | 'prep' | 'ready';
 
 export interface PlanDay {
   date: string;
@@ -290,6 +290,8 @@ interface SimOptions {
   /** 大会に向けた減量（維持確認を含む）を始める日。なければ増量を続ける */
   prepStart?: string | null;
   contestDate?: string;
+  /** コンテスト体重に届いておく日（大会の何日か前）。なければ大会日 */
+  readyDate?: string;
   contestKg?: number;
 }
 
@@ -312,12 +314,16 @@ function simulate(o: SimOptions): PlanDay[] {
   let holdAuto = status.holdAuto;
   for (let date = today; date < o.until; date = addDays(date, 1)) {
     const maintenance = tdee + kcalPerKg * (w - currentKg);
-    if (o.prepStart && date >= o.prepStart && state !== 'prepCalibrate' && state !== 'prep') {
+    if (o.prepStart && date >= o.prepStart && state !== 'prepCalibrate' && state !== 'prep' && state !== 'ready') {
       state = cal > 0 ? 'prepCalibrate' : 'prep';
       since = date;
     }
     if (state === 'prepCalibrate' && daysBetween(since, date) >= cal) {
       state = 'prep';
+      since = date;
+    }
+    if (state === 'prep' && o.readyDate && o.contestDate && o.readyDate < o.contestDate && date >= o.readyDate) {
+      state = 'ready';
       since = date;
     }
     if (state === 'calibrate' && daysBetween(since, date) >= cal) {
@@ -332,8 +338,8 @@ function simulate(o: SimOptions): PlanDay[] {
     if (state === 'bulk') adjust = surplus;
     else if (state === 'minicut') adjust = -miniCutDeficit(s, w, cutPct);
     else if (state === 'prep' && o.contestDate && o.contestKg !== undefined) {
-      // 大会当日にコンテスト体重になるよう、残りの日数で割った赤字
-      const left = Math.max(1, daysBetween(date, o.contestDate));
+      // 目標の日（大会の数週間前）にコンテスト体重になるよう、残りの日数で割った赤字
+      const left = Math.max(1, daysBetween(date, o.readyDate ?? o.contestDate));
       adjust = -Math.max(0, Math.round(((w - o.contestKg) / left) * KCAL_PER_KG));
     }
     const intake = Math.round(maintenance + adjust);
@@ -366,14 +372,14 @@ export interface PrepStart {
 }
 
 /**
- * 増量を続けた場合の見込み体重から、「この日に減量を始めれば、月 paceKg のペースで大会当日にコンテスト体重になる」
- * 一番遅い日を探す。維持確認の日数は減量に使えない日として差し引く。
+ * 増量を続けた場合の見込み体重から、「この日に減量を始めれば、月 paceKg のペースで目標の日（readyDate）に
+ * コンテスト体重になる」一番遅い日を探す。維持確認の日数は減量に使えない日として差し引く。
  */
-export function findPrepStart(days: PlanDay[], contestKg: number, contestDate: string, calibrationDays: number, paceKgPerMonth: number): PrepStart | null {
+export function findPrepStart(days: PlanDay[], contestKg: number, readyDate: string, calibrationDays: number, paceKgPerMonth: number): PrepStart | null {
   let found: PlanDay | null = null;
   for (const d of days) {
-    if (d.date >= contestDate) break;
-    const lossDays = daysBetween(d.date, contestDate) - calibrationDays;
+    if (d.date >= readyDate) break;
+    const lossDays = daysBetween(d.date, readyDate) - calibrationDays;
     const possible = lossDays > 0 ? (paceKgPerMonth / DAYS_PER_MONTH) * lossDays : 0;
     if (d.weightKg - contestKg > possible) break;
     found = d;
@@ -395,25 +401,28 @@ export interface ContestPlan {
   /** 月 prepPaceMaxKg で落とす場合（遅くともこの日） */
   late: PrepStart;
   contestDate: string;
+  /** コンテスト体重に届いておく日 */
+  readyDate: string;
   contestKg: number;
 }
 
 /**
  * これからの見込み。大会日とコンテスト体重がわかれば、減量に入る時期（月2〜3kg ペース）を出し、
- * 早めの方の日で増量を終えて、維持確認 → 大会減量 → 大会までを描く。
+ * 早めの方の日で増量を終えて、維持確認 → 大会減量 → 目標の日（大会の数週間前）に到達 → 調整 → 大会までを描く。
  */
 export function planAhead(
   o: Omit<SimOptions, 'until' | 'prepStart'>,
   defaultWeeks = 26,
 ): { days: PlanDay[]; contest: ContestPlan | null } {
   const { contestDate, contestKg } = o;
-  const hasContest = !!contestDate && contestKg !== undefined && daysBetween(o.today, contestDate) > o.calibrationDays;
+  const readyDate = o.readyDate && contestDate && o.readyDate < contestDate ? o.readyDate : contestDate;
+  const hasContest = !!contestDate && !!readyDate && contestKg !== undefined && daysBetween(o.today, readyDate) > o.calibrationDays;
   if (!hasContest) return { days: simulate({ ...o, until: addDays(o.today, defaultWeeks * 7) }), contest: null };
-  const bulkOnly = simulate({ ...o, until: contestDate });
-  const early = findPrepStart(bulkOnly, contestKg, contestDate, o.calibrationDays, o.s.prepPaceMinKg)!;
-  const late = findPrepStart(bulkOnly, contestKg, contestDate, o.calibrationDays, o.s.prepPaceMaxKg)!;
-  const days = simulate({ ...o, until: addDays(contestDate, 1), prepStart: early.date });
-  return { days, contest: { early, late, contestDate, contestKg } };
+  const bulkOnly = simulate({ ...o, until: readyDate });
+  const early = findPrepStart(bulkOnly, contestKg, readyDate, o.calibrationDays, o.s.prepPaceMinKg)!;
+  const late = findPrepStart(bulkOnly, contestKg, readyDate, o.calibrationDays, o.s.prepPaceMaxKg)!;
+  const days = simulate({ ...o, readyDate, until: addDays(contestDate, 1), prepStart: early.date });
+  return { days, contest: { early, late, contestDate, readyDate, contestKg } };
 }
 
 /** 週ごとの行（各週の最初の日）。状態が週の途中で変わったときもその日を入れる */
@@ -423,7 +432,7 @@ export function weeklyRows(days: PlanDay[]): PlanDay[] {
 
 /** 増量期の見込みと、大会に向けた減量の開始時期（画面用のまとめ） */
 export function bulkPlanFor(
-  profile: Pick<Profile, 'bulk' | 'calibrationDays' | 'activityFactor' | 'contestDate'>,
+  profile: Pick<Profile, 'bulk' | 'calibrationDays' | 'activityFactor' | 'contestDate' | 'readyDaysBefore'>,
   t: { bulk: BulkStatus | null; currentKg: number; tdee: number },
   today: string,
 ): { days: PlanDay[]; contest: ContestPlan | null } | null {
@@ -438,6 +447,7 @@ export function bulkPlanFor(
     kcalPerKg: 10 * profile.activityFactor,
     today,
     contestDate: profile.contestDate > today ? profile.contestDate : undefined,
+    readyDate: addDays(profile.contestDate, -profile.readyDaysBefore),
     contestKg: t.bulk.limits?.contestKg,
   });
 }

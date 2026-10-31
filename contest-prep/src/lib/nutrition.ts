@@ -64,13 +64,15 @@ export interface Targets extends Macros {
     result: TdeeEstimate | null;
   } | null;
   daysLeft: number;
+  /** 目標体重に届いておく日（大会の readyDaysBefore 日前） */
+  readyDate: string;
   remainingKg: number;
-  /** 大会までに目標体重へ届くのに必要な週あたり減量（kg） */
+  /** 目標の日までに目標体重へ届くのに必要な週あたり減量（kg） */
   requiredKgPerWeek: number;
   /** 上限を考慮して計画する週あたり減量（kg） */
   plannedKgPerWeek: number;
   deficit: number;
-  /** このペースで大会当日に見込まれる体重 */
+  /** このペースで目標の日に見込まれる体重 */
   projectedKg: number;
   tooFast: boolean;
   belowBmr: boolean;
@@ -84,6 +86,11 @@ export function macrosFor(kcal: number, weightKg: number, proteinPerKg: number, 
   const f = Math.round((kcal * fatPct) / 100 / 9);
   const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
   return { p, f, c };
+}
+
+/** 目標体重に届いておく日 */
+export function readyDateOf(p: Pick<Profile, 'contestDate' | 'readyDaysBefore'>): string {
+  return addDays(p.contestDate, -p.readyDaysBefore);
 }
 
 /** コンテスト減量の確認期間を、とらなかった・途中で切り上げた */
@@ -138,9 +145,12 @@ export function calcTargets(
   const daysLeft = Math.max(0, daysBetween(today, profile.contestDate));
   // 減量に使える日数（キャリブレーション中は、その残りを除く）
   const lossStart = !bulk && window && window.end > today ? window.end : today;
-  const lossDays = Math.max(0, daysBetween(lossStart, profile.contestDate));
+  // 大会当日ではなく、その readyDaysBefore 日前に目標体重に届くように落とす（残りは調整期間）
+  const readyDate = readyDateOf(profile);
+  const lossDays = Math.max(0, daysBetween(lossStart, readyDate));
   const remainingKg = Math.round((currentKg - targetWeightKg) * 10) / 10;
-  const requiredKgPerWeek = lossDays > 0 ? Math.max(0, (remainingKg / lossDays) * 7) : 0;
+  // 目標の日を過ぎてまだ届いていなければ、上限ペースで落とし続ける
+  const requiredKgPerWeek = remainingKg <= 0 || daysLeft === 0 ? 0 : (remainingKg / Math.max(1, lossDays)) * 7;
   const capKgPerWeek = (currentKg * profile.maxWeeklyLossPct) / 100;
   const plannedKgPerWeek = Math.min(requiredKgPerWeek, capKgPerWeek);
   const deficit = calibrating ? 0 : bulk ? Math.max(0, -bulk.adjustKcal) : Math.round((plannedKgPerWeek * KCAL_PER_KG) / 7);
@@ -176,6 +186,7 @@ export function calcTargets(
         }
       : null,
     daysLeft,
+    readyDate,
     remainingKg,
     requiredKgPerWeek: Math.round(requiredKgPerWeek * 100) / 100,
     plannedKgPerWeek: Math.round(plannedKgPerWeek * 100) / 100,

@@ -36,6 +36,7 @@ type Form = Record<
   | 'fatPct'
   | 'maxWeeklyLossPct'
   | 'calibrationDays'
+  | 'readyDaysBefore'
   | 'manualP'
   | 'manualF'
   | 'manualC',
@@ -74,6 +75,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
     fatPct: String(initial?.fatPct ?? 20),
     maxWeeklyLossPct: String(initial?.maxWeeklyLossPct ?? 1),
     calibrationDays: String(initial?.calibrationDays ?? 14),
+    readyDaysBefore: String(initial?.readyDaysBefore ?? 28),
     manualP: initial?.manualMacros ? String(initial.manualMacros.p) : '',
     manualF: initial?.manualMacros ? String(initial.manualMacros.f) : '',
     manualC: initial?.manualMacros ? String(initial.manualMacros.c) : '',
@@ -97,7 +99,8 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
   const useNavy = navyBf !== null && bodyFatSource !== 'scale';
   const bf = useNavy ? navyBf : (scaleBf?.value ?? null);
   const leanKg = bf !== null && weightNow !== null ? Math.round(weightNow * (1 - bf / 100) * 10) / 10 : null;
-  const daysLeft = Math.max(0, daysBetween(today, f.contestDate));
+  // 目標体重は大会の readyDaysBefore 日前に届いているように考える
+  const daysLeft = Math.max(0, daysBetween(today, addDays(f.contestDate, -Number(f.readyDaysBefore))));
   const options =
     leanKg !== null && weightNow !== null && num('maxWeeklyLossPct') > 0
       ? targetOptions(sex, leanKg, weightNow, daysLeft, num('maxWeeklyLossPct'))
@@ -186,6 +189,7 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
         calibrationDays: Math.round(num('calibrationDays')),
         tdeeMode,
         manualTdee: initial?.manualTdee ?? null,
+        readyDaysBefore: Number(f.readyDaysBefore),
         calibrationSkippedOn: initial?.calibrationSkippedOn ?? null,
         manualMacros: useManual ? { p: num('manualP'), f: num('manualF'), c: num('manualC') } : null,
       },
@@ -228,6 +232,17 @@ export function ProfileForm({ initial, today, body, currentKg, onSave, submitLab
           <input type="date" value={f.prepStartDate} onChange={set('prepStartDate')} />
         </label>
       </div>
+      <div className="label">目標体重に届いておく日</div>
+      <div className="seg">
+        {[14, 21, 28, 42].map((d) => (
+          <button type="button" key={d} className={Number(f.readyDaysBefore) === d ? 'on' : ''} onClick={() => setF((v) => ({ ...v, readyDaysBefore: String(d) }))}>
+            {d / 7}週間前
+          </button>
+        ))}
+      </div>
+      <p className="muted">
+        大会の{Number(f.readyDaysBefore) / 7}週間前（{formatJa(addDays(f.contestDate, -Number(f.readyDaysBefore)))}）までに目標体重に届くよう計画し、そこから大会までは調整期間にします。
+      </p>
 
       <h3>体</h3>
       <div className="seg">

@@ -27,6 +27,7 @@ function paceStatus(rate: Rate | null, t: Targets, maxPct: number): { cls: strin
   if (t.daysLeft === 0) return { cls: '', text: '大会おつかれさまでした' };
   if (t.calibration?.active)
     return { cls: '', text: '維持カロリーの確認期間です。食事を毎日記録して、体重が大きく動かないか見てください' };
+  if (t.remainingKg <= 0) return { cls: 'ok', text: '目標体重に届いています。大会までは維持カロリーで調整期間です' };
   if (!rate) return { cls: '', text: '体重を2週間ほど記録すると、実際のペースを判定します' };
   const loss = -rate.kgPerWeek;
   if (-rate.pctPerWeek > maxPct * 1.2) return { cls: 'warn', text: '落ちるのが速すぎます。筋量を守るためカロリーを少し戻す検討を' };
@@ -108,6 +109,15 @@ export function Today({ onApplyTdee, onUseFormula, bulkPlan, profile, targets: t
             </div>
           ) : (
             <div className="big">大会当日・終了後</div>
+          )}
+          {t.daysLeft > 0 && (
+            <div className="cal-note">
+              {t.readyDate > today
+                ? `目標体重の期限 ${formatJa(t.readyDate)}（大会の${profile.readyDaysBefore / 7}週間前・あと${daysBetween(today, t.readyDate)}日）`
+                : t.remainingKg > 0
+                  ? `目標体重の期限（${formatJa(t.readyDate)}）を過ぎています`
+                  : '調整期間（目標体重に到達済み）'}
+            </div>
           )}
           {t.calibration?.active && (
             <div className="cal-note">
@@ -203,7 +213,7 @@ export function Today({ onApplyTdee, onUseFormula, bulkPlan, profile, targets: t
           <p className={`status ${status.cls}`}>{status.text}</p>
           {t.tooFast && (
             <p className="status warn">
-              目標体重には週{profile.maxWeeklyLossPct}%の上限ペースでは届きません。このペースだと大会当日は約 {t.projectedKg} kg
+              目標体重には週{profile.maxWeeklyLossPct}%の上限ペースでは期限（{formatJa(t.readyDate)}）までに届きません。このペースだと期限の日は約 {t.projectedKg} kg
               の見込みです。
             </p>
           )}

@@ -31,6 +31,7 @@ const profile: Profile = {
   calibrationDays: 0,
   manualTdee: null,
   calibrationSkippedOn: null,
+  readyDaysBefore: 0,
 };
 
 /** start から毎日 perDay kg ずつ変わる体重 */
@@ -498,5 +499,18 @@ describe('maintenance mode', () => {
     const t = calcTargets({ ...profile, tdeeMode: 'manual', manualTdee: { kcal: 2750, date: '2026-10-29' } }, body, intake, '2026-10-29');
     expect(t.tdeeSource).toBe('manual');
     expect(t.tdee).toBe(2750);
+  });
+});
+
+describe('ready date before the contest', () => {
+  it('needs the target weight 4 weeks before the contest', () => {
+    const body: BodyRecord[] = Array.from({ length: 14 }, (_, i) => ({ date: addDays('2026-10-18', i), weightKg: 80 }));
+    const contest = { ...profile, contestDate: '2027-01-31', targetWeightKg: 72, calibrationDays: 0, readyDaysBefore: 28 };
+    const t = calcTargets(contest, body, new Map(), '2026-10-31');
+    expect(t.readyDate).toBe('2027-01-03');
+    // 8kg を 10/31〜1/3（64日）で
+    expect(t.requiredKgPerWeek).toBeCloseTo((8 / 64) * 7, 1);
+    const reached = calcTargets({ ...contest, targetWeightKg: 80 }, body, new Map(), '2027-01-10');
+    expect(reached.deficit).toBe(0);
   });
 });
