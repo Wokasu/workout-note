@@ -721,7 +721,7 @@
         "田中沙友利",
         "森川優"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12983186600.html",
       "applyUrl": "https://akb48.zaiko.io/e/2026ra-nov8-1300",
       "deadlines": [
         {
@@ -741,59 +741,16 @@
           "minute": 0
         }
       ],
-      "lobby": null,
-      "tag": null
-    },
-    {
-      "year": 2026,
-      "month": 11,
-      "day": 8,
-      "hour": 17,
-      "minute": 30,
-      "title": "「ここからだ」公演",
-      "members": [
-        "奥本カイリ"
-      ],
-      "cast": [
-        "岩立沙穂",
-        "奥本カイリ",
-        "川村結衣",
-        "工藤華純",
-        "下尾みう",
-        "長友彩海",
-        "成田香姫奈",
-        "橋本恵理子",
-        "橋本陽菜",
-        "平田侑希",
-        "正鋳真優",
-        "八木愛月",
-        "山根涼羽",
-        "大賀彩姫",
-        "田中沙友利",
-        "森川優"
-      ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
-      "applyUrl": "https://akb48.zaiko.io/e/2026kk-1108-1730",
-      "deadlines": [
-        {
-          "label": "(1)〜(3)枠",
-          "year": 2026,
-          "month": 11,
-          "day": 1,
-          "hour": 16,
-          "minute": 0
-        },
-        {
-          "label": "(4)〜(6)枠",
-          "year": 2026,
-          "month": 11,
-          "day": 3,
-          "hour": 16,
-          "minute": 0
-        }
-      ],
-      "lobby": null,
-      "tag": "女性限定公演"
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 11,
+        "day": 5,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
+      "tag": "<2回目> 17:30開演 女性限定公演"
     },
     {
       "year": 2026,
