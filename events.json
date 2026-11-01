@@ -825,8 +825,25 @@
         "近藤沙樹"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
-      "applyUrl": null,
-      "deadlines": [],
+      "applyUrl": "https://akb48.zaiko.io/e/2026t-1113-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 6,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 8,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
@@ -860,7 +877,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 8,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 10,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
@@ -895,7 +929,24 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
       "applyUrl": null,
-      "deadlines": [],
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 8,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 10,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
