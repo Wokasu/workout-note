@@ -4052,13 +4052,13 @@ function renderExerciseForm(view, E, cat) {
 }
 
 // ===== 詳細 =====
-// トップセット：いちばん重いセット（同じ重量なら回数が多い方）。ウォームアップ（W）は除く
+// トップセット：推定1RM がいちばん高いセット（同じなら重い方）。ウォームアップ（W）は除く
 function topSet(ex) {
   let top = null;
   for (const st of ex.sets) {
     if (st.weight == null || !(st.reps > 0) || st.note === "W") continue;
-    const w = st.unit === "lb" ? Math.round(st.weight * 0.4536 * 10) / 10 : st.weight;
-    if (!top || w > top.weight || (w === top.weight && st.reps > top.reps)) top = { weight: w, reps: st.reps };
+    const w = st.unit === "lb" ? Math.round(st.weight * 0.4536 * 10) / 10 : st.weight, rm = WN.estimate1RM(w, st.reps);
+    if (!top || rm > top.rm + 1e-9 || (Math.abs(rm - top.rm) <= 1e-9 && w > top.weight)) top = { weight: w, reps: st.reps, rm };
   }
   return top;
 }
@@ -4070,18 +4070,14 @@ function compareWithPrev(ex, vol, prev) {
   const t = topSet(ex), pt = topSet(prev.exercise);
   let topCell = null;
   if (t && pt) {
-    const dw = Math.round((t.weight - pt.weight) * 100) / 100, dr = t.reps - pt.reps;
-    const rmd = WN.estimate1RM(t.weight, t.reps) - WN.estimate1RM(pt.weight, pt.reps);
-    // 重量が上がった・同じ重量で回数が増えた＝伸びた。重量が下がっても推定1RM が上なら伸びた扱い
-    // 重量が上がっても回数が減り、推定1RM が下がったときは「重量は上・回数は下」（どちらとも言えない）
-    const mixed = dw > 0 && dr < 0 && rmd < -0.05;
-    const grew = !mixed && (dw > 0 || (dw === 0 && dr > 0) || (dw < 0 && rmd > 0.05));
-    const fell = !grew && !mixed && (dw < 0 || (dw === 0 && dr < 0));
+    // 伸びたかどうかは推定1RM で決める（重量・回数の差は内訳として出す）
+    const dw = Math.round((t.weight - pt.weight) * 100) / 100, dr = t.reps - pt.reps, rmd = t.rm - pt.rm;
+    const grew = rmd >= 0.05, fell = rmd <= -0.05;
     const how = [dw !== 0 ? `重量 ${dw > 0 ? "+" : "−"}${fmtW(Math.abs(dw))}kg` : null, dr !== 0 ? `${dw === 0 ? "同じ重量で" : "回数 "}${dr > 0 ? "+" : "−"}${Math.abs(dr)}回` : null].filter(Boolean).join("・") || "前回と同じ";
     topCell = h("div", { class: "cmp " + (grew ? "up" : fell ? "down" : "same") },
-      h("span", { class: "k" }, "トップセット"),
+      h("span", { class: "k" }, "トップセット（推定1RM がいちばん高いセット）"),
       h("b", {}, `${fmtW(t.weight)}kg×${t.reps}`, h("small", {}, `（前回 ${fmtW(pt.weight)}×${pt.reps}）`)),
-      h("span", { class: "d" }, `${grew ? "▲ 伸びた" : fell ? "▼ 下がった" : mixed ? "± 重量は上・回数は下" : "± 同じ"}・${how}${Math.abs(rmd) >= 0.05 ? `・推定1RM ${rmd > 0 ? "+" : "−"}${WN.round1(Math.abs(rmd))}kg` : ""}`));
+      h("span", { class: "d" }, `${grew ? "▲ 伸びた" : fell ? "▼ 下がった" : "± 同じ"}・推定1RM ${WN.round1(t.rm)}kg${Math.abs(rmd) >= 0.05 ? `（${rmd > 0 ? "+" : "−"}${WN.round1(Math.abs(rmd))}kg）` : ""}・${how}`));
   }
   return h("div", { class: "cmp-wrap" },
     h("div", { class: "muted" }, `前回（${WN.shortDate(prev.date)}）と比べて`),
