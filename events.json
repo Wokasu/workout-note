@@ -780,7 +780,7 @@
         "近藤沙樹",
         "髙橋舞桜"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/490264702/",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12983292232.html",
       "applyUrl": "https://akb48.zaiko.io/e/2026d-1109-1830",
       "deadlines": [
         {
@@ -800,7 +800,15 @@
           "minute": 0
         }
       ],
-      "lobby": null,
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 11,
+        "day": 6,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
