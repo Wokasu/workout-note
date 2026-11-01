@@ -1737,8 +1737,8 @@ function renderHome(view) {
   const pct = prev && pick(prev) > 0 ? Math.round((pick(cur) / pick(prev) - 1) * 100) : null;
   const paint = paintCard();
   if (paint) view.append(paint);
-  const adv = adviceCard();
-  if (adv) view.append(adv);
+  const chk = checkCard();
+  if (chk) view.append(chk);
   view.append(monthSwitcher());
   view.append(h("div", { class: "seg", role: "group", "aria-label": "表示する量" },
     [["kg", "重量（kg）"], ["sets", "セット数"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(S.measure === k), onclick: () => { S.measure = k; S.selWeek = null; render(); } }, l))));
@@ -2248,150 +2248,135 @@ async function toggleFocus(p, name) {
   try { await rulesDoc().set(S.exRules); } catch { toast("★を保存できませんでした。通信状態を確認してください"); }
 }
 
-// ===== 今日のおすすめ =====
-// 休み・軽め・量を控えめに、をすすめるのは、自分の記録で実際に★種目の伸び（調子）や出し切り（2セット目以降の落ち込み）が
-// 悪くなっていると観測できたときだけ。データが足りないときは、そう伝える。
-function compareBy(sessions, test, farTest = (x) => !test(x)) {
-  const g = (arr, k) => { const v = arr.map((x) => x[k]).filter((v) => v != null); return { avg: v.length ? mean(v) : null, n: v.length }; };
-  const near = sessions.filter(test), far = sessions.filter(farTest);
-  const c = { form: [g(near, "form"), g(far, "form")], drop: [g(near, "drop"), g(far, "drop")] };
-  const fOk = c.form[0].n >= 3 && c.form[1].n >= 3, dOk = c.drop[0].n >= 3 && c.drop[1].n >= 3;
-  if (!fOk && !dOk) return null;
-  c.fd = fOk ? c.form[0].avg - c.form[1].avg : null;
-  c.dd = dOk ? c.drop[0].avg - c.drop[1].avg : null;
-  c.bad = (c.fd != null && c.fd <= -1.5) || (c.dd != null && c.dd >= 3); // 調子1.5ポイント以上低い、または落ち込みが3ポイント（およそ1レップ分）以上大きい
-  return c;
-}
-function evidenceText(c, nearLabel, farLabel) {
-  const out = [];
-  if (c.fd != null) out.push(`調子 ${c.form[0].avg.toFixed(1)}%（${nearLabel}・${c.form[0].n}回）と ${c.form[1].avg.toFixed(1)}%（${farLabel}・${c.form[1].n}回）`);
-  if (c.dd != null) out.push(`2セット目以降の落ち込み ${c.drop[0].avg.toFixed(1)}% と ${c.drop[1].avg.toFixed(1)}%`);
-  return out.join("。");
-}
-const restLabel = (since) => (since <= 1 ? "連日" : `中${since - 1}日以内`);
-const agoLabel = (since) => (since === 1 ? "昨日" : `${since}日前`);
+// ===== 調子のチェック =====
+// 毎回の上下は気にせず、長い目で★種目が伸びているかを見る。知らせるのは次の2つだけ。
+// ・下降アラート：★種目の推定1RM（いちばん高いセット）が2回続けて下がり、合計3%以上落ちたとき（3回が4週以内）
+// ・予防アラート：自分の記録で「この状況だと調子が下がる」とはっきり言える状況に、今日が当てはまるとき
+// どちらも、どの因子で引っかかったかを数字つきで出す。休み方などの提案はしない。
+const DOWN_MIN = 0.03, METHOD_CHANGE = 0.15, DOWN_WINDOW = 28, RISK_MIN_N = 8, RISK_MIN_SD = 0.5;
+const sdOf = (a) => { const m = mean(a); return Math.sqrt(mean(a.map((v) => (v - m) ** 2))); };
+const medianOf = (a) => { const v = [...a].sort((x, y) => x - y); return v.length ? v[Math.floor(v.length / 2)] : 0; };
 
-// 今日の状況と同じだった過去の回の、★種目の調子・落ち込みを、その種目の全体平均と比べる
-const GAP_B = [[1, 1, "連日で"], [2, 2, "中1日空けて"], [3, 4, "中2〜3日空けて"], [5, 7, "中4〜6日空けて"], [8, 999, "中7日以上空けて"]];
-const LEVELS = ["少なめ", "ふつう", "多め"];
-function tertiles(vals) { const v = [...vals].sort((a, b) => a - b); return [v[Math.floor(v.length / 3)], v[Math.floor((v.length * 2) / 3)]]; }
-function situationFactors(L, part, ctx) {
-  const ss = L.list.filter((x) => x.form != null || x.drop != null);
-  const avgOf = (arr, k) => { const v = arr.map((x) => x[k]).filter((v) => v != null); return v.length ? { avg: mean(v), n: v.length } : null; };
-  const base = { form: avgOf(ss, "form"), drop: avgOf(ss, "drop") }, out = [];
-  const add = (type, when, test) => {
-    const sel = ss.filter(test), f = avgOf(sel, "form"), d = avgOf(sel, "drop");
-    const fd = f && f.n >= 3 && base.form ? f.avg - base.form.avg : null, dd = d && d.n >= 3 && base.drop ? d.avg - base.drop.avg : null;
-    if (fd == null && dd == null) return;
-    out.push({ type, when, fd, dd, f, d });
-  };
-  const P = partLabel(part);
-  const gb = GAP_B.find(([a, b]) => ctx.since >= a && ctx.since <= b);
-  add("gap", `${P}を${gb[2]}やった日`, (x) => x.partGap != null && x.partGap >= gb[0] && x.partGap <= gb[1]);
-  if (ss.length >= 9) {
-    const t7 = tertiles(ss.map((x) => x.part7)), lv7 = (v) => (v <= t7[0] ? 0 : v <= t7[1] ? 1 : 2), k7 = lv7(ctx.acute7);
-    add("vol", `直近7日の${P}が${LEVELS[k7]}（今は${ctx.acute7}セット）だった日`, (x) => lv7(x.part7) === k7);
-    const t3 = tertiles(ss.map((x) => x.load3)), lv3 = (v) => (v <= t3[0] ? 0 : v <= t3[1] ? 1 : 2), k3 = lv3(ctx.last3);
-    add("load", `直近3日の全身の量が${LEVELS[k3]}だった日`, (x) => lv3(x.load3) === k3);
-  }
-  const sb = Math.min(ctx.streak, 2);
-  add("streak", sb === 0 ? "前日がオフか軽めだった日" : sb === 1 ? "前日にしっかりやっていた日" : "しっかりやった日が2日以上続いたあと", (x) => Math.min(x.hardBefore, 2) === sb);
-  return { base, factors: out };
-}
-const isBad = (x) => (x.fd != null && x.fd <= -1.5) || (x.dd != null && x.dd >= 3);
-const isGood = (x) => !isBad(x) && ((x.fd != null && x.fd >= 1) || (x.dd != null && x.dd <= -2));
-function factorText(name, x, base) {
-  const parts = [];
-  if (x.fd != null) parts.push(`調子 ${x.f.avg.toFixed(1)}%（${x.f.n}回・いつもは${base.form.avg.toFixed(1)}%）`);
-  if (x.dd != null) parts.push(`2セット目以降の落ち込み ${x.d.avg.toFixed(1)}%（いつもは${base.drop.avg.toFixed(1)}%）`);
-  return `${x.when}の${name}は${parts.join("、")}`;
+// 直近3回の推定1RM で下降を見る。15%以上の急な下げは、やり方を変えたかの確認にする（確認済みならその回から数え直す）
+function downTrend(name, list) {
+  const ack = S.exRules.ack?.[name];
+  const L = list.filter((x) => x.rm && (!ack || x.date >= ack));
+  if (L.length < 2) return null;
+  const b = L.at(-2), c = L.at(-1);
+  if (c.rm < b.rm * (1 - METHOD_CHANGE)) return { kind: "change", pts: [b, c], drop: (b.rm - c.rm) / b.rm };
+  if (L.length < 3) return null;
+  const a = L.at(-3);
+  if (!(a.rm > b.rm && b.rm > c.rm)) return null;
+  const drop = (a.rm - c.rm) / a.rm;
+  if (drop >= METHOD_CHANGE) return { kind: "change", pts: [a, b, c], drop };
+  if (drop < DOWN_MIN || WN.daysBetween(a.date, c.date) > DOWN_WINDOW) return null;
+  return { kind: "down", pts: [a, b, c], drop };
 }
 
-function todayAdvice() {
-  const t = today(), F = formData();
+// 予防アラートの因子。hist は過去の各回の直前の状況（わからなければ null）、today は今日の状況
+const RISK_FACTORS = [
+  { key: "gap", label: (p) => `${partLabel(p)}を中1日以内でやる`, hist: (x) => (x.partGap == null ? null : x.partGap <= 2), today: (c) => c.since <= 2, now: (c, p) => `今日は前回の${partLabel(p)}から${c.since}日目` },
+  { key: "vol7", label: (p) => `直近7日の${partLabel(p)}のセット数が多い（いつもの1.3倍以上）`, hist: (x, r) => (r.part7 > 0 ? x.part7 >= r.part7 * 1.3 : null), today: (c, r) => r.part7 > 0 && c.acute7 >= r.part7 * 1.3, now: (c, p, r) => `今は直近7日で${c.acute7}セット（いつもは${r.part7}セット）` },
+  { key: "streak", label: () => "しっかりやった日が2日以上続いたあと", hist: (x) => x.hardBefore >= 2, today: (c) => c.streak >= 2, now: (c) => `今は${c.streak}日続いている` },
+  { key: "load3", label: () => "直近3日の全身の量が多い（いつもの1.3倍以上）", hist: (x, r) => (r.load3 > 0 ? x.load3 >= r.load3 * 1.3 : null), today: (c, r) => r.load3 > 0 && c.last3 >= r.load3 * 1.3, now: (c, p, r) => `今は直近3日で${c.last3}セット（いつもは${r.load3}セット）` },
+  { key: "sleep", label: () => "睡眠6時間未満", hist: (x) => (x.sleep == null ? null : x.sleep < 6), today: (c) => c.sleep != null && c.sleep < 6, now: (c) => `今日の睡眠 ${c.sleep}時間` },
+  { key: "cond", label: () => "コンディションスコア2以下", hist: (x) => (x.cond == null ? null : x.cond <= 2), today: (c) => c.cond != null && c.cond <= 2, now: (c) => `今日のコンディション ${c.cond}/5` },
+];
+
+let checkCache = null;
+function conditionCheck() {
+  const F = formData(), t = today();
+  if (checkCache && checkCache.F === F) return checkCache.result;
   const past = S.workouts.filter((w) => w.date <= t);
-  if (!past.length) return null;
-  const first = past.reduce((a, w) => (w.date < a ? w.date : a), t), span = WN.daysBetween(first, t);
-  if (span < 14) return { needMore: true };
-  // 全身の状況：しっかりやった日（いつもの練習日の6割以上のセット数）の連続と、直近3日の量
-  const trainedToday = F.daySets.has(t);
-  let streak = 0;
-  for (let d = WN.addDays(t, -1); F.hard(d); d = WN.addDays(d, -1)) streak++;
-  const last3 = [1, 2, 3].reduce((a, k) => a + (F.daySets.get(WN.addDays(t, -k)) || 0), 0);
-  const rows = [];
-  for (const p of WN.BODY_PARTS) {
-    let acute7 = 0, chronic = 0, todaySets = 0, last = null;
-    for (const w of past) {
-      const n = w.exercises.filter((e) => e.part === p).reduce((a, e) => a + e.sets.length, 0);
-      if (!n) continue;
-      const d = WN.daysBetween(w.date, t);
-      if (d === 0) { todaySets += n; continue; }
-      if (!last || w.date > last) last = w.date;
-      if (d <= 7) acute7 += n; else if (d <= 35) chronic += n;
-    }
-    if (!last && !todaySets) continue;
-    const since = last ? WN.daysBetween(last, t) : 999;
-    if (since > 60 && !todaySets) continue;
-    chronic = span >= 35 ? chronic / 4 : null;
-    const ratio = chronic ? acute7 / chronic : null;
-    const r = { part: p, since, acute: acute7, chronic, ratio, score: 0 };
-    rows.push(r);
-    if (todaySets) { Object.assign(r, { kind: "done", label: "今日やった", text: `今日 ${todaySets}セット` }); continue; }
-
-    // ほかの★種目・部位の日が、この部位の★種目に悪く影響していないか（影響の分析の結果）
-    const hit = F.effects.filter((e) => e.xPart === p && e.diff <= -1.5)
-      .map((e) => ({ ...e, g: WN.daysBetween(e.lastY, t) })).filter((e) => e.g >= 1 && e.g <= 2).sort((a, b) => a.diff - b.diff)[0];
-    // この部位の★種目について、今日と同じ状況だった回の調子・落ち込みを見る
-    const ctx = { since, acute7, streak, last3 };
-    const bad = [], good = [];
-    let checked = false;
-    for (const f of F.focus.filter((x) => x.part === p)) {
-      const sf = situationFactors({ list: F.by.get(f.name) }, p, ctx);
-      if (sf.factors.length) checked = true;
-      for (const x of sf.factors) {
-        if (isBad(x)) bad.push({ name: f.name, x, base: sf.base, sev: Math.max(-(x.fd ?? 0) / 1.5, (x.dd ?? 0) / 3) });
-        else if (isGood(x)) good.push({ name: f.name, x, base: sf.base, gain: Math.max((x.fd ?? 0) / 1, -(x.dd ?? 0) / 2) });
+  let result;
+  if (!past.length) result = null;
+  else if (WN.daysBetween(past.reduce((a, w) => (w.date < a ? w.date : a), t), t) < 14) result = { needMore: true };
+  else {
+    const condBy = new Map();
+    for (const w of S.workouts) if (w.cond && !condBy.has(w.date)) condBy.set(w.date, w.cond);
+    const todayCond = condBy.get(t) || {};
+    let streak = 0;
+    for (let d = WN.addDays(t, -1); F.hard(d); d = WN.addDays(d, -1)) streak++;
+    const last3 = [1, 2, 3].reduce((a, k) => a + (F.daySets.get(WN.addDays(t, -k)) || 0), 0);
+    const lifts = F.focus.filter((f) => !f.auto).map((f) => {
+      const list = F.by.get(f.name), part = f.part;
+      const trend = liftTrend(list), down = downTrend(f.name, list);
+      // 今日の状況（今日もうこの部位をやっていれば予防アラートは出さない）
+      let since = 999, acute7 = 0, doneToday = false;
+      for (const w of past) {
+        const n = w.exercises.filter((e) => e.part === part).reduce((a, e) => a + e.sets.length, 0);
+        if (!n) continue;
+        const d = WN.daysBetween(w.date, t);
+        if (d === 0) { doneToday = true; continue; }
+        since = Math.min(since, d);
+        if (d <= 7) acute7 += n;
       }
-    }
-    bad.sort((a, b) => b.sev - a.sev); good.sort((a, b) => b.gain - a.gain);
-    if (hit) Object.assign(r, { kind: "rest", label: "休み推奨", score: -3, text: `${hit.Y}から${hit.g}日。あなたの記録では、${hit.Y}から2日以内の${hit.X}は調子が${Math.abs(hit.diff).toFixed(1)}ポイント低め（${hit.near.toFixed(1)}% と ${hit.far.toFixed(1)}%）` });
-    else if (bad.length) {
-      const b = bad[0], over = b.x.type === "vol" || b.x.type === "load";
-      Object.assign(r, { kind: over ? "over" : "rest", label: over ? "量を控えめに" : "休み推奨", score: -1 - b.sev, text: `${factorText(b.name, b.x, b.base)}。今日は落ちやすい状況です` });
-    } else if (good.length) {
-      const g2 = [...new Map(good.map((g) => [g.x.type, g])).values()].slice(0, 2); // 同じ種類の理由は1つだけ
-      Object.assign(r, { kind: "go", label: "やりどき", score: 1 + good[0].gain, text: `${g2.map((g) => factorText(g.name, g.x, g.base)).join("。")}。今日はパフォーマンスが出やすい状況です` });
-    } else if (checked) Object.assign(r, { kind: "ok", label: "ふつう", text: `最後は${since === 1 ? "昨日" : `${since}日前`}・直近7日で${acute7}セット。あなたの記録では、この状況で調子が上がる・下がるといった差は見えていません` });
-    else Object.assign(r, { kind: "ok", label: "判断材料なし", text: `最後は${since === 1 ? "昨日" : `${since}日前`}・直近7日で${acute7}セット。★種目の記録がまだ少なく、今日の調子の見込みはわかりません` });
+      const ctx = { since, acute7, streak, last3, sleep: todayCond.sleep ?? null, cond: todayCond.condition ?? null };
+      // 自分の記録で「下がりやすい」とはっきり言える因子：差がいつものブレの半分以上、比べる回数がどちらも8回以上
+      const sc = scoredOf(list).map((x) => ({ ...x, sleep: condBy.get(x.date)?.sleep ?? null, cond: condBy.get(x.date)?.condition ?? null }));
+      const ref = { part7: Math.round(medianOf(sc.map((x) => x.part7))), load3: Math.round(medianOf(sc.map((x) => x.load3))) };
+      const spread = sc.length >= 2 * RISK_MIN_N ? sdOf(sc.map((x) => x.form)) : null;
+      const learned = [];
+      if (spread) for (const fa of RISK_FACTORS) {
+        const yes = [], no = [];
+        for (const x of sc) { const v = fa.hist(x, ref); if (v === true) yes.push(x.form); else if (v === false) no.push(x.form); }
+        if (yes.length < RISK_MIN_N || no.length < RISK_MIN_N) continue;
+        const diff = mean(yes) - mean(no);
+        if (diff <= -RISK_MIN_SD * spread) learned.push({ fa, yes: mean(yes), no: mean(no), nYes: yes.length, nNo: no.length, diff, spread });
+      }
+      const risks = doneToday || down?.kind === "down" ? [] : learned.filter((l) => l.fa.today(ctx, ref));
+      return { name: f.name, part, list, trend, down, risks, learned, ctx, ref, doneToday };
+    });
+    result = { lifts, anyStar: F.focus.some((f) => !f.auto) };
   }
-
-  const all = F.focus.flatMap((f) => F.by.get(f.name));
-  const streakC = !trainedToday && streak >= 2 ? compareBy(all, (x) => x.hardBefore >= streak) : null;
-  const usual3 = F.typical ? F.perDay * 3 : null, ratio3 = usual3 ? last3 / usual3 : null;
-  const loadC = !trainedToday && ratio3 && ratio3 >= 1.3 ? compareBy(all, (x) => x.load3 >= last3 * 0.85) : null;
-  const goParts = rows.filter((r) => r.kind === "go").sort((a, b) => b.score - a.score);
-  const anyRest = rows.some((r) => r.kind === "rest" || r.kind === "over");
-  let headline, tone = "go";
-  if (trainedToday) { headline = "今日のトレーニングは記録済みです。おつかれさまでした"; tone = "done"; }
-  else if (streakC?.bad) { headline = `しっかりやった日が${streak}日続いています。あなたの記録では、${streak}日以上続いたあとの★種目は落ちています（${evidenceText(streakC, `${streak}日以上続いたあと`, "それ以外")}）。今日は全身オフがおすすめです`; tone = "rest"; }
-  else if (loadC?.bad) { headline = `直近3日で${last3}セット（いつもの${ratio3.toFixed(1)}倍）。あなたの記録では、これくらい多いあとの★種目は落ちています（${evidenceText(loadC, "多いあと", "それ以外")}）。今日は休むか軽めに`; tone = "over"; }
-  else if (goParts.length) headline = `今日は${goParts.slice(0, 2).map((r) => partLabel(r.part)).join("・")}がパフォーマンスを出しやすい状況です`;
-  else if (anyRest) { headline = "今日は休むか、軽めにするのがおすすめです"; tone = "rest"; }
-  else { headline = "今日は、記録からはっきり調子が出やすい・落ちやすい部位は見つかっていません"; tone = "done"; }
-  return { rows, headline, tone };
+  checkCache = { F, result };
+  return result;
 }
-const ADV_PILL = { rest: "rest", over: "warn", light: "warn", go: "good", done: "sum", ok: "sum" };
-function adviceCard() {
-  const A = todayAdvice();
-  if (!A) return null;
-  const card = h("div", { class: "card" }, h("div", { class: "card-head" }, h("h2", { class: "card-title" }, "今日のおすすめ"), h("span", { class: "muted" }, WN.formatDateJa(today()))));
-  if (A.needMore) { card.append(h("div", { class: "sub" }, "記録が2週間分たまると、休みどきや、やりすぎ・やらなさすぎをお知らせします。")); return card; }
-  card.append(h("div", { class: "adv-head " + A.tone }, A.headline));
-  for (const r of A.rows) card.append(h("div", { class: "adv-row" },
-    h("div", { class: "row", style: "gap:6px" }, tag(r.part), h("span", { class: "pill " + ADV_PILL[r.kind] }, r.label)),
-    h("div", { class: "sub", style: "font-size:12px" }, r.text)));
+
+const ptsText = (pts) => pts.map((x) => `${WN.shortDate(x.date)} ${WN.round1(x.rm)}`).join(" → ") + "kg";
+async function ackMethodChange(name, date) {
+  S.exRules = { ...S.exRules, ack: { ...(S.exRules.ack || {}), [name]: date } };
+  checkCache = null; render();
+  try { await rulesDoc().set(S.exRules); toast(`${name}は ${WN.shortDate(date)} から数え直します`); } catch { toast("保存できませんでした。通信状態を確認してください"); }
+}
+
+function checkCard() {
+  const C = conditionCheck();
+  if (!C) return null;
+  const card = h("div", { class: "card" }, h("div", { class: "card-head" }, h("h2", { class: "card-title" }, "調子のチェック"), h("span", { class: "muted" }, WN.formatDateJa(today()))));
+  if (C.needMore) { card.append(h("div", { class: "sub" }, "記録が2週間分たまると、★種目の伸びと下降のサインをお知らせします。")); return card; }
+  if (!C.anyStar) {
+    card.append(h("div", { class: "sub" }, "伸ばしたい種目（★）を選ぶと、その種目の伸びと下降のサインを見ます。"), h("button", { class: "linkish", type: "button", onclick: openExercises }, "★を選ぶ ›"));
+    return card;
+  }
+  const downs = C.lifts.filter((l) => l.down?.kind === "down"), changes = C.lifts.filter((l) => l.down?.kind === "change"), risky = C.lifts.filter((l) => l.risks.length);
+  const head = downs.length ? ["rest", `回復不足かもしれません：${downs.map((l) => l.name).join("・")}が下がっています`]
+    : risky.length ? ["over", `下がりやすい状況です：${[...new Set(risky.map((l) => partLabel(l.part)))].join("・")}`]
+    : ["go", "順調です。下降のサインはありません"];
+  card.append(h("div", { class: "adv-head " + head[0] }, head[1]));
+
+  for (const l of downs) card.append(h("div", { class: "adv-row" },
+    h("div", { class: "row", style: "gap:6px" }, tag(l.part), h("b", {}, l.name), h("span", { class: "pill rest" }, "下降アラート")),
+    h("div", { class: "sub", style: "font-size:12px" }, `因子：推定1RM が2回続けて下がった（${ptsText(l.down.pts)}、合計 −${(l.down.drop * 100).toFixed(1)}%）`),
+    h("div", { class: "muted" }, `基準：2回続けて下がり、合計3%以上（3回が4週以内）。次の${l.name}で上がれば消えます。`)));
+  for (const l of risky) card.append(h("div", { class: "adv-row" },
+    h("div", { class: "row", style: "gap:6px" }, tag(l.part), h("b", {}, l.name), h("span", { class: "pill warn" }, "予防アラート")),
+    l.risks.map((r) => h("div", { class: "sub", style: "font-size:12px" },
+      `因子：${r.fa.label(l.part)}。${r.fa.now(l.ctx, l.part, l.ref)}。`,
+      h("br"), h("span", { class: "muted" }, `あなたの記録では、この状況の${l.name}は調子 ${r.yes.toFixed(1)}%（${r.nYes}回）、それ以外は ${r.no.toFixed(1)}%（${r.nNo}回）。差 ${signed(r.diff)}pt（いつものブレ ±${r.spread.toFixed(1)}pt）`)))));
+  for (const l of changes) card.append(h("div", { class: "adv-row" },
+    h("div", { class: "row", style: "gap:6px" }, tag(l.part), h("b", {}, l.name), h("span", { class: "pill sum" }, "確認")),
+    h("div", { class: "sub", style: "font-size:12px" }, `推定1RM が急に${(l.down.drop * 100).toFixed(0)}%下がりました（${ptsText(l.down.pts)}）。器具・握り・フォームなど、やり方を変えましたか？ 変えた場合は下降として扱いません。`),
+    h("div", { class: "row", style: "gap:14px" }, h("button", { class: "linkish", type: "button", disabled: !S.db, onclick: () => ackMethodChange(l.name, l.down.pts.at(-1).date) }, "やり方を変えた（ここから数え直す）"))));
+
+  // 長い目の伸び（直近12週）
+  card.append(h("div", { class: "flabel", style: "margin-top:4px" }, "★種目の伸び（直近12週）"));
+  for (const l of C.lifts) card.append(h("div", { class: "row", style: "gap:6px;justify-content:space-between" },
+    h("span", { class: "row", style: "gap:6px;min-width:0" }, h("i", { class: "dot", c: partColor(l.part) }), h("span", {}, l.name)),
+    h("span", { class: "row", style: "gap:6px" }, h("span", { class: "num", style: "font-size:15px;color:var(--ink-2)" }, l.trend.slope != null ? `${signed(l.trend.slope, 2)}kg/週` : "—"), h("span", { class: "pill " + l.trend.status[0] }, l.trend.status[1]))));
+  const watching = C.lifts.reduce((a, l) => a + l.learned.length, 0);
   card.append(h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" },
-    h("span", { class: "muted" }, "記録からの目安です。体調が悪いときや痛みがあるときは休んでください。"),
+    h("span", { class: "muted" }, `記録からの目安です。予防アラートは、あなたの記録ではっきり差が出た状況だけで出します（今は${watching}つ）。体調が悪いときや痛みがあるときは休んでください。`),
     h("button", { class: "linkish", type: "button", style: "white-space:nowrap", onclick: () => openForm() }, "調子の分析 ›")));
   return card;
 }
@@ -3882,7 +3867,7 @@ async function loadRules() {
   try {
     const snap = await rulesDoc().get();
     const d = snap.exists ? snap.data() : null;
-    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}), ...(d.hits ? { hits: d.hits } : {}), ...(d.paint ? { paint: d.paint } : {}) };
+    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}), ...(d.hits ? { hits: d.hits } : {}), ...(d.paint ? { paint: d.paint } : {}), ...(d.ack ? { ack: d.ack } : {}) };
   } catch {}
 }
 const canonName = (n) => S.exRules.aliases[nameKey(n)] || n;
@@ -3948,6 +3933,7 @@ async function applyExerciseChange(fromNames, toName, part) {
       R.hits = H;
     }
     if (S.exRules.paint) R.paint = S.exRules.paint;
+    if (S.exRules.ack) R.ack = Object.fromEntries(Object.entries(S.exRules.ack).map(([n, d]) => [from.has(n) ? toName : n, d]));
     S.exRules = R;
     try { await rulesDoc().set(R); } catch {}
     toast(from.size > 1 ? `「${toName}」に1つにまとめました（${touched.length}件の記録）` : `「${toName}」を更新しました（${touched.length}件の記録）`);
