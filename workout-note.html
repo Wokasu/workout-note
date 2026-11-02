@@ -388,6 +388,12 @@
   .bm-g[data-g="n"] { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line); text-decoration: line-through; }
   .bm-g[data-g="add"] { background: transparent; color: var(--accent); box-shadow: inset 0 0 0 1px dashed var(--accent); }
   .bm-g:disabled { opacity: .6; cursor: default; }
+  /* デロード */
+  .dl-sig { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
+  .dl-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); flex: none; margin-top: 4px; }
+  .dl-sig.on .dl-dot { background: var(--bad); border-color: var(--bad); }
+  .dl-list summary { cursor: pointer; font-size: 12px; color: var(--ink-2); padding: 4px 0; }
+  .dl-list .row { font-size: 13px; padding: 2px 0; }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 5; max-width: calc(100% - 32px); text-align: center; }
 </style>
 
@@ -1735,6 +1741,8 @@ function renderHome(view) {
   const unit = isKg ? "kg" : "セット";
   const pick = (x) => (isKg ? x.volume : x.sets);
   const pct = prev && pick(prev) > 0 ? Math.round((pick(cur) / pick(prev) - 1) * 100) : null;
+  const dl = deloadCard();
+  if (dl) view.append(dl);
   const paint = paintCard();
   if (paint) view.append(paint);
   const chk = checkCard();
@@ -2300,7 +2308,7 @@ function conditionCheck() {
     const last3 = [1, 2, 3].reduce((a, k) => a + (F.daySets.get(WN.addDays(t, -k)) || 0), 0);
     const lifts = F.focus.filter((f) => !f.auto).map((f) => {
       const list = F.by.get(f.name), part = f.part;
-      const trend = liftTrend(list), down = downTrend(f.name, list);
+      const trend = liftTrend(list), dl = inDeload(t), d0 = downTrend(f.name, list), down = dl && d0?.kind === "down" ? null : d0;
       // 今日の状況（今日もうこの部位をやっていれば予防アラートは出さない）
       let since = 999, acute7 = 0, doneToday = false;
       for (const w of past) {
@@ -2324,7 +2332,7 @@ function conditionCheck() {
         const diff = mean(yes) - mean(no);
         if (diff <= -RISK_MIN_SD * spread) learned.push({ fa, yes: mean(yes), no: mean(no), nYes: yes.length, nNo: no.length, diff, spread });
       }
-      const risks = doneToday || down?.kind === "down" ? [] : learned.filter((l) => l.fa.today(ctx, ref));
+      const risks = doneToday || dl || down?.kind === "down" ? [] : learned.filter((l) => l.fa.today(ctx, ref));
       return { name: f.name, part, list, trend, down, risks, learned, ctx, ref, doneToday };
     });
     result = { lifts, anyStar: F.focus.some((f) => !f.auto) };
@@ -2378,6 +2386,145 @@ function checkCard() {
   card.append(h("div", { class: "row", style: "justify-content:space-between;align-items:flex-start" },
     h("span", { class: "muted" }, `記録からの目安です。予防アラートは、あなたの記録ではっきり差が出た状況だけで出します（今は${watching}つ）。体調が悪いときや痛みがあるときは休んでください。`),
     h("button", { class: "linkish", type: "button", style: "white-space:nowrap", onclick: () => openForm() }, "調子の分析 ›")));
+  return card;
+}
+
+// ===== デロード =====
+// 疲労メーター（フィットネス疲労モデル）：その日の量＝効いたセット分（全身ぬりえと同じ数え方）。
+// フィットネスは時定数42日、疲労は7日でならし、「疲労 ÷ フィットネス」を出す（1.0 がいつもどおり）。
+// デロードどき＝疲労メーターの直近2週平均が、ふだんの上位25%以上 かつ ★種目の頭打ち（前回デロード以降のベストを
+// 直近2週で更新していない種目が半分以上）または下降アラートがあるとき。やり方の提案はしない。
+const FIT_TAU = 42, FAT_TAU = 7, DELOAD_DAYS = 7;
+const deloadList = () => (S.exRules.deloads || []).slice().sort((a, b) => a.start.localeCompare(b.start));
+const inDeload = (d) => deloadList().find((x) => d >= x.start && d <= x.end) || null;
+
+function dayLoads() {
+  const load = new Map();
+  for (const w of S.workouts) for (const ex of w.exercises) {
+    const n = countedSets(ex).length;
+    if (!n) continue;
+    const k = Object.values(hitsFor(ex.name, ex.part)).reduce((a, g) => a + (GRADE[g]?.k || 0), 0);
+    load.set(w.date, (load.get(w.date) || 0) + n * k);
+  }
+  return load;
+}
+let deloadCache = null;
+function deloadState() {
+  const t = today(), key = JSON.stringify([S.exRules.deloads || [], S.exRules.hits || {}, S.exRules.ack || {}]);
+  if (deloadCache && deloadCache.src === S.workouts && deloadCache.day === t && deloadCache.key === key) return deloadCache.result;
+  const load = dayLoads(), dates = [...load.keys()].filter((d) => d <= t).sort();
+  let result = null;
+  if (dates.length && WN.daysBetween(dates[0], t) >= 28) {
+    // 疲労メーター（毎日）
+    const series = [];
+    let fit = 0, fat = 0;
+    for (let d = dates[0]; d <= t; d = WN.addDays(d, 1)) {
+      const l = load.get(d) || 0;
+      fit += (l - fit) / FIT_TAU; fat += (l - fat) / FAT_TAU;
+      series.push({ d, r: fit > 0 ? fat / fit : 0 });
+    }
+    // 直近2週の平均どうしで比べる（その日までの14日平均の分布。デロード中の日は除く）
+    series.forEach((x, i) => { if (i >= 13) x.avg14 = mean(series.slice(i - 13, i + 1).map((y) => y.r)); });
+    const warm = series.slice(FIT_TAU).filter((x) => x.avg14 != null && !inDeload(x.d) && WN.daysBetween(x.d, t) <= 365).map((x) => x.avg14).sort((a, b) => a - b);
+    const pct = (p) => (warm.length ? warm[Math.min(warm.length - 1, Math.floor(warm.length * p))] : null);
+    const usual = pct(0.5), high = pct(0.75);
+    const last14 = series.slice(-14), meter = mean(last14.map((x) => x.r));
+    const fatigueHigh = high != null && meter >= high;
+
+    // 今のサイクル（前回のデロード明けから）
+    const past = deloadList().filter((x) => x.start <= t);
+    const cur = inDeload(t), lastDl = cur || past.at(-1) || null;
+    const cycleStart = lastDl ? WN.addDays(lastDl.end, 1) : dates[0];
+
+    // 頭打ち：★種目ごとに、サイクル内で直近2週より前のベストを、直近2週で更新したか
+    const F = formData(), from14 = WN.addDays(t, -13), lifts = [];
+    for (const f of F.focus.filter((x) => !x.auto)) {
+      const L = F.by.get(f.name).filter((x) => x.rm && x.date >= cycleStart && x.date <= t);
+      const before = L.filter((x) => x.date < from14), recent = L.filter((x) => x.date >= from14);
+      if (!before.length || !recent.length) { lifts.push({ name: f.name, part: f.part, judged: false }); continue; }
+      const b = Math.max(...before.map((x) => x.rm)), r = Math.max(...recent.map((x) => x.rm));
+      lifts.push({ name: f.name, part: f.part, judged: true, best: b, recent: r, updated: r > b + 0.05 });
+    }
+    const judged = lifts.filter((l) => l.judged), stalled = judged.filter((l) => !l.updated);
+    const plateau = judged.length > 0 && stalled.length >= Math.ceil(judged.length / 2);
+    const C = conditionCheck(), downs = (C?.lifts || []).filter((l) => l.down?.kind === "down").map((l) => l.name);
+    const perfSign = plateau || downs.length > 0;
+
+    // デロード明けの戻り：明けから3週以内は、デロード前のサイクルのベストに戻ったかを見る
+    let after = null;
+    const prevDl = past.at(-1);
+    if (!cur && prevDl && WN.daysBetween(prevDl.end, t) <= 21) {
+      const prevStart = past.length >= 2 ? WN.addDays(past.at(-2).end, 1) : dates[0];
+      after = F.focus.filter((x) => !x.auto).map((f) => {
+        const L = F.by.get(f.name).filter((x) => x.rm);
+        const pre = L.filter((x) => x.date >= prevStart && x.date < prevDl.start), post = L.filter((x) => x.date > prevDl.end && x.date <= t);
+        if (!pre.length || !post.length) return null;
+        const b = Math.max(...pre.map((x) => x.rm)), p = Math.max(...post.map((x) => x.rm));
+        return { name: f.name, part: f.part, before: b, after: p, back: p >= b * 0.98 };
+      }).filter(Boolean);
+    }
+    const stage = cur ? "deload" : fatigueHigh && perfSign ? "due" : "ok";
+    result = { series: series.slice(-56), meter, usual, high, fatigueHigh, plateau, judged, stalled, downs, perfSign, stage, cur, lastDl, cycleStart, cycleDays: WN.daysBetween(cycleStart, t) + 1, after };
+  }
+  deloadCache = { src: S.workouts, day: t, key, result };
+  return result;
+}
+
+async function saveDeloads(list, msg) {
+  S.exRules = { ...S.exRules, deloads: list };
+  deloadCache = null; checkCache = null; render();
+  try { await rulesDoc().set(S.exRules); toast(msg); } catch { toast("保存できませんでした。通信状態を確認してください"); }
+}
+const startDeload = () => saveDeloads([...deloadList().filter((x) => !(x.start <= today() && x.end >= today())), { start: today(), end: WN.addDays(today(), DELOAD_DAYS - 1) }], "今日から7日間をデロードにしました");
+const endDeload = (dl) => saveDeloads(deloadList().map((x) => (x === dl ? { ...x, end: today() } : x)), "デロードを今日で終えました");
+const removeDeload = (dl) => saveDeloads(deloadList().filter((x) => x !== dl), `${WN.shortDate(dl.start)}〜のデロードを消しました`);
+
+// 疲労メーターの小さなグラフ（直近8週。点線は「高い」の目安、帯はデロード期間）
+function meterChart(D) {
+  const W = 320, H = 80, L = 4, R = W - 4, T = 6, B = H - 16, ss = D.series;
+  const svg = s("svg", { class: "chart", viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "疲労メーターの推移（直近8週）" });
+  const top = Math.max(1.6, ...ss.map((x) => x.r)), X = (i) => L + (i / Math.max(1, ss.length - 1)) * (R - L), Y = (v) => B - (v / top) * (B - T);
+  ss.forEach((x, i) => { if (inDeload(x.d)) s("rect", { x: X(i) - (R - L) / ss.length / 2, y: T, width: (R - L) / ss.length + 0.5, height: B - T, style: "fill:var(--good-bg)" }, svg); });
+  s("line", { x1: L, x2: R, y1: Y(1), y2: Y(1), class: "grid" }, svg);
+  if (D.high) s("line", { x1: L, x2: R, y1: Y(D.high), y2: Y(D.high), class: "ref" }, svg);
+  s("path", { d: ss.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(x.r).toFixed(1)}`).join(" "), style: "fill:none;stroke:var(--accent);stroke-width:1.8;stroke-linejoin:round" }, svg);
+  s("text", { x: L, y: H - 3 }, svg).textContent = WN.shortDate(ss[0].d);
+  s("text", { x: R, y: H - 3, "text-anchor": "end" }, svg).textContent = "今日";
+  return svg;
+}
+
+function deloadCard() {
+  const D = deloadState();
+  if (!D) return null;
+  const fmt2 = (v) => (v == null ? "—" : v.toFixed(2));
+  const head = D.stage === "deload" ? ["done", `デロード中です（${WN.shortDate(D.cur.start)}〜${WN.shortDate(D.cur.end)}・あと${WN.daysBetween(today(), D.cur.end)}日）`]
+    : D.stage === "due" ? ["rest", "デロードどきです"]
+    : ["go", D.fatigueHigh ? "疲労は高めですが、★種目はまだ伸びています" : D.perfSign ? "伸びが止まりかけていますが、疲労はふだんどおりです" : "まだ伸びしろがあります"];
+  const card = h("div", { class: "card" }, h("div", { class: "card-head" }, h("h2", { class: "card-title" }, "デロード"),
+    h("span", { class: "muted" }, D.lastDl ? `前回 ${WN.shortDate(D.lastDl.start)}〜・明けから${Math.floor(D.cycleDays / 7)}週${D.cycleDays % 7 ? `${D.cycleDays % 7}日` : ""}` : "デロードの記録なし")),
+    h("div", { class: "adv-head " + head[0] }, head[1]));
+  if (D.stage !== "deload") {
+    // 点いているサイン（数字つき）
+    const sig = (on, label, detail) => h("div", { class: "dl-sig" + (on ? " on" : "") }, h("span", { class: "dl-dot", "aria-hidden": "true" }), h("span", { class: "grow" }, h("b", {}, label), h("br"), h("span", { class: "muted" }, detail)));
+    card.append(
+      sig(D.fatigueHigh, `疲労メーター ${fmt2(D.meter)}${D.fatigueHigh ? "（高め）" : ""}`, `直近2週の平均。ふだん ${fmt2(D.usual)}、高めの目安 ${fmt2(D.high)} 以上（あなたの記録の2週平均の上位25%）`),
+      sig(D.plateau, D.judged.length ? `頭打ち：${D.stalled.length} / ${D.judged.length} 種目がベスト更新なし` : "頭打ち：まだ判定できません", D.judged.length ? (D.stalled.length ? `前回デロード明けからのベストを直近2週で更新していない：${D.stalled.map((l) => l.name).join("、")}` : "★種目はどれも直近2週でベストを更新しています") : "明けから2週より前と、直近2週の両方に★種目の記録がそろうと判定します"),
+      sig(D.downs.length > 0, `下降アラート：${D.downs.length ? D.downs.join("、") : "なし"}`, "推定1RM が2回続けて下がり、合計3%以上"),
+      h("div", { class: "muted" }, "デロードどき＝疲労メーターが高め、かつ「頭打ち」か「下降アラート」があるとき。"));
+  }
+  if (D.after?.length) card.append(h("div", { class: "flabel" }, `デロード明けの戻り（${D.after.filter((a) => a.back).length} / ${D.after.length} 種目がデロード前の水準）`),
+    D.after.map((a) => h("div", { class: "row", style: "justify-content:space-between;font-size:13px" }, h("span", {}, a.name), h("span", { class: "num", style: `font-size:15px;color:var(${a.back ? "--good" : "--ink-2"})` }, `${WN.round1(a.before)} → ${WN.round1(a.after)}kg`))));
+  card.append(meterChart(D), h("div", { class: "muted" }, "線は疲労メーター（疲労 ÷ フィットネス。1.0 がいつもどおり）。点線は高めの目安、緑の帯はデロード期間。量は全身ぬりえと同じ効いたセット分で数えています。"));
+  card.append(D.cur
+    ? h("button", { class: "btn secondary small", type: "button", disabled: !S.db, onclick: () => endDeload(D.cur) }, "デロードを今日で終える")
+    : h("button", { class: "btn " + (D.stage === "due" ? "primary" : "secondary") + " small", type: "button", disabled: !S.db, onclick: startDeload }, "今日からデロードにする（7日間）"));
+  const list = deloadList().slice().reverse();
+  if (list.length) {
+    const det = h("details", { class: "dl-list" }, h("summary", {}, `デロードの記録（${list.length}回）`),
+      list.map((x) => h("div", { class: "row", style: "justify-content:space-between" }, h("span", {}, `${WN.formatDateJa(x.start)} 〜 ${WN.formatDateJa(x.end)}`),
+        h("button", { class: "x del", type: "button", disabled: !S.db, "aria-label": `${WN.shortDate(x.start)}〜のデロードを消す`, onclick: () => removeDeload(x) }, "✕"))));
+    card.append(det);
+  }
   return card;
 }
 
@@ -3867,7 +4014,9 @@ async function loadRules() {
   try {
     const snap = await rulesDoc().get();
     const d = snap.exists ? snap.data() : null;
-    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}), ...(d.hits ? { hits: d.hits } : {}), ...(d.paint ? { paint: d.paint } : {}), ...(d.ack ? { ack: d.ack } : {}) };
+    if (d) S.exRules = { parts: d.parts || {}, aliases: d.aliases || {}, custom: Array.isArray(d.custom) ? d.custom : [], ...(d.focus ? { focus: d.focus } : {}), ...(d.hits ? { hits: d.hits } : {}), ...(d.paint ? { paint: d.paint } : {}), ...(d.ack ? { ack: d.ack } : {}), ...(Array.isArray(d.deloads) ? { deloads: d.deloads } : {}) };
+    checkCache = null; deloadCache = null;
+    if (d && S.loaded && S.view !== "edit" && S.view !== "add") render();
   } catch {}
 }
 const canonName = (n) => S.exRules.aliases[nameKey(n)] || n;
@@ -3933,6 +4082,7 @@ async function applyExerciseChange(fromNames, toName, part) {
       R.hits = H;
     }
     if (S.exRules.paint) R.paint = S.exRules.paint;
+    if (S.exRules.deloads) R.deloads = S.exRules.deloads;
     if (S.exRules.ack) R.ack = Object.fromEntries(Object.entries(S.exRules.ack).map(([n, d]) => [from.has(n) ? toName : n, d]));
     S.exRules = R;
     try { await rulesDoc().set(R); } catch {}
