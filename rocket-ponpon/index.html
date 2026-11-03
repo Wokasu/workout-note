@@ -68,7 +68,7 @@ body {
 .count svg { width: 1.1em; height: 1.1em; }
 .count.bump { animation: bump 0.35s ease-out; }
 @keyframes bump { 40% { transform: scale(1.25); } }
-.sound {
+.sound, .home {
   pointer-events: auto;
   width: 56px; height: 56px;
   border-radius: 50%;
@@ -79,8 +79,8 @@ body {
   place-items: center;
   cursor: pointer;
 }
-.sound svg { width: 28px; height: 28px; }
-.sound:focus-visible, .big:focus-visible { outline: 4px solid var(--sun); outline-offset: 4px; }
+.sound svg, .home svg { width: 28px; height: 28px; }
+.sound:focus-visible, .big:focus-visible, .home:focus-visible { outline: 4px solid var(--sun); outline-offset: 4px; }
 
 .screen {
   position: fixed;
@@ -113,21 +113,45 @@ body {
   font-size: clamp(18px, 4.6vw, 26px);
   line-height: 1.6;
 }
+.levels {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: min(100%, 340px);
+}
 .big {
+  --face: var(--sun);
+  --edge: #d99a1e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   font-family: var(--font);
   font-weight: 800;
-  font-size: clamp(30px, 8vw, 48px);
+  font-size: clamp(26px, 7vw, 36px);
   color: var(--sky-top);
-  background: var(--sun);
+  background: var(--face);
   border: 0;
   border-radius: 999px;
-  padding: 0.5em 1.6em;
-  box-shadow: 0 8px 0 #d99a1e, 0 14px 30px rgba(0, 0, 0, 0.35);
+  padding: 0.45em 0.6em 0.45em 1.1em;
+  box-shadow: 0 7px 0 var(--edge), 0 12px 26px rgba(0, 0, 0, 0.35);
   cursor: pointer;
-  animation: breathe 1.6s ease-in-out infinite;
 }
-.big:active { transform: translateY(6px); box-shadow: 0 2px 0 #d99a1e; }
-@keyframes breathe { 50% { transform: scale(1.07); } }
+.big small {
+  display: block;
+  font-size: 0.5em;
+  font-weight: 500;
+  text-align: left;
+  opacity: 0.8;
+}
+.big .stars { display: flex; gap: 2px; flex: none; }
+.big .stars svg { width: 0.9em; height: 0.9em; }
+.big.normal { --face: var(--mint); --edge: #3aa58c; }
+.big.hard { --face: var(--pop); --edge: #c23f74; }
+.big.last { animation: breathe 1.6s ease-in-out infinite; }
+.big:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--edge); }
+@keyframes breathe { 50% { transform: scale(1.05); } }
+.hud-right { display: flex; gap: 10px; }
 .cheer {
   position: fixed;
   inset: 0;
@@ -148,7 +172,7 @@ body {
   100% { transform: scale(1.1); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .big, .count.bump { animation: none; }
+  .big.last, .count.bump { animation: none; }
 }
 </style>
 </head>
@@ -160,9 +184,14 @@ body {
     <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#ffd35c" stroke="#fff3c4" stroke-width="1.2" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg>
     <span id="score">0</span>
   </div>
-  <button class="sound" id="sound" type="button" aria-label="おとを けす">
-    <svg viewBox="0 0 24 24" aria-hidden="true" id="soundIcon"></svg>
-  </button>
+  <div class="hud-right">
+    <button class="home" id="home" type="button" aria-label="むずかしさを えらびなおす" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11.5L12 4l8.5 7.5M6 10v9.5h4.5v-5h3v5H18V10" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="sound" id="sound" type="button" aria-label="おとを けす">
+      <svg viewBox="0 0 24 24" aria-hidden="true" id="soundIcon"></svg>
+    </button>
+  </div>
 </div>
 
 <div class="cheer" id="cheer" aria-live="polite"></div>
@@ -170,7 +199,11 @@ body {
 <div class="screen" id="start">
   <h1 class="title">ロケット<span>ぽんぽん</span></h1>
   <p class="hint">ゆびで ロケットを うごかしてね<br>うちゅうじんに ほしを とどけよう</p>
-  <button class="big" id="go" type="button">あそぶ</button>
+  <div class="levels">
+    <button class="big easy" type="button" data-level="easy"><span>かんたん<small>2〜3さい</small></span><span class="stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fffaf0" stroke="#1b1450" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg></span></button>
+    <button class="big normal" type="button" data-level="normal"><span>ふつう<small>4さい</small></span><span class="stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fffaf0" stroke="#1b1450" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fffaf0" stroke="#1b1450" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg></span></button>
+    <button class="big hard" type="button" data-level="hard"><span>むずかしい<small>5さい〜</small></span><span class="stars"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fffaf0" stroke="#1b1450" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fffaf0" stroke="#1b1450" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#fffaf0" stroke="#1b1450" stroke-width="1.6" stroke-linejoin="round" d="M12 2.5l2.9 6 6.6.8-4.9 4.5 1.3 6.5L12 17l-5.9 3.3 1.3-6.5-4.9-4.5 6.6-.8z"/></svg></span></button>
+  </div>
 </div>
 
 <script>
@@ -229,6 +262,9 @@ body {
   let noteIdx = 0;
   const sfx = {
     pew() { tone(700, 0, 0.12, 'sine', 0.06, 1300); },
+    clonk() { tone(1200, 0, 0.12, 'square', 0.05, 600); tone(1800, 0.04, 0.1, 'sine', 0.06); },
+    plop() { tone(330, 0, 0.18, 'sine', 0.12, 160); },
+    dizzy() { [600, 450, 600, 450].forEach((f, i) => tone(f, i * 0.12, 0.14, 'triangle', 0.12)); },
     hit() {
       const f = SCALE[noteIdx % SCALE.length]; noteIdx++;
       tone(f, 0, 0.35, 'triangle', 0.3);
@@ -269,6 +305,17 @@ body {
   let fireTimer = 0, bonus = null, bonusTimer = 12;
   const form = { ox: 0, oy: 0, dir: 1, gapX: 0, gapY: 0 };
 
+  // how each level gets harder: speed, smaller hit zones, less auto-fire, goo drops, helmets
+  const LEVELS = {
+    easy:   { auto: 0.34, maxB: 8, hitR: 0.8,  speed: [0.9, 0.18, 2.2], limit: 0.5,  rows: [2, 3], drop: 0,    dropMax: 0, dropSp: 0,    armor: 0,    bonusSp: 2.2 },
+    normal: { auto: 0.6,  maxB: 5, hitR: 0.62, speed: [1.4, 0.25, 3.2], limit: 0.58, rows: [3, 3], drop: 0.4,  dropMax: 2, dropSp: 0.3,  armor: 0.15, bonusSp: 3 },
+    hard:   { auto: 0,    maxB: 3, hitR: 0.5,  speed: [1.9, 0.3, 4.4],  limit: 0.66, rows: [3, 4], drop: 0.95, dropMax: 4, dropSp: 0.42, armor: 0.35, bonusSp: 3.8 },
+  };
+  let level = 'easy';
+  try { if (LEVELS[localStorage.getItem('rocket-ponpon-level')]) level = localStorage.getItem('rocket-ponpon-level'); } catch (e) {}
+  let L = LEVELS[level];
+  let drops = [], dropTimer = 2, dizzy = 0;
+
   const WAVES = [
     { kind: 'blob',  colors: ['#ff8fb8', '#7fd6ff', '#9be87c'] },
     { kind: 'ufo',   colors: ['#ffb35c', '#c49bff', '#6fe3c8'] },
@@ -292,7 +339,7 @@ body {
   function newWave() {
     const w = WAVES[wave % WAVES.length];
     const cols = W < 520 ? 4 : 5;
-    const rows = wave === 0 ? 2 : 3;
+    const rows = wave === 0 ? L.rows[0] : L.rows[1];
     form.gapX = Math.min(U * 2.2, (W - U * 2.4) / (cols - 1));
     form.gapY = U * 1.75;
     form.ox = (W - form.gapX * (cols - 1)) / 2;
@@ -307,22 +354,51 @@ body {
           color: w.colors[(r + c) % w.colors.length],
           phase: Math.random() * 6.28, blink: Math.random() * 4,
           x: 0, y: 0, vx: 0, vy: 0, rot: 0, spin: 0,
+          hp: wave > 0 && Math.random() < L.armor ? 2 : 1, shake: 0,
         });
       }
     }
   }
 
-  function startGame() {
+  const homeBtn = document.getElementById('home');
+  function markLast() {
+    document.querySelectorAll('.big').forEach((b) => b.classList.toggle('last', b.dataset.level === level));
+  }
+  markLast();
+  function startGame(lv) {
+    if (lv && LEVELS[lv]) level = lv;
+    L = LEVELS[level];
+    try { localStorage.setItem('rocket-ponpon-level', level); } catch (e) {}
+    markLast();
     initAudio();
     startEl.hidden = true;
+    homeBtn.hidden = false;
+    drops = []; dropTimer = 2.5; dizzy = 0; cheering = 0;
+    cheerEl.classList.remove('show');
     running = true;
     score = 0; wave = 0; noteIdx = 0;
     scoreEl.textContent = '0';
     bullets = []; particles = []; flyers = []; bonus = null; bonusTimer = 12;
     newWave();
     sfx.cheer();
+    if (!L.auto) {
+      cheerEl.textContent = 'タップで うとう！';
+      cheerEl.classList.remove('show'); void cheerEl.offsetWidth; cheerEl.classList.add('show');
+    }
   }
-  document.getElementById('go').addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
+  document.querySelectorAll('.big').forEach((b) =>
+    b.addEventListener('click', (e) => { e.stopPropagation(); startGame(b.dataset.level); }));
+  function goHome() {
+    running = false;
+    aliens = []; bullets = []; drops = []; flyers = []; bonus = null; dizzy = 0; cheering = 0;
+    cheerEl.classList.remove('show');
+    startEl.hidden = false;
+    homeBtn.hidden = true;
+    const b = document.querySelector('.big.last');
+    if (b) b.focus();
+  }
+  homeBtn.addEventListener('click', (e) => { e.stopPropagation(); goHome(); });
+  homeBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
 
   // ---------- input: drag anywhere, tap to shoot too ----------
   let dragging = false;
@@ -340,7 +416,9 @@ body {
   const keys = {};
   addEventListener('keydown', (e) => {
     keys[e.key] = true;
-    if ((e.key === ' ' || e.key === 'Enter') && !running) { startGame(); e.preventDefault(); }
+    if (!running && { 1: 'easy', 2: 'normal', 3: 'hard' }[e.key]) { startGame({ 1: 'easy', 2: 'normal', 3: 'hard' }[e.key]); return; }
+    if (e.key === 'Escape' && running) { goHome(); return; }
+    if (e.key === ' ' && !running) { startGame(); e.preventDefault(); }
     else if (e.key === ' ' && running) { shoot(); e.preventDefault(); }
   });
   addEventListener('keyup', (e) => { keys[e.key] = false; });
@@ -348,10 +426,10 @@ body {
   document.addEventListener('contextmenu', (e) => e.preventDefault());
 
   function shoot() {
-    if (bullets.length > 7) return;
+    if (dizzy > 0 || bullets.length >= L.maxB) return;
     bullets.push({ x: rocket.x, y: rocket.y - U * 0.9, rot: 0 });
     rocket.squash = 1;
-    fireTimer = 0.34;
+    fireTimer = L.auto;
     sfx.pew();
   }
 
@@ -408,15 +486,16 @@ body {
     if (keys.ArrowRight) rocket.tx += U * 9 * dt;
     rocket.tx = Math.min(Math.max(rocket.tx, U * 0.8), W - U * 0.8);
     const dx = rocket.tx - rocket.x;
-    rocket.x += dx * Math.min(1, dt * 12);
+    rocket.x += dx * Math.min(1, dt * (dizzy > 0 ? 3 : 12));
+    dizzy = Math.max(0, dizzy - dt);
     rocket.tilt += (Math.max(-0.35, Math.min(0.35, dx / (U * 6))) - rocket.tilt) * Math.min(1, dt * 10);
     rocket.squash = Math.max(0, rocket.squash - dt * 6);
 
     if (!running) return;
 
-    // auto-fire, so even the smallest players never need two hands
+    // auto-fire (easy/normal), tap-to-shoot only on hard, so even the smallest players never need two hands
     fireTimer -= dt;
-    if (fireTimer <= 0 && cheering <= 0) shoot();
+    if (L.auto && fireTimer <= 0 && cheering <= 0) shoot();
 
     for (const b of bullets) { b.y -= H * 1.05 * dt; b.rot += dt * 8; }
     bullets = bullets.filter((b) => b.y > -U);
@@ -424,7 +503,7 @@ body {
     // formation: glide in, then sway; never comes down past the middle
     const alive = aliens.filter((a) => a.alive);
     if (alive.length) {
-      const speed = U * Math.min(2.2, 0.9 + wave * 0.18);
+      const speed = U * Math.min(L.speed[2], L.speed[0] + wave * L.speed[1]);
       if (form.oy < form.enter) form.oy = Math.min(form.enter, form.oy + U * 3 * dt);
       form.ox += form.dir * speed * dt;
       let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -435,17 +514,25 @@ body {
       const pad = U * 0.9;
       if ((form.dir > 0 && maxX > W - pad) || (form.dir < 0 && minX < pad)) {
         form.dir *= -1;
-        if (maxY < H * 0.5) form.oy += U * 0.35;
+        if (maxY < H * L.limit) form.oy += U * 0.35;
       }
     }
 
     // hits (generous hit circles)
-    const hitR = U * 0.8;
+    const hitR = U * L.hitR;
+    for (const a of aliens) a.shake = Math.max(0, a.shake - dt * 3);
     for (const b of bullets) {
       for (const a of aliens) {
         if (!a.alive) continue;
         const p = alienPos(a);
         if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < hitR * hitR) {
+          if (a.hp > 1) {
+            // first hit pops the helmet off
+            a.hp--; a.shake = 1; b.dead = true;
+            burst(p.x, p.y - U * 0.3, '#bfeaff', 10, 0.7);
+            sfx.clonk();
+            break;
+          }
           a.alive = false; a.happy = 1;
           a.x = p.x; a.y = p.y; a.vx = (Math.random() - 0.5) * U * 3; a.vy = -U * 2;
           a.spin = (Math.random() < 0.5 ? -1 : 1) * 4;
@@ -464,7 +551,40 @@ body {
         sfx.bonus();
       }
     }
+    // goo balls: shoot them away, or get a little dizzy (never a game over)
+    for (const b of bullets) {
+      if (b.dead) continue;
+      for (const d of drops) {
+        if (!d.dead && (b.x - d.x) ** 2 + (b.y - d.y) ** 2 < (U * 0.55) ** 2) {
+          d.dead = true; b.dead = true;
+          burst(d.x, d.y, '#b8f27a', 8, 0.6);
+          sfx.plop();
+          break;
+        }
+      }
+    }
     bullets = bullets.filter((b) => !b.dead);
+    if (L.drop && cheering <= 0 && form.oy >= form.enter) {
+      dropTimer -= dt;
+      const shooters = aliens.filter((a) => a.alive);
+      if (dropTimer <= 0 && shooters.length && drops.length < L.dropMax) {
+        const a = shooters[Math.floor(Math.random() * shooters.length)];
+        const p = alienPos(a);
+        drops.push({ x: p.x, y: p.y + U * 0.5, t: 0 });
+        dropTimer = (0.6 + Math.random() * 0.8) / L.drop;
+      }
+    }
+    for (const d of drops) {
+      d.t += dt;
+      d.y += H * L.dropSp * dt;
+      if (!d.dead && dizzy <= 0 && Math.abs(d.x - rocket.x) < U * 0.6 && Math.abs(d.y - rocket.y) < U * 0.9) {
+        d.dead = true;
+        dizzy = 1.3;
+        burst(d.x, d.y, '#b8f27a', 12, 0.8);
+        sfx.dizzy();
+      }
+    }
+    drops = drops.filter((d) => !d.dead && d.y < H + U);
 
     // happy aliens float away waving
     for (const a of aliens) {
@@ -477,7 +597,7 @@ body {
     bonusTimer -= dt;
     if (!bonus && bonusTimer <= 0 && cheering <= 0) {
       const fromLeft = Math.random() < 0.5;
-      bonus = { x: fromLeft ? -U * 2 : W + U * 2, y: H * 0.1 + U * 0.6, vx: (fromLeft ? 1 : -1) * U * 2.2, hit: false, t: 0 };
+      bonus = { x: fromLeft ? -U * 2 : W + U * 2, y: H * 0.1 + U * 0.6, vx: (fromLeft ? 1 : -1) * U * L.bonusSp, hit: false, t: 0 };
       bonusTimer = 14 + Math.random() * 8;
       sfx.boing();
     }
@@ -556,6 +676,7 @@ body {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(a.rot || 0);
+    if (a.shake) ctx.translate(Math.sin(time * 60) * U * 0.08 * a.shake, 0);
     const sc = a.alive ? 1 : 0.6 + a.happy * 0.4;
     ctx.scale(sc, sc);
     ctx.globalAlpha = a.alive ? 1 : Math.max(0, a.happy);
@@ -612,6 +733,15 @@ body {
       ctx.beginPath(); ctx.arc(0, 0, r * 1.15, 0, 7); ctx.stroke();
       drawFace(r, a);
     }
+    if (a.alive && a.hp > 1) {
+      // glass space helmet: needs one extra hit
+      ctx.fillStyle = 'rgba(191, 234, 255, 0.22)';
+      ctx.strokeStyle = 'rgba(220, 245, 255, 0.9)';
+      ctx.lineWidth = r * 0.1;
+      ctx.beginPath(); ctx.arc(0, -r * 0.05, r * 1.32, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.beginPath(); ctx.ellipse(-r * 0.7, -r * 0.75, r * 0.25, r * 0.1, -0.8, 0, 7); ctx.fill();
+    }
     ctx.restore();
     if (!a.alive && a.happy > 0) {
       ctx.fillStyle = `rgba(255, 111, 165, ${Math.max(0, a.happy)})`;
@@ -631,7 +761,7 @@ body {
     const s = U * 0.85;
     ctx.save();
     ctx.translate(rocket.x, rocket.y);
-    ctx.rotate(rocket.tilt);
+    ctx.rotate(rocket.tilt + (dizzy > 0 ? Math.sin(time * 18) * 0.35 * Math.min(1, dizzy * 2) : 0));
     ctx.scale(1 + rocket.squash * 0.06, 1 - rocket.squash * 0.06);
     // flame
     const fl = 0.75 + Math.sin(time * 40) * 0.12 + Math.random() * 0.1;
@@ -729,7 +859,22 @@ body {
       starPath(b.x, b.y, U * 0.26, b.rot); ctx.fill();
     }
 
+    for (const d of drops) {
+      const wob = 1 + Math.sin(d.t * 14) * 0.08;
+      ctx.fillStyle = '#9be35a';
+      ctx.beginPath(); ctx.ellipse(d.x, d.y, U * 0.3 * wob, U * 0.3 / wob, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath(); ctx.arc(d.x - U * 0.1, d.y - U * 0.1, U * 0.08, 0, 7); ctx.fill();
+    }
+
     if (running || !startEl.hidden) drawRocket();
+    if (dizzy > 0) {
+      for (let i = 0; i < 3; i++) {
+        const a = time * 6 + (i * Math.PI * 2) / 3;
+        ctx.fillStyle = '#ffd35c';
+        starPath(rocket.x + Math.cos(a) * U * 0.7, rocket.y - U * 1.3 + Math.sin(a) * U * 0.22, U * 0.16, a); ctx.fill();
+      }
+    }
 
     for (const p of particles) {
       ctx.globalAlpha = Math.max(0, p.life);
