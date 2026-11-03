@@ -23,6 +23,7 @@
   --sig: #ff9a3c;
   --lulu: #46e08c;
   --bolt: #ff5468;
+  --oshi: #78d8f8;
   --num: "Russo One", "M PLUS 1p", sans-serif;
   --jp: "M PLUS 1p", "Hiragino Sans", "Yu Gothic", sans-serif;
   color-scheme: dark;
@@ -130,6 +131,13 @@ body.touch #radio { bottom: auto; top: calc(max(12px, env(safe-area-inset-top)) 
 .stats { font: 20px/1.8 var(--num); margin: 10px 0 18px; }
 .stats span { color: var(--gold); }
 .rank { font: 64px/1 var(--num); color: var(--gold); text-shadow: 0 0 20px rgba(255,213,74,.7), 0 4px 0 #000; margin: 6px 0; }
+.story { font-size: 14px; line-height: 1.8; margin: 0 auto 18px; max-width: 460px; color: #dbe8ff; }
+.story b { color: var(--oshi); }
+.story span { color: var(--amber); font-weight: 800; }
+.rankcap { color: var(--oshi); font-weight: 800; margin-bottom: 4px; }
+#progbox { position: absolute; left: 50%; top: max(14px, env(safe-area-inset-top)); transform: translateX(-50%); text-align: center; }
+#progbar { width: min(22vw, 200px); height: 8px; }
+#progbar > i { background: linear-gradient(90deg, #78d8f8, #3a7dff); transition: none; }
 .best { color: var(--dim); font-size: 13px; margin-top: 10px; }
 </style>
 </head>
@@ -153,11 +161,12 @@ body.touch #radio { bottom: auto; top: calc(max(12px, env(safe-area-inset-top)) 
     <div id="lives"></div>
     <div id="bombs"></div>
   </div>
+  <div id="progbox"><div class="label">劇場まで</div><div class="bar" id="progbar"><i></i></div></div>
   <div id="bossbox" hidden>
-    <div class="label">FORTRESS VARKADE</div>
+    <div class="label">FORTRESS MUTE</div>
     <div class="bar" id="bossbar"><i></i></div>
   </div>
-  <div id="radio"><div id="face">S</div><div><div id="rname">SIG</div><div id="rtext"></div></div></div>
+  <div id="radio"><div id="face">ゲ</div><div><div id="rname"></div><div id="rtext"></div></div></div>
   <div id="center"></div>
   <div id="lock"></div>
   <div id="pops"></div>
@@ -177,6 +186,7 @@ body.touch #radio { bottom: auto; top: calc(max(12px, env(safe-area-inset-top)) 
   <div class="card">
     <h1 class="logo">AERO LANCER</h1>
     <div class="sub">エアロランサー</div>
+    <p class="story">今日は推しメン・<b>奥本カイリ</b>の劇場公演の日。<br>なのに劇場への空を「無音軍団」がふさいでいる。<br>カイリ推しのヲタク<b>アオ太</b>は、推しカラーの水色の機体で飛び立った。<br><span>── 開演に間に合え!</span></p>
     <button class="btn" id="startBtn">出撃する</button>
     <div class="opts">
       <label><input type="checkbox" id="optInvert"> 上下反転（飛行機の操縦）</label>
@@ -211,6 +221,7 @@ body.touch #radio { bottom: auto; top: calc(max(12px, env(safe-area-inset-top)) 
 <div id="over" class="screen" hidden>
   <div class="card">
     <div class="big" style="color:var(--red)">GAME OVER</div>
+    <div class="best">このままじゃ開演に間に合わない…!</div>
     <div class="stats">HITS <span id="overHits">0</span></div>
     <button class="btn" id="contBtn">コンティニュー</button>
     <button class="btn alt" id="overQuit">タイトルへ</button>
@@ -220,8 +231,9 @@ body.touch #radio { bottom: auto; top: calc(max(12px, env(safe-area-inset-top)) 
 
 <div id="clear" class="screen" hidden>
   <div class="card">
-    <div class="big">MISSION COMPLETE</div>
+    <div class="big">開演に間に合った!</div>
     <div class="rank" id="rank">A</div>
+    <div class="rankcap" id="rankCap"></div>
     <div class="stats">HITS <span id="clearHits">0</span><br>のこり機体 <span id="clearLives">0</span></div>
     <button class="btn" id="againBtn">もう一度</button>
     <button class="btn alt" id="clearQuit">タイトルへ</button>
@@ -403,7 +415,7 @@ function makeShip() {
   const wing = [[-0.4, 0, -0.5], [-3.5, -0.35, 1.5], [-0.4, 0, 1.7]];
   g.add(mesh(triGeo([...wing, ...mirrorX(wing)]), phong(0xdde5f0, 20)));
   const stripe = [[-1.2, 0.03, 0.5], [-2.9, -0.24, 1.35], [-1.2, 0.03, 1.2]];
-  g.add(mesh(triGeo([...stripe, ...mirrorX(stripe)]), phong(0xff8a2a)));
+  g.add(mesh(triGeo([...stripe, ...mirrorX(stripe)]), phong(0x7fe0ff)));
   const fin = [[-3.0, -0.3, 1.0], [-3.5, -0.35, 1.6], [-3.35, 0.95, 1.95]];
   g.add(mesh(triGeo([...fin, ...mirrorX(fin)]), phong(0x2f6bff, 30)));
   g.add(mesh(triGeo([[0, 0.45, 0.5], [0, 0.45, 2.3], [0, 1.55, 2.5]]), phong(0x2f6bff, 30)));
@@ -554,7 +566,7 @@ const CHECKPOINTS = [0, 4300, 8650];
 const hud = {
   shield: $('#shieldbar'), boost: $('#boostbar'), hits: $('#hits'), lives: $('#lives'), bombs: $('#bombs'), golds: $('#golds').children,
   bossbox: $('#bossbox'), bossbar: $('#bossbar'), center: $('#center'), radio: $('#radio'), face: $('#face'), rname: $('#rname'), rtext: $('#rtext'),
-  lock: $('#lock'), pops: $('#pops'), flash: $('#flash'), cache: {},
+  lock: $('#lock'), pops: $('#pops'), prog: $('#progbar'), progbox: $('#progbox'), flash: $('#flash'), cache: {},
 };
 function setBar(el, v) { el.firstElementChild.style.transform = 'scaleX(' + clamp(v, 0, 1).toFixed(3) + ')'; }
 function updateHud() {
@@ -568,6 +580,9 @@ function updateHud() {
   if (c.lives !== P.lives) { c.lives = P.lives; hud.lives.innerHTML = '<b>SHIP</b>' + '<i class="pip-ship"></i>'.repeat(Math.max(0, P.lives)); }
   if (c.bombs !== P.bombs) { c.bombs = P.bombs; hud.bombs.innerHTML = '<b>BOMB</b>' + '<i class="pip-bomb"></i>'.repeat(P.bombs); }
   if (c.golds !== P.golds) { c.golds = P.golds; for (let i = 0; i < 3; i++) hud.golds[i].classList.toggle('on', i < P.golds); }
+  const pr = Math.round(Math.min(1, G.dist / 8700) * 200);
+  if (c.pr !== pr) { c.pr = pr; setBar(hud.prog, pr / 200); }
+  hud.progbox.hidden = !!boss || G.state !== 'play';
   if (boss) {
     const tot = boss.parts.reduce((s, p) => s + p.max, 0), cur = boss.parts.reduce((s, p) => s + Math.max(0, p.hp), 0);
     setBar(hud.bossbar, cur / tot);
@@ -579,9 +594,10 @@ function centerMsg(html, sec, warn) {
   centerTimer = sec || 2.5;
 }
 const PILOTS = {
-  sig: { name: 'SIG / 隊長機', letter: 'S', color: 'var(--sig)' },
-  lulu: { name: 'LULU / 整備士', letter: 'L', color: 'var(--lulu)' },
-  bolt: { name: 'BOLT / 僚機', letter: 'B', color: 'var(--bolt)' },
+  ao: { name: 'アオ太 / 主人公・カイリ推し', letter: 'ア', color: 'var(--oshi)' },
+  sig: { name: 'ゲン / 古参の先輩ヲタ', letter: 'ゲ', color: 'var(--sig)' },
+  lulu: { name: 'ルル / 整備士', letter: 'ル', color: 'var(--lulu)' },
+  bolt: { name: 'ジン / 同担の相棒', letter: 'ジ', color: 'var(--bolt)' },
 };
 const radioQ = []; let radioT = 0, radioCur = null, radioChars = 0;
 function radio(who, text) { radioQ.push({ who, text }); }
@@ -878,12 +894,12 @@ function collect(it) {
   if (it.type === 'silver') { P.shield = Math.min(100, P.shield + 30); popup(it.x, it.y, it.z, 'SHIELD +', '#cfe6ff'); }
   else if (it.type === 'gold') {
     P.shield = Math.min(100, P.shield + 40); P.golds++;
-    if (P.golds >= 3) { P.golds = 0; P.lives++; popup(it.x, it.y, it.z, '1UP!', '#ffd54a'); radio('lulu', 'ゴールドリング3つ! 予備機を1機追加したよ!'); }
+    if (P.golds >= 3) { P.golds = 0; P.lives++; popup(it.x, it.y, it.z, '1UP!', '#ffd54a'); radio('lulu', '金のリング3つ! 予備機を1機追加したよ!'); }
     else popup(it.x, it.y, it.z, 'GOLD ' + P.golds + '/3', '#ffd54a');
   } else if (it.type === 'laser') {
     P.laser = Math.min(2, P.laser + 1);
-    popup(it.x, it.y, it.z, P.laser === 2 ? 'BLUE LASER!' : 'TWIN LASER!', '#5dff9a');
-    radio('lulu', P.laser === 2 ? 'ブルーレーザーに強化! 威力が上がったよ!' : 'ツインレーザーだよ! 2本同時に撃てる!');
+    popup(it.x, it.y, it.z, P.laser === 2 ? '伝説の水色サイリウム!' : 'ペンラ二刀流!', '#78d8f8');
+    radio('lulu', P.laser === 2 ? '伝説の水色サイリウムに強化! 威力アップだよ!' : 'ペンラ二刀流! 2本同時に撃てるよ!');
   } else { P.bombs = Math.min(9, P.bombs + 1); popup(it.x, it.y, it.z, 'BOMB +1', '#ff8090'); }
 }
 
@@ -931,7 +947,7 @@ function aimDir() {
 }
 function shootLaser() {
   const d = aimDir(), sp = 300;
-  const col = P.laser === 2 ? 0x55aaff : 0x5dff9a, dmg = P.laser === 2 ? 2 : 1;
+  const col = P.laser === 2 ? 0x5fb0ff : 0x8ff0ff, dmg = P.laser === 2 ? 2 : 1;
   const offs = P.laser === 0 ? [0] : [-1.15, 1.15];
   const ca = Math.cos(P.roll), sa = Math.sin(P.roll);
   for (const o of offs) {
@@ -947,6 +963,7 @@ function shootCharge() {
   const d = aimDir(), sp = 150;
   const m = new THREE.Mesh(GEO.charge, glowMat(0x66ccff)); m.scale.setScalar(1.2);
   m.position.set(P.x, P.y, -3); scene.add(m);
+  popup(P.x, P.y + 2.5, -4, 'カイリーーっ!', '#78d8f8');
   pshots.push({ g: m, x: P.x, y: P.y, z: -3, vx: d.x * sp, vy: d.y * sp, vz: d.z * sp, dmg: 8, life: 3, kind: 'charge', target: P.lock, dead: false });
   Snd.chargeShot();
 }
@@ -1003,12 +1020,12 @@ function hurtPlayer(dmg) {
   G.shake = Math.max(G.shake, 0.7); screenFlash('#ff2030', 0.45); Snd.hurt();
   if (P.shield <= 0) { P.shield = 0; playerDie(); return; }
   P.hurtTalk -= 1;
-  if (P.shield < 35 && P.hurtTalk <= 0) { P.hurtTalk = 4; radio('sig', 'シールドが減ってるぞ! リングを探せ!'); }
+  if (P.shield < 35 && P.hurtTalk <= 0) { P.hurtTalk = 4; radio('sig', 'シールドが減ってるぞ! 開演前にやられるなよ!'); }
 }
 function playerDie() {
   P.dead = true; P.deadT = 0; P.lives--; P.laser = 0; P.charge = 0; P.lock = null;
   explode(P.x, P.y, 0, 10, 0xdde5f0); P.root.visible = false;
-  radio('bolt', pick(['うそだろ!? 脱出しろ!', 'やられた!? しっかりしろ!']));
+  radio('bolt', pick(['アオ太!? 予備機で戻ってこい!', 'まだ開演前だぞ! しっかりしろ!']));
 }
 function respawn() {
   P.dead = false; P.root.visible = true; P.shield = 100; P.inv = 2.5; P.x = 0; P.y = 8; P.vx = P.vy = 0; P.bombs = Math.max(P.bombs, 3);
@@ -1112,7 +1129,7 @@ function startBoss() {
   boss = { g, x: 0, y: 14, z: -460, t: 0, parts, core, hL, hR, inner, ring, ring2, open: 0, armT: [1.5, 2.6], mineT: 6, coreT: 2, dying: false, dyingT: 0, own };
   hud.bossbox.hidden = false;
   Music.play('boss');
-  centerMsg('WARNING<small>巨大要塞機 接近</small>', 3, true);
+  centerMsg('WARNING<small>無音要塞ミュート 接近</small>', 3, true);
 }
 function damageBoss(p, dmg, x, y, z) {
   if (!p.alive || boss.dying) return;
@@ -1125,7 +1142,7 @@ function damageBoss(p, dmg, x, y, z) {
       explode(px, py, boss.z, 9, 0x7a2e45); p.g.visible = false; G.hits += 5; popup(px, py, boss.z, '+5');
       if (!boss.parts[0].alive && !boss.parts[1].alive) {
         boss.parts[2].shielded = false;
-        radio('sig', 'コアが開いたぞ! 今だ、撃ちこめ!');
+        radio('sig', 'コアが開いたぞ! 今だ、全力の推しコールだ!');
       } else radio('bolt', '片腕を落としたぜ!');
     } else {
       boss.dying = true; boss.dyingT = 0; G.hits += 20; popup(px, py, boss.z, '+20', '#ffd54a');
@@ -1144,8 +1161,9 @@ function updateBoss(dt) {
       explode(b.x, b.y, b.z, 18, 0x4a4f66); screenFlash('#ffffff', 1);
       scene.remove(b.g); b.own.forEach(m => m.dispose()); boss = null; hud.bossbox.hidden = true;
       G.state = 'clearing'; G.clearT = 0;
-      radio('lulu', '要塞機の反応、消えたよ! みんなおつかれさま!');
-      centerMsg('MISSION COMPLETE', 3);
+      radio('lulu', '要塞の反応、消えたよ! 劇場の灯りが見える!');
+      radio('ao', '間に合った…! 今日も水色のペンラ、全力で振るぞ!');
+      centerMsg('開演に間に合った!', 3);
       Music.stop();
     }
     return;
@@ -1193,20 +1211,20 @@ function updateBoss(dt) {
 // =====================================================================
 const TL = [];
 const at = (d, f) => TL.push({ d, f });
-at(30, () => { centerMsg('STAGE 1<small>エメラルド平原</small>', 3); radio('sig', '全機、発進! 平原の向こうの敵基地を叩くぞ!'); });
+at(30, () => { centerMsg('劇場への空路<small>開演に間に合え!</small>', 3); radio('ao', '今日はカイリの劇場公演! 絶対に開演に間に合わせる!'); radio('sig', '無音軍団が空路をふさいでる。突っ切るぞ、アオ太!'); });
 at(260, () => radio('lulu', '銀のリングをくぐるとシールドが回復するよ!'));
 at(340, () => spawnItem('silver', 0, 8, -420));
-at(520, () => { radio('bolt', '敵機が来たぞ! 先にもらうぜ!'); for (let i = 0; i < 3; i++) spawnPass(-12 + i * 12, 6 + i * 2, -400 - i * 40); });
+at(520, () => { radio('bolt', '敵機だ! カイリの公演のジャマはさせねえ!'); for (let i = 0; i < 3; i++) spawnPass(-12 + i * 12, 6 + i * 2, -400 - i * 40); });
 at(850, () => { spawnHover(-10, 8); spawnHover(10, 11); });
-at(1150, () => { radio('sig', '前方にゲート。全部くぐり抜けてみろ!'); for (let i = 0; i < 6; i++) spawnGate(Math.sin(i * 1.1) * 9, -420 - i * 75); });
+at(1150, () => { radio('sig', '前方にゲート。全部くぐれば、いいことがあるぞ!'); for (let i = 0; i < 6; i++) spawnGate(Math.sin(i * 1.1) * 9, -420 - i * 75); });
 at(1750, () => { radio('lulu', '地上に砲台! 低く飛んで狙ってね!'); [-14, 9, -5, 16, -18, 3].forEach((x, i) => spawnTurret(x, -400 - i * 55)); });
 at(2100, () => { for (let i = 0; i < 5; i++) spawnPass(rand(-16, 16), rand(5, 16), -400 - i * 30, 9); });
 at(2400, () => { radio('bolt', '編隊だ! まとめて落とせ!'); spawnFormation(1); });
 at(2800, () => { radio('lulu', '浮遊機雷だよ! 近づくと爆発する!'); for (let i = 0; i < 9; i++) spawnMine(rand(-18, 18), rand(4, 18), -400 - i * 30); });
 at(3150, () => spawnItem('silver', rand(-6, 6), 10, -420));
-at(3300, () => { radio('sig', '後ろから敵だ! 抜かせてから撃て!'); for (let i = 0; i < 4; i++) spawnChase((i % 2 ? 1 : -1) * rand(8, 16), rand(4, 18)); });
-at(3750, () => { radio('sig', '大型機だ。長押しでチャージ、ロックオンして撃て!'); spawnBomber(0, 'laser'); spawnHover(-14, 7, { rate: 2.2 }); spawnHover(14, 7, { rate: 2.2 }); });
-at(4350, () => { radio('sig', 'タワー地帯だ。ブレーキとローリングを使え!'); for (let i = 0; i < 14; i++) spawnTower(rand(-20, 20), -420 - i * 48); });
+at(3300, () => { radio('sig', '後ろから来るぞ! 抜かせてから撃て。物販列の割り込みと同じだ!'); for (let i = 0; i < 4; i++) spawnChase((i % 2 ? 1 : -1) * rand(8, 16), rand(4, 18)); });
+at(3750, () => { radio('sig', '大型機だ。ショット長押しで「推しコール」! ロックオンして撃て!'); spawnBomber(0, 'laser'); spawnHover(-14, 7, { rate: 2.2 }); spawnHover(14, 7, { rate: 2.2 }); });
+at(4350, () => { radio('sig', 'タワー地帯だ。ブレーキとローリングでかわせ!'); for (let i = 0; i < 14; i++) spawnTower(rand(-20, 20), -420 - i * 48); });
 at(4700, () => { for (let i = 0; i < 4; i++) spawnPass(rand(-14, 14), rand(5, 14), -400 - i * 50, 4); });
 at(5300, () => { spawnItem('gold', 0, 12, -420); spawnFormation(-1); });
 at(5700, () => { [-16, -6, 6, 16].forEach((x, i) => spawnTurret(x, -400 - i * 60)); spawnHover(-8, 10); spawnHover(8, 13); spawnHover(0, 6); });
@@ -1216,8 +1234,9 @@ at(6950, () => { spawnItem('gold', rand(-10, 10), 9, -420); spawnItem('bomb', ra
 at(7200, () => { radio('lulu', '大型機が2機! ボムでまとめて落とすのもアリだよ!'); spawnBomber(-12, 'silver'); spawnBomber(12, 'bomb'); });
 at(7800, () => { spawnFormation(1); spawnFormation(-1); });
 at(8250, () => { spawnItem('silver', -6, 9, -420); spawnItem('gold', 6, 12, -470); });
-at(8500, () => radio('lulu', '前方に巨大な反応…! 気をつけて!'));
-at(8620, () => radio('sig', '敵の要塞機だ! 両腕を壊してから、コアを狙え!'));
+at(8500, () => radio('lulu', '劇場の上空に巨大な反応…! 気をつけて!'));
+at(8620, () => radio('sig', '無音要塞ミュートだ! 公演の音を消す気だぞ。両腕を壊してからコアを狙え!'));
+at(8680, () => radio('ao', 'カイリの歌は、絶対に消させない!'));
 at(8700, () => startBoss());
 TL.sort((a, b) => a.d - b.d);
 
@@ -1336,7 +1355,7 @@ function update(dt) {
       o.counted = true;
       if (!o.hit && !P.dead && Math.abs(P.x - o.x) < o.w / 2 && P.y < o.h) {
         G.gatesPassed++; G.hits += 1; Snd.gate(); popup(P.x, P.y + 2, -6, 'GATE ' + G.gatesPassed + '/' + G.gatesTotal, '#5dff9a');
-        if (G.gatesPassed === G.gatesTotal) { radio('lulu', 'ゲート全部クリア! ごほうびのレーザーを送るね!'); spawnItem('laser', 0, 9, -380); }
+        if (G.gatesPassed === G.gatesTotal) { radio('lulu', 'ゲート全部クリア! ごほうびのペンラを送るね!'); spawnItem('laser', 0, 9, -380); }
       }
     }
     if (o.z > 40) o.dead = true;
@@ -1432,7 +1451,7 @@ function startGame(fromCheckpoint) {
   const cp = fromCheckpoint || 0;
   Object.assign(G, { state: 'play', speed: 55, dist: cp, hits: 0, checkpoint: cp, gatesPassed: 0, gatesTotal: 0, shake: 0, clearT: 0 });
   G.evIdx = TL.findIndex(e => e.d >= cp); if (G.evIdx < 0) G.evIdx = TL.length;
-  if (cp > 0) { centerMsg('CONTINUE', 2); radio('sig', 'もう一度いくぞ。落ち着いていけ!'); }
+  if (cp > 0) { centerMsg('CONTINUE', 2); radio('sig', 'もう一度だ。開演はまだ間に合う!'); }
   hud.cache = {};
   ['#title', '#over', '#clear', '#pause'].forEach(s => $(s).hidden = true);
   $('#hud').hidden = false;
@@ -1449,7 +1468,8 @@ function gameOver() {
 function showClear() {
   G.state = 'done'; clearWorld();
   const h = G.hits, rank = h >= 110 ? 'S' : h >= 85 ? 'A' : h >= 55 ? 'B' : 'C';
-  $('#rank').textContent = rank; $('#clearHits').textContent = h; $('#clearLives').textContent = P.lives;
+  $('#rank').textContent = rank;
+  $('#rankCap').textContent = { S: '最高の推し活! カイリにも届いたはず', A: 'ナイス推し活! 堂々と入場', B: 'セーフ! 開演ブザーに間に合った', C: 'ギリギリ入場! 次はもっと早く' }[rank]; $('#clearHits').textContent = h; $('#clearLives').textContent = P.lives;
   const newBest = h > G.best; if (newBest) { G.best = h; store.set('best', h); }
   $('#clearBest').textContent = newBest ? '新記録!' : 'ベスト ' + G.best + ' HITS';
   $('#clear').hidden = false; $('#hud').hidden = true;
