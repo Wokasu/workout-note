@@ -10,7 +10,7 @@ REFRESH-INTERVAL;VALUE=DURATION:PT6H
 X-PUBLISHED-TTL:PT6H
 BEGIN:VEVENT
 UID:20261018-1100--e383ade3838ae383abe38389@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261018T020000Z
 DTEND:20261018T040000Z
 SUMMARY:ロナルド・マクドナルド・ハウス 支援募金活動(
@@ -31,7 +31,7 @@ URL:https://www.mcdonalds.co.jp/sustainability/local/aoimc/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261019-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261019T093000Z
 DTEND:20261019T113000Z
 SUMMARY:「ここからだ」公演【坂川陽香 生誕祭】（奥本カ
@@ -48,7 +48,7 @@ URL:https://akb48.zaiko.io/ja/e/s2026-1019-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261021-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261021T093000Z
 DTEND:20261021T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -63,7 +63,7 @@ URL:https://akb48.zaiko.io/ja/e/2026w-1021-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261025-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261025T040000Z
 DTEND:20261025T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -78,7 +78,7 @@ URL:https://akb48.zaiko.io/ja/e/te2026-1025-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261025-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261025T083000Z
 DTEND:20261025T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -93,7 +93,7 @@ URL:https://akb48.zaiko.io/ja/e/te2026-1025-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261027-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261027T093000Z
 DTEND:20261027T113000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
@@ -109,7 +109,7 @@ URL:https://akb48.zaiko.io/ja/e/ko2026-1027-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261029-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261029T093000Z
 DTEND:20261029T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ）
@@ -125,7 +125,7 @@ URL:https://akb48.zaiko.io/ja/e/k2026-1029-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261102-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261102T093000Z
 DTEND:20261102T113000Z
 SUMMARY:「ここからだ」公演【長友彩海 生誕祭】（奥本カ
@@ -134,15 +134,15 @@ DESCRIPTION:推しメン: 奥本カイリ\n出演メンバー: 奥本カイ
  リ・小栗有以・行天優莉奈・工藤華純・倉野尾成美・
  黒須遥香・徳永羚海・長友彩海・成田香姫奈・平田侑
  希・水島美結・武藤小麟・山内瑞葵・山根涼羽・大賀
- 彩姫・丸山ひなた\n申込: https://akb48.zaiko.io/e/2026a-nov2-1830
- \n出典: https://www.akb48.co.jp/\n※出演メンバーは変更にな
- る場合があります
+ 彩姫・丸山ひなた\n申込: https://akb48.zaiko.io/ja/e/2026a-nov2-1
+ 830\n出典: https://www.akb48.co.jp/\n※出演メンバーは変更に
+ なる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://akb48.zaiko.io/e/2026a-nov2-1830
+URL:https://akb48.zaiko.io/ja/e/2026a-nov2-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261103T040000Z
 DTEND:20261103T060000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
@@ -150,15 +150,15 @@ DESCRIPTION:推しメン: 渡邉葵心\n出演メンバー: 秋山由奈・
  新井彩永・太田有紀・久保姫菜乃・坂川陽香・下尾み
  う・千葉恵里・永野芹佳・橋本恵理子・畠山希美・正
  鋳真優・近藤沙樹・髙橋舞桜・田中沙友利・森川優・
- 渡邉葵心\n申込: https://akb48.zaiko.io/e/2026k-1103-1300\n出典: ht
- tps://www.akb48.co.jp/\n※出演メンバーは変更になる場合が
- あります
+ 渡邉葵心\n申込: https://akb48.zaiko.io/ja/e/2026k-1103-1300\n出典:
+  https://www.akb48.co.jp/\n※出演メンバーは変更になる場合
+ があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://akb48.zaiko.io/e/2026k-1103-1300
+URL:https://akb48.zaiko.io/ja/e/2026k-1103-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261103-1730--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261103T083000Z
 DTEND:20261103T103000Z
 SUMMARY:「ここからだ」公演（渡邉葵心）
@@ -166,15 +166,15 @@ DESCRIPTION:推しメン: 渡邉葵心\n出演メンバー: 秋山由奈・
  新井彩永・太田有紀・久保姫菜乃・坂川陽香・下尾み
  う・千葉恵里・永野芹佳・橋本恵理子・畠山希美・正
  鋳真優・近藤沙樹・髙橋舞桜・田中沙友利・森川優・
- 渡邉葵心\n申込: https://akb48.zaiko.io/e/kokokara-1103-1730\n出典:
-  https://www.akb48.co.jp/\n※出演メンバーは変更になる場合
- があります
+ 渡邉葵心\n申込: https://akb48.zaiko.io/ja/e/kokokara-1103-1730\n出
+ 典: https://www.akb48.co.jp/\n※出演メンバーは変更になる場
+ 合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://akb48.zaiko.io/e/kokokara-1103-1730
+URL:https://akb48.zaiko.io/ja/e/kokokara-1103-1730
 END:VEVENT
 BEGIN:VEVENT
 UID:20261105-1830--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261105T093000Z
 DTEND:20261105T113000Z
 SUMMARY:「ここからだ」公演（奥本カイリ・渡邉葵心）
@@ -182,15 +182,15 @@ DESCRIPTION:推しメン: 奥本カイリ、渡邉葵心\n出演メンバ
  ー: 岩立沙穂・奥本カイリ・迫由芽実・髙橋彩音・徳永
  羚海・長友彩海・平田侑希・福岡聖菜・布袋百椛・正
  鋳真優・山内瑞葵・山口結愛・山根涼羽・大賀彩姫・
- 丸山ひなた・渡邉葵心\n申込: https://akb48.zaiko.io/e/2026ko-no
- v5-1830\n出典: https://www.akb48.co.jp/\n※出演メンバーは変更
- になる場合があります
+ 丸山ひなた・渡邉葵心\n申込: https://akb48.zaiko.io/ja/e/2026ko
+ -nov5-1830\n出典: https://www.akb48.co.jp/\n※出演メンバーは変
+ 更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://akb48.zaiko.io/e/2026ko-nov5-1830
+URL:https://akb48.zaiko.io/ja/e/2026ko-nov5-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261106-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261106T093000Z
 DTEND:20261106T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -198,14 +198,14 @@ SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
 DESCRIPTION:推しメン: 奥本カイリ、渡邉葵心\n出演メンバ
  ー: 岩立沙穂・奥本カイリ・大賀彩姫・近藤沙樹・丸山
  ひなた・田中沙友利・牧戸愛茉・渡邉葵心\n申込: https:/
- /akb48.zaiko.io/e/2026e-1106-1830\n出典: https://www.akb48.co.jp/\n※
- 出演メンバーは変更になる場合があります
+ /akb48.zaiko.io/ja/e/2026e-1106-1830\n出典: https://www.akb48.co.jp/\n
+ ※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://akb48.zaiko.io/e/2026e-1106-1830
+URL:https://akb48.zaiko.io/ja/e/2026e-1106-1830
 END:VEVENT
 BEGIN:VEVENT
 UID:20261108-1300--e3808ce38193e38193e3818b@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261108T040000Z
 DTEND:20261108T060000Z
 SUMMARY:「ここからだ」公演【<2回目> 17:30開演 女性限定公
@@ -222,7 +222,7 @@ URL:https://akb48.zaiko.io/e/2026ra-nov8-1300
 END:VEVENT
 BEGIN:VEVENT
 UID:20261115-1400--e69fb1e381aee4bc9ae99990@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261115T050000Z
 DTEND:20261115T070000Z
 SUMMARY:柱の会限定イベント（渡邉葵心）
@@ -230,14 +230,14 @@ DESCRIPTION:推しメン: 渡邉葵心\n出演メンバー: 秋山由奈・
  新井彩永・小栗有以・行天優莉奈・工藤華純・倉野尾
  成美・迫由芽実・佐藤綺星・下尾みう・永野芹佳・畠
  山希美・山口結愛・山根涼羽・大賀彩姫・近藤沙樹・
- 渡邉葵心\n出典: https://www.akb48.co.jp/news/detailpage/489596266/\n
- ※出演メンバーは変更になる場合があります
+ 渡邉葵心\n出典: https://ameblo.jp/akihabara48/entry-12983271944.html
+ \n※出演メンバーは変更になる場合があります
 LOCATION:AKB48劇場（ドン・キホーテ秋葉原店8F）
-URL:https://www.akb48.co.jp/news/detailpage/489596266/
+URL:https://ameblo.jp/akihabara48/entry-12983271944.html
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1300--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261123T040000Z
 DTEND:20261123T060000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -252,7 +252,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261123-1730--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261123T083000Z
 DTEND:20261123T103000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -267,7 +267,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261126-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261126T093000Z
 DTEND:20261126T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ・渡邉葵
@@ -282,7 +282,7 @@ URL:https://www.akb48.co.jp/news/detailpage/489596266/
 END:VEVENT
 BEGIN:VEVENT
 UID:20261130-1830--e3808ce6898be38292e381a4@akb48-calendar
-DTSTAMP:20261104T101438Z
+DTSTAMP:20261105T040350Z
 DTSTART:20261130T093000Z
 DTEND:20261130T113000Z
 SUMMARY:「手をつなぎながら」公演（奥本カイリ）
