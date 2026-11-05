@@ -175,12 +175,12 @@ td.v { font: 600 18px/1 var(--display); font-variant-numeric: tabular-nums; }
 .zoombar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 
 /* compare */
-.cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cmp.single { grid-template-columns: 1fr; max-width: 520px; margin: 0 auto; width: 100%; }
-.cmp figure { margin: 0; display: grid; gap: 6px; min-width: 0; }
-.cmp canvas { width: 100%; height: auto; display: block; border-radius: 8px; background: #0d0f12; max-width: 100%; }
-.cmp figcaption { font-size: 13px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-.cmp figcaption .num { font-size: 18px; font-weight: 700; }
+.cmp-out { display: grid; gap: 6px; max-width: 760px; width: 100%; margin: 0 auto; }
+.cmp-out.single { max-width: 460px; }
+.cmp-out img, .cmp-out canvas { width: 100%; height: auto; display: block; border-radius: 8px; max-width: 100%; }
+.cmp-out canvas.adjusting { touch-action: none; cursor: grab; outline: 2px dashed var(--accent); outline-offset: 2px; }
+.cmp-tools { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 760px; width: 100%; margin: 0 auto; }
+.cmp-tools .row { justify-content: center; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { border: 0; background: var(--surface); padding: 6px 12px; font-size: 13px; }
 .seg button + button { border-left: 1px solid var(--line); }
@@ -260,6 +260,7 @@ const SLOT = Object.fromEntries(SLOTS.map(s => [s.k, s]));
 // 2点で測る項目。head は全写真共通の物差し（頭頂〜あご先）
 const MARKS = {
   head:      { name: '頭の高さ', hint: '頭のてっぺん → あごの先', why: 'すべての長さの物差しになります（脂肪で変わりにくい）' },
+  body:      { name: '全身の高さ', hint: '頭のてっぺん → 両かかとの間の床', why: '比較の写真で、大きさと位置をそろえるのに使います' },
   shoulder:  { name: '肩幅', hint: '左右の三角筋の一番外側', why: '腕を下ろしたリラックスの姿勢で' },
   neck:      { name: '首の幅', hint: '首の一番細いところの左右端' },
   chest:     { name: '胸の幅', hint: 'わきの下の高さで、胴体の左右端（広背筋まで含む）' },
@@ -279,9 +280,9 @@ const MARKS = {
   calf_d:    { name: 'ふくらはぎの厚み', hint: 'ふくらはぎの一番太いところの前端 → 後端' },
 };
 const MARKS_FOR = {
-  front: ['head', 'shoulder', 'neck', 'chest', 'arm', 'forearm', 'waist', 'hip', 'thigh', 'calf'],
-  side:  ['head', 'neck_d', 'chest_d', 'arm_d', 'forearm_d', 'waist_d', 'hip_d', 'thigh_d', 'calf_d'],
-  align: ['head'],
+  front: ['head', 'body', 'shoulder', 'neck', 'chest', 'arm', 'forearm', 'waist', 'hip', 'thigh', 'calf'],
+  side:  ['head', 'body', 'neck_d', 'chest_d', 'arm_d', 'forearm_d', 'waist_d', 'hip_d', 'thigh_d', 'calf_d'],
+  align: ['head', 'body'],
 };
 // 周囲長は 正面の幅 × 側面の厚み の楕円で近似する。厚みがないときは ratio（厚み/幅の目安）で補う
 const PARTS = [
@@ -391,7 +392,7 @@ const Local = {
 const S = {
   sessions: [], profile: { id: 'profile', headCm: null, heightCm: null, calib: {} },
   tab: 'log', view: { name: 'home' },
-  compare: { slot: 'q_front', a: null, b: null, mode: 'side', alpha: 0.5, split: 0.5 },
+  compare: { slot: 'q_front', a: null, b: null, mode: 'side', alpha: 0.5, split: 0.5, adjust: false },
   trend: { metric: 'weight' },
   urls: {},
 };
@@ -701,7 +702,7 @@ async function renderSession() {
       </div>
       <div class="group-title"><h2>クォーターターン</h2><span class="small muted">正面と側面は計測に使います</span></div>
       <div class="slots">${qt.join('')}</div>
-      <div class="group-title"><h2>規定7ポーズ</h2><span class="small muted">頭の位置を合わせておくと比較で大きさがそろいます</span></div>
+      <div class="group-title"><h2>規定7ポーズ</h2><span class="small muted">正面の写真に「全身の高さ」の点を打つと、比較で大きさと位置がそろいます</span></div>
       <div class="slots">${poses.join('')}</div>
     </section>
     <section class="panel">
@@ -896,7 +897,7 @@ async function slotMenu(slot) {
   const s = getSession(S.view.id); const ph = s.photos?.[slot]; const sl = SLOT[slot];
   if (!ph) return pickPhoto(slot);
   const choice = await sheet(`<h3>${esc(sl.name)}</h3>`, [
-    { v: 'measure', label: sl.measure ? '計測する' : '頭の位置を合わせる（比較用）', cls: 'primary' },
+    { v: 'measure', label: sl.measure ? '計測する' : '位置合わせの点を打つ（比較用）', cls: 'primary' },
     { v: 'replace', label: '写真を差し替える' },
     { v: 'delete', label: 'この写真を削除', cls: 'danger' },
     { v: null, label: '閉じる', cls: 'ghost' },
@@ -944,7 +945,7 @@ async function renderMeasure() {
         ${otherSide && s.photos[otherSide] ? `<button class="btn" data-ed="go" data-slot="${otherSide}">${SLOT[otherSide].name.slice(0, 3)}で測る</button>` : ''}
       </div>
     </div>
-    <div><div class="eyebrow">${sl.en} · ${fmtDate(s.date)}</div><h2>${esc(sl.name)}${sl.measure ? 'を計測' : 'の頭の位置'}</h2></div>
+    <div><div class="eyebrow">${sl.en} · ${fmtDate(s.date)}</div><h2>${esc(sl.name)}${sl.measure ? 'を計測' : 'の位置合わせ'}</h2></div>
     <div class="chips" id="ed-chips"></div>
     <div class="hint" id="ed-hint"></div>
     <div class="zoombar">
@@ -1076,7 +1077,84 @@ function showLoupe(e) {
 }
 function hideLoupe() { if (loupe) { loupe.remove(); loupe = null; } }
 
-/* ---------- 比較 ---------- */
+/* ---------- 比較 ----------
+   日付と体重の札を上に付けて横に並べた1枚の画像を作る。
+   写真は「頭頂〜足元の床」（なければ 頭の高さ × その人の頭身）で大きさと位置をそろえる。
+   同じ日の写真は同じカメラ位置で撮っている前提で、点を打っていない写真は正面の写真の位置合わせを使う */
+const FW = 600, FH = 1000;              // 写真1コマ（出力の画素）
+const TOP_Y = 0.06, FLOOR_Y = 0.95;     // 頭頂と足元の床を置く高さ（コマの高さに対する割合）
+const higher = m => m[0][1] < m[1][1] ? m[0] : m[1];
+function bodyRatio() { // 全身の高さ ÷ 頭の高さ。両方測った写真があればその平均（その人の頭身）
+  const r = [];
+  for (const s of S.sessions) for (const ph of Object.values(s.photos || {})) {
+    const h = ph.marks?.head, b = ph.marks?.body;
+    if (h?.length === 2 && b?.length === 2) r.push(dist(b[0], b[1]) / dist(h[0], h[1]));
+  }
+  return r.length ? r.reduce((a, b) => a + b) / r.length : HEADS_PER_HEIGHT;
+}
+function anchorOf(ph) {
+  const b = ph?.marks?.body, h = ph?.marks?.head;
+  if (b?.length === 2) return { top: higher(b), len: dist(b[0], b[1]) };
+  if (h?.length === 2) return { top: [(h[0][0] + h[1][0]) / 2, higher(h)[1]], len: dist(h[0], h[1]) * bodyRatio() };
+  return null;
+}
+function frameFor(s, slot) {
+  const ph = s.photos[slot];
+  let a = anchorOf(ph), kind = 'own';
+  if (!a && slot !== 'q_front' && s.photos.q_front) {
+    const f = s.photos.q_front, fa = anchorOf(f);
+    if (fa) { const k = ph.w / f.w; a = { top: [fa.top[0] * k, fa.top[1] * k], len: fa.len * k }; kind = 'front'; }
+  }
+  let sc, tx, ty;
+  if (a) { sc = FH * (FLOOR_Y - TOP_Y) / a.len; tx = FW / 2 - a.top[0] * sc; ty = FH * TOP_Y - a.top[1] * sc; }
+  else { kind = 'fit'; sc = Math.max(FW / ph.w, FH / ph.h); tx = (FW - ph.w * sc) / 2; ty = (FH - ph.h * sc) / 2; }
+  const adj = ph.adj || { x: 0, y: 0, z: 1 };
+  // 手で直した分：コマの中心を軸に拡大縮小して、ずらす
+  sc *= adj.z; tx = FW / 2 + (tx - FW / 2) * adj.z + adj.x * FW; ty = FH / 2 + (ty - FH / 2) * adj.z + adj.y * FH;
+  return { sc, tx, ty, kind };
+}
+const imgCache = {};
+async function photoImage(ph) {
+  if (!imgCache[ph.ref]) imgCache[ph.ref] = loadImage(await photoURL(ph.ref)).catch(() => null);
+  return imgCache[ph.ref];
+}
+function drawFramed(ctx, img, fr, x, y) {
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, FW, FH); ctx.clip();
+  ctx.fillStyle = '#d9d6d1'; ctx.fillRect(x, y, FW, FH);
+  if (img) ctx.drawImage(img, x + fr.tx, y + fr.ty, fr.sc * img.naturalWidth, fr.sc * img.naturalHeight);
+  ctx.restore();
+}
+// 札と写真を並べた1枚。戻り値の panels は、ドラッグでどのコマを触ったかを調べるのに使う
+const CM = 24, CG = 24, LH = 210;
+async function composeCompare(slot, list) {
+  const W = CM * 2 + list.length * FW + (list.length - 1) * CG, H = CM + LH + CG + FH + CM;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  try { await document.fonts.load('700 120px "Barlow Condensed"'); } catch (e) {}
+  ctx.fillStyle = '#f4f3f1'; ctx.fillRect(0, 0, W, H);
+  const years = new Set(list.map(s => s.date.slice(0, 4)));
+  const panels = [];
+  for (let i = 0; i < list.length; i++) {
+    const s = list[i], x = CM + i * (FW + CG);
+    ctx.fillStyle = '#2a2420'; ctx.fillRect(x, CM, FW, LH);
+    const [y, m, d] = s.date.split('-').map(Number);
+    ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'alphabetic';
+    ctx.font = '700 72px "Barlow Condensed", sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(years.size > 1 ? `${y}/${m}/${d}` : `${m}/${d}`, x + 30, CM + 82);
+    if (s.weight) {
+      const num = (+s.weight).toFixed(Number.isInteger(+s.weight) ? 0 : 1);
+      ctx.textAlign = 'right'; ctx.font = '700 92px "Barlow Condensed", sans-serif';
+      const kgW = ctx.measureText('kg').width;
+      ctx.fillText('kg', x + FW - 34, CM + LH - 30);
+      ctx.font = '700 140px "Barlow Condensed", sans-serif';
+      ctx.fillText(num, x + FW - 34 - kgW - 6, CM + LH - 30);
+    }
+    const ph = s.photos[slot]; const fr = frameFor(s, slot);
+    drawFramed(ctx, await photoImage(ph), fr, x, CM + LH + CG);
+    panels.push({ s, x, y: CM + LH + CG, kind: fr.kind });
+  }
+  return { canvas: c, panels };
+}
 async function renderCompare() {
   ED = null;
   const C = S.compare;
@@ -1085,7 +1163,11 @@ async function renderCompare() {
   if (!withSlot.find(s => s.id === C.b)) C.b = withSlot[withSlot.length - 1]?.id ?? null;
   const opts = sel => withSlot.map(s => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${fmtDate(s.date)}${s.weight ? `（${fmt(+s.weight)}kg）` : ''}</option>`).join('');
   const A = getSession(C.a), B = getSession(C.b);
-  const aligned = A?.photos[C.slot]?.marks?.head && B?.photos[C.slot]?.marks?.head;
+  const ready = withSlot.length >= 2 && A && B && A.id !== B.id;
+  const kinds = ready ? [A, B].map(s => frameFor(s, C.slot).kind) : [];
+  const kindNote = (s, k) => k === 'own' ? '' : `<li>${fmtDate(s.date)}：${k === 'front'
+    ? 'この写真には点がないので、同じ日の正面の写真の位置合わせを使っています'
+    : '位置合わせの点がないので、枠いっぱいに表示しています'}　<button class="btn ghost small" data-cfix="${s.id}">点を打つ</button></li>`;
   app.innerHTML = `<section class="panel">
     <h2>写真を並べて比べる</h2>
     <div class="fields">
@@ -1097,58 +1179,50 @@ async function renderCompare() {
       <div class="seg" role="group" aria-label="表示">
         ${[['side', '並べる'], ['blend', '重ねる'], ['wipe', 'スライド']].map(([v, l]) => `<button data-cmode="${v}" aria-pressed="${C.mode === v}">${l}</button>`).join('')}
       </div>
+      ${C.mode === 'side' && ready ? `<button class="btn" data-cadjust aria-pressed="${!!C.adjust}">${C.adjust ? '微調整を終える' : '位置を微調整'}</button>
+        <button class="btn primary" data-csave>画像を保存</button>` : ''}
       ${C.mode === 'blend' ? `<label class="small muted" for="c-alpha" style="flex:1;min-width:160px">後の写真の濃さ<input id="c-alpha" type="range" min="0" max="1" step="0.01" value="${C.alpha}"></label>` : ''}
       ${C.mode === 'wipe' ? `<label class="small muted" for="c-split" style="flex:1;min-width:160px">境目の位置<input id="c-split" type="range" min="0" max="1" step="0.01" value="${C.split}"></label>` : ''}
     </div>
-    ${withSlot.length < 2 ? `<p class="muted">このポーズの写真が2回分そろうと比べられます（いま ${withSlot.length} 回分）。</p>` : `
-    <div class="cmp ${C.mode === 'side' ? '' : 'single'}" id="c-out"></div>
-    <p class="small muted">${aligned ? '両方の写真の「頭の高さ」をそろえて、同じ縮尺で表示しています。' : '頭の位置を合わせていない写真があるので、枠に収めて表示しています。写真をタップして「頭の位置を合わせる」と、同じ縮尺で比べられます。'}</p>`}
+    ${!ready ? `<p class="muted">このポーズの写真が2回分そろうと比べられます（いま ${withSlot.length} 回分）。</p>` : `
+    ${C.adjust && C.mode === 'side' ? '<p class="small" style="margin:0"><b>写真をドラッグすると位置が動きます。</b>大きさは下のボタンで変えられます。直した分は保存され、次からもその位置で並びます。</p>' : ''}
+    <div class="cmp-out ${C.mode === 'side' ? '' : 'single'}" id="c-out"></div>
+    ${C.adjust && C.mode === 'side' ? `<div class="cmp-tools">${[A, B].map(s => `<div class="row">
+      <button class="btn" data-cz="${s.id}" data-d="-1" aria-label="${fmtDate(s.date)}を縮小">−</button>
+      <button class="btn" data-cz="${s.id}" data-d="1" aria-label="${fmtDate(s.date)}を拡大">＋</button>
+      <button class="btn ghost" data-creset="${s.id}">元に戻す</button></div>`).join('')}</div>` : ''}
+    <p class="small muted" style="margin:0">頭のてっぺんと足元の床の高さをそろえて、同じ大きさ・同じ位置に並べています。計測で「全身の高さ」（頭頂 → 両かかとの間の床）に点を打つと、いちばん正確にそろいます。</p>
+    ${kinds.some(k => k !== 'own') ? `<ul class="small muted" style="margin:0;padding-left:1.2em">${[A, B].map((s, i) => kindNote(s, kinds[i])).join('')}</ul>` : ''}`}
   </section>`;
-  if (withSlot.length >= 2) drawCompare();
+  if (ready) drawCompare();
 }
+let CMP = null; // いま表示している並び画像（ドラッグ用）
 async function drawCompare() {
   const C = S.compare; const out = $('#c-out'); if (!out) return;
   const A = getSession(C.a), B = getSession(C.b);
-  const [ia, ib] = await Promise.all([A, B].map(async s => loadImage(await photoURL(s.photos[C.slot].ref)).catch(() => null)));
-  const W = 600, H = 900;
-  const both = A.photos[C.slot].marks?.head && B.photos[C.slot].marks?.head;
-  const place = (ctx, img, ph) => {
-    if (!img) return;
-    const hm = both ? ph.marks.head : null;
-    if (hm) { // 頭の高さを 0.1H に、頭頂を上から 0.07H、頭の中心を左右中央に
-      const s = (H * 0.1) / dist(hm[0], hm[1]);
-      const top = hm[0][1] < hm[1][1] ? hm[0] : hm[1];
-      const cx = (hm[0][0] + hm[1][0]) / 2;
-      ctx.drawImage(img, W / 2 - cx * s, H * 0.07 - top[1] * s, img.naturalWidth * s, img.naturalHeight * s);
-    } else {
-      const s = Math.min(W / img.naturalWidth, H / img.naturalHeight);
-      ctx.drawImage(img, (W - img.naturalWidth * s) / 2, (H - img.naturalHeight * s) / 2, img.naturalWidth * s, img.naturalHeight * s);
-    }
-  };
-  const cap = s => `<figcaption><span class="num">${fmtDate(s.date)}</span>${s.weight ? `<span class="muted">${fmt(+s.weight)} kg</span>` : ''}</figcaption>`;
-  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
-  out.innerHTML = '';
   if (C.mode === 'side') {
-    for (const [s, img] of [[A, ia], [B, ib]]) {
-      const f = document.createElement('figure'); const c = mk(); const ctx = c.getContext('2d');
-      ctx.fillStyle = '#0d0f12'; ctx.fillRect(0, 0, W, H); place(ctx, img, s.photos[C.slot]);
-      f.append(c); f.insertAdjacentHTML('beforeend', cap(s)); out.append(f);
-    }
+    const { canvas, panels } = await composeCompare(C.slot, [A, B]);
+    if (S.tab !== 'compare' || out !== $('#c-out')) return;
+    CMP = { canvas, panels };
+    out.innerHTML = '';
+    if (C.adjust) { canvas.className = 'adjusting'; out.append(canvas); }
+    else { const img = new Image(); img.src = canvas.toDataURL('image/jpeg', 0.9); img.alt = `${fmtDate(A.date)} と ${fmtDate(B.date)} の${SLOT[C.slot].name}`; out.append(img); }
     return;
   }
-  const f = document.createElement('figure'); const c = mk(); const ctx = c.getContext('2d');
-  ctx.fillStyle = '#0d0f12'; ctx.fillRect(0, 0, W, H);
-  place(ctx, ia, A.photos[C.slot]);
-  if (C.mode === 'blend') { ctx.globalAlpha = C.alpha; place(ctx, ib, B.photos[C.slot]); ctx.globalAlpha = 1; }
+  // 重ねる・スライド：同じ位置合わせで1コマに
+  const c = document.createElement('canvas'); c.width = FW; c.height = FH; const ctx = c.getContext('2d');
+  const [ia, ib] = await Promise.all([A, B].map(s => photoImage(s.photos[C.slot])));
+  drawFramed(ctx, ia, frameFor(A, C.slot), 0, 0);
+  if (C.mode === 'blend') { ctx.globalAlpha = C.alpha; drawFramed(ctx, ib, frameFor(B, C.slot), 0, 0); ctx.globalAlpha = 1; }
   else {
-    ctx.save(); ctx.beginPath(); ctx.rect(W * C.split, 0, W, H); ctx.clip();
-    ctx.fillStyle = '#0d0f12'; ctx.fillRect(0, 0, W, H); place(ctx, ib, B.photos[C.slot]); ctx.restore();
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(W * C.split - 1, 0, 2, H);
+    ctx.save(); ctx.beginPath(); ctx.rect(FW * C.split, 0, FW, FH); ctx.clip(); drawFramed(ctx, ib, frameFor(B, C.slot), 0, 0); ctx.restore();
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(FW * C.split - 1, 0, 2, FH);
   }
-  f.append(c);
-  f.insertAdjacentHTML('beforeend', `<figcaption><span class="num">${fmtDate(A.date)}</span><span class="muted">${C.mode === 'wipe' ? '左' : '下'}</span>　<span class="num">${fmtDate(B.date)}</span><span class="muted">${C.mode === 'wipe' ? '右' : '上'}</span></figcaption>`);
-  out.append(f);
+  if (S.tab !== 'compare' || out !== $('#c-out')) return;
+  out.innerHTML = ''; out.append(c);
+  out.insertAdjacentHTML('beforeend', `<p class="small muted" style="margin:0"><span class="num">${fmtDate(A.date)}</span>（${C.mode === 'wipe' ? '左' : '下'}）と <span class="num">${fmtDate(B.date)}</span>（${C.mode === 'wipe' ? '右' : '上'}）</p>`);
 }
+function adjOf(s) { const ph = s.photos[S.compare.slot]; return ph.adj || (ph.adj = { x: 0, y: 0, z: 1 }); }
 app.addEventListener('change', e => {
   if (S.tab !== 'compare') return;
   const id = e.target.id;
@@ -1161,10 +1235,53 @@ app.addEventListener('input', e => {
   if (e.target.id === 'c-alpha') { S.compare.alpha = +e.target.value; drawCompare(); }
   if (e.target.id === 'c-split') { S.compare.split = +e.target.value; drawCompare(); }
 });
-app.addEventListener('click', e => {
-  const b = e.target.closest('[data-cmode]'); if (!b || S.tab !== 'compare') return;
-  S.compare.mode = b.dataset.cmode; renderCompare();
+app.addEventListener('click', async e => {
+  if (S.tab !== 'compare') return;
+  const C = S.compare;
+  const m = e.target.closest('[data-cmode]');
+  if (m) { C.mode = m.dataset.cmode; C.adjust = false; return renderCompare(); }
+  if (e.target.closest('[data-cadjust]')) { C.adjust = !C.adjust; return renderCompare(); }
+  if (e.target.closest('[data-csave]')) return saveCompareImage();
+  const fix = e.target.closest('[data-cfix]');
+  if (fix) { S.tab = 'log'; S.view = { name: 'measure', id: fix.dataset.cfix, slot: C.slot }; render(); window.scrollTo(0, 0); return; }
+  const z = e.target.closest('[data-cz]');
+  if (z) { const s = getSession(z.dataset.cz); const a = adjOf(s); a.z = Math.max(0.5, Math.min(2, a.z * (+z.dataset.d > 0 ? 1.03 : 1 / 1.03))); saveSession(s, 800); return drawCompare(); }
+  const r = e.target.closest('[data-creset]');
+  if (r) { const s = getSession(r.dataset.creset); delete s.photos[C.slot].adj; saveSession(s, 0); return drawCompare(); }
 });
+// 微調整：並び画像の上でドラッグしたコマの写真を動かす
+let cdrag = null;
+app.addEventListener('pointerdown', e => {
+  if (S.tab !== 'compare' || !S.compare.adjust || !e.target.matches?.('canvas.adjusting') || !CMP) return;
+  const r = e.target.getBoundingClientRect(); const k = CMP.canvas.width / r.width;
+  const px = (e.clientX - r.left) * k;
+  const p = CMP.panels.find(p => px >= p.x && px <= p.x + FW); if (!p) return;
+  e.target.setPointerCapture(e.pointerId);
+  cdrag = { id: e.pointerId, s: p.s, k, x: e.clientX, y: e.clientY, a0: { ...adjOf(p.s) }, busy: false };
+});
+app.addEventListener('pointermove', async e => {
+  if (!cdrag || cdrag.id !== e.pointerId) return;
+  const a = adjOf(cdrag.s);
+  a.x = cdrag.a0.x + (e.clientX - cdrag.x) * cdrag.k / FW; a.y = cdrag.a0.y + (e.clientY - cdrag.y) * cdrag.k / FH;
+  if (cdrag.busy) return; cdrag.busy = true; // 描き直しが追いつく分だけ描く
+  const { canvas, panels } = await composeCompare(S.compare.slot, [getSession(S.compare.a), getSession(S.compare.b)]);
+  const shown = $('#c-out canvas.adjusting');
+  if (shown) { shown.getContext('2d').drawImage(canvas, 0, 0); CMP.panels = panels; }
+  if (cdrag) cdrag.busy = false;
+});
+const endCdrag = e => { if (!cdrag || cdrag.id !== e.pointerId) return; const s = cdrag.s; cdrag = null; saveSession(s, 300); drawCompare(); };
+app.addEventListener('pointerup', endCdrag);
+app.addEventListener('pointercancel', endCdrag);
+async function saveCompareImage() {
+  const C = S.compare; const A = getSession(C.a), B = getSession(C.b);
+  const { canvas } = await composeCompare(C.slot, [A, B]);
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.92));
+  const filename = `physique_${C.slot}_${A.date}_${B.date}.jpg`;
+  const dl = window.claude?.use ? await claude.use('downloads') : null;
+  if (!dl) { toast('ここでは保存できません。表示している画像を長押しして保存してください'); return; }
+  try { await dl.save({ filename, data: blob }); }
+  catch (err) { if (err?.code !== 'declined') toast('画像を保存できませんでした。画像を長押しして保存してください'); }
+}
 
 /* ---------- 推移 ---------- */
 const TREND_METRICS = [
