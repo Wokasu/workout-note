@@ -18,7 +18,8 @@ param(
   [string]$ProfilePrefix = 'AKB',
   [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
   [string]$ApplicationsUrl = 'https://zaiko.io/account/applications',
-  [string]$ChromePath
+  [string]$ChromePath,
+  [switch]$UseSystemProxy   # 最初から Windows のプロキシ設定を使って読み込む
 )
 
 $ErrorActionPreference = 'Stop'
@@ -57,6 +58,42 @@ function Get-Profiles {
     Sort-Object Name
 }
 
+# URL の中身を文字列で読む。
+# まず直接つなぎ（8秒で打ち切り）、つながらなければ Windows のプロキシ設定を使う（60秒まで待つ）。
+# プロキシ設定の自動検出は時間がかかるので、見つかったプロキシは launcher-proxy.txt に覚えて次から直接使う
+function Get-Text([string]$url) {
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  $proxyFile = Join-Path $here 'launcher-proxy.txt'
+  $saved = if (Test-Path $proxyFile) { (Get-Content -Raw $proxyFile).Trim() } else { '' }
+  $read = {
+    param($proxy, [int]$timeout)
+    $request = [Net.HttpWebRequest]::Create($url)
+    $request.Proxy = $proxy
+    $request.Timeout = $timeout
+    $request.ReadWriteTimeout = $timeout
+    $response = $request.GetResponse()
+    try { (New-Object IO.StreamReader($response.GetResponseStream(), [Text.Encoding]::UTF8)).ReadToEnd() } finally { $response.Close() }
+  }
+  if ($saved -and $saved -ne 'direct') {
+    try { return & $read (New-Object Net.WebProxy($saved)) 20000 } catch { Write-Host "  覚えていたプロキシ（$saved）でつながりませんでした" -ForegroundColor DarkGray }
+  }
+  if (-not $UseSystemProxy) {
+    try {
+      $text = & $read $null 8000
+      if ($saved -ne 'direct') { Set-Content -Path $proxyFile -Value 'direct' -Encoding ASCII }
+      return $text
+    } catch { Write-Host '  直接つながらないので、Windows のプロキシ設定で読み込みます（少し時間がかかります）…' -ForegroundColor DarkGray }
+  }
+  $system = [Net.WebRequest]::GetSystemWebProxy()
+  $system.Credentials = [Net.CredentialCache]::DefaultCredentials
+  $text = & $read $system 60000
+  try {
+    $via = $system.GetProxy([Uri]$url)
+    Set-Content -Path $proxyFile -Value $(if ($via.Host -eq ([Uri]$url).Host) { 'direct' } else { $via.AbsoluteUri }) -Encoding ASCII
+  } catch {}
+  return $text
+}
+
 # 申込する公演の一覧。urls.txt があればそちらを優先（1行に1つURL）
 function Get-Shows {
   $manual = Join-Path $here 'urls.txt'
@@ -69,10 +106,20 @@ function Get-Shows {
   }
   if (Test-Path $Links) {
     $json = Get-Content -Raw -Encoding UTF8 $Links
-  } else {
-    $client = New-Object Net.WebClient
-    $client.Encoding = [Text.Encoding]::UTF8
-    $json = $client.DownloadString("$Links`?t=$([DateTime]::Now.Ticks)")
+    return @($json | ConvertFrom-Json)
+  }
+  # 前回読めた一覧を残しておき、読み込めなかったときに使う
+  $cache = Join-Path $here 'links-cache.json'
+  Write-Host '公演の一覧を読み込んでいます…'
+  $watch = [Diagnostics.Stopwatch]::StartNew()
+  try {
+    $json = Get-Text "$Links`?t=$([DateTime]::Now.Ticks)"
+    Write-Host ("  {0:N1} 秒で読み込みました" -f $watch.Elapsed.TotalSeconds) -ForegroundColor DarkGray
+    try { [IO.File]::WriteAllText($cache, $json, (New-Object Text.UTF8Encoding($false))) } catch {}
+  } catch {
+    if (-not (Test-Path $cache)) { throw }
+    Write-Host "  読み込めなかったので、前回の一覧を使います（$((Get-Item $cache).LastWriteTime.ToString('M/d HH:mm')) 時点）: $($_.Exception.Message)" -ForegroundColor Yellow
+    $json = Get-Content -Raw -Encoding UTF8 $cache
   }
   return @($json | ConvertFrom-Json)
 }
