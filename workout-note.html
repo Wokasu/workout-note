@@ -2478,6 +2478,26 @@ async function saveDeloads(list, msg) {
 const startDeload = () => saveDeloads([...deloadList().filter((x) => !(x.start <= today() && x.end >= today())), { start: today(), end: WN.addDays(today(), DELOAD_DAYS - 1) }], "今日から7日間をデロードにしました");
 const endDeload = (dl) => saveDeloads(deloadList().map((x) => (x === dl ? { ...x, end: today() } : x)), "デロードを今日で終えました");
 const removeDeload = (dl) => saveDeloads(deloadList().filter((x) => x !== dl), `${WN.shortDate(dl.start)}〜のデロードを消しました`);
+// 開始日・終了日をあとから直す。7日間のまま（終了＝開始＋6日）だったものは、開始日を動かすと終了日も一緒に動かす
+function changeDeload(dl, key, value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return render();
+  const next = { ...dl, [key]: value };
+  if (key === "start" && dl.end === WN.addDays(dl.start, DELOAD_DAYS - 1)) next.end = WN.addDays(value, DELOAD_DAYS - 1);
+  if (next.start > today()) { toast("開始日は今日より前の日にしてください"); return render(); }
+  if (next.end < next.start) { toast("終了日は開始日より後の日にしてください"); return render(); }
+  const clash = deloadList().find((x) => x !== dl && x.start <= next.end && x.end >= next.start);
+  if (clash) { toast(`${WN.shortDate(clash.start)}〜${WN.shortDate(clash.end)} のデロードと重なっています`); return render(); }
+  saveDeloads(deloadList().map((x) => (x === dl ? next : x)), `デロードを ${WN.shortDate(next.start)}〜${WN.shortDate(next.end)} にしました`);
+}
+function deloadDates(dl, idp) {
+  const inp = (key, label) => {
+    const el = h("input", { class: "in", type: "date", id: `${idp}-${key}`, "aria-label": label, disabled: !S.db, max: key === "start" ? today() : null, style: "font-size:14px;padding:5px 6px;width:auto" });
+    el.value = dl[key];
+    el.addEventListener("change", () => changeDeload(dl, key, el.value));
+    return el;
+  };
+  return h("div", { class: "row", style: "gap:6px;flex-wrap:wrap" }, inp("start", "デロードの開始日"), h("span", {}, "〜"), inp("end", "デロードの終了日"));
+}
 
 // 疲労メーターの小さなグラフ（直近8週。点線は「高い」の目安、帯はデロード期間）
 function meterChart(D) {
@@ -2501,7 +2521,7 @@ function deloadCard() {
     : D.stage === "due" ? ["rest", "デロードどきです"]
     : ["go", D.fatigueHigh ? "疲労は高めですが、★種目はまだ伸びています" : D.perfSign ? "伸びが止まりかけていますが、疲労はふだんどおりです" : "まだ伸びしろがあります"];
   const card = h("div", { class: "card" }, h("div", { class: "card-head" }, h("h2", { class: "card-title" }, "デロード"),
-    h("span", { class: "muted" }, D.lastDl ? `前回 ${WN.shortDate(D.lastDl.start)}〜・明けから${Math.floor(D.cycleDays / 7)}週${D.cycleDays % 7 ? `${D.cycleDays % 7}日` : ""}` : "デロードの記録なし")),
+    h("span", { class: "muted" }, D.cur ? `デロード ${WN.daysBetween(D.cur.start, today()) + 1}日目` : D.lastDl ? `前回 ${WN.shortDate(D.lastDl.start)}〜・明けから${Math.floor(D.cycleDays / 7)}週${D.cycleDays % 7 ? `${D.cycleDays % 7}日` : ""}` : "デロードの記録なし")),
     h("div", { class: "adv-head " + head[0] }, head[1]));
   if (D.stage !== "deload") {
     // 点いているサイン（数字つき）
@@ -2515,14 +2535,16 @@ function deloadCard() {
   if (D.after?.length) card.append(h("div", { class: "flabel" }, `デロード明けの戻り（${D.after.filter((a) => a.back).length} / ${D.after.length} 種目がデロード前の水準）`),
     D.after.map((a) => h("div", { class: "row", style: "justify-content:space-between;font-size:13px" }, h("span", {}, a.name), h("span", { class: "num", style: `font-size:15px;color:var(${a.back ? "--good" : "--ink-2"})` }, `${WN.round1(a.before)} → ${WN.round1(a.after)}kg`))));
   card.append(meterChart(D), h("div", { class: "muted" }, "線は疲労メーター（疲労 ÷ フィットネス。1.0 がいつもどおり）。点線は高めの目安、緑の帯はデロード期間。量は全身ぬりえと同じ効いたセット分で数えています。"));
+  if (D.cur) card.append(h("div", { class: "flabel" }, "期間（日付を押すと直せます）"), deloadDates(D.cur, "dl-cur"));
   card.append(D.cur
     ? h("button", { class: "btn secondary small", type: "button", disabled: !S.db, onclick: () => endDeload(D.cur) }, "デロードを今日で終える")
     : h("button", { class: "btn " + (D.stage === "due" ? "primary" : "secondary") + " small", type: "button", disabled: !S.db, onclick: startDeload }, "今日からデロードにする（7日間）"));
   const list = deloadList().slice().reverse();
   if (list.length) {
-    const det = h("details", { class: "dl-list" }, h("summary", {}, `デロードの記録（${list.length}回）`),
-      list.map((x) => h("div", { class: "row", style: "justify-content:space-between" }, h("span", {}, `${WN.formatDateJa(x.start)} 〜 ${WN.formatDateJa(x.end)}`),
+    const det = h("details", { class: "dl-list", open: S.dlListOpen || null }, h("summary", {}, `デロードの記録（${list.length}回）・日付を押すと直せます`),
+      list.map((x, i) => h("div", { class: "row", style: "justify-content:space-between" }, deloadDates(x, `dl-${i}`),
         h("button", { class: "x del", type: "button", disabled: !S.db, "aria-label": `${WN.shortDate(x.start)}〜のデロードを消す`, onclick: () => removeDeload(x) }, "✕"))));
+    det.addEventListener("toggle", () => (S.dlListOpen = det.open));
     card.append(det);
   }
   return card;
