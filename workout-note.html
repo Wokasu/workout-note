@@ -392,6 +392,13 @@
   .dl-sig { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.5; }
   .dl-dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--line); flex: none; margin-top: 4px; }
   .dl-sig.on .dl-dot { background: var(--bad); border-color: var(--bad); }
+  .dl-nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dl-nums > div { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .dl-nums > div.ok { background: var(--good-bg); }
+  .dl-nums .k { font-size: 11px; font-weight: 700; color: var(--ink-2); }
+  .dl-nums b { font-size: 30px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .dl-nums .s { font-size: 11px; color: var(--ink-3); line-height: 1.5; }
+  .dl-nums > div.ok .s { color: var(--good); font-weight: 700; }
   .dl-list summary { cursor: pointer; font-size: 12px; color: var(--ink-2); padding: 4px 0; }
   .dl-list .row { font-size: 13px; padding: 2px 0; }
   .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; z-index: 5; max-width: calc(100% - 32px); text-align: center; }
@@ -2394,7 +2401,7 @@ function checkCard() {
 // フィットネスは時定数42日、疲労は7日でならし、「疲労 ÷ フィットネス」を出す（1.0 がいつもどおり）。
 // デロードどき＝疲労メーターの直近2週平均が、ふだんの上位25%以上 かつ ★種目の頭打ち（前回デロード以降のベストを
 // 直近2週で更新していない種目が半分以上）または下降アラートがあるとき。やり方の提案はしない。
-const FIT_TAU = 42, FAT_TAU = 7, DELOAD_DAYS = 7;
+const FIT_TAU = 42, FAT_TAU = 7, DELOAD_DAYS = 7, DELOAD_END = 0.7, DELOAD_MAX_DAYS = 10;
 const deloadList = () => (S.exRules.deloads || []).slice().sort((a, b) => a.start.localeCompare(b.start));
 const inDeload = (d) => deloadList().find((x) => d >= x.start && d <= x.end) || null;
 
@@ -2464,7 +2471,7 @@ function deloadState() {
       }).filter(Boolean);
     }
     const stage = cur ? "deload" : fatigueHigh && perfSign ? "due" : "ok";
-    result = { series: series.slice(-56), meter, usual, high, fatigueHigh, plateau, judged, stalled, downs, perfSign, stage, cur, lastDl, cycleStart, cycleDays: WN.daysBetween(cycleStart, t) + 1, after };
+    result = { series: series.slice(-56), today: series.at(-1).r, meter, usual, high, fatigueHigh, plateau, judged, stalled, downs, perfSign, stage, cur, lastDl, cycleStart, cycleDays: WN.daysBetween(cycleStart, t) + 1, after };
   }
   deloadCache = { src: S.workouts, day: t, key, result };
   return result;
@@ -2523,6 +2530,15 @@ function deloadCard() {
   const card = h("div", { class: "card" }, h("div", { class: "card-head" }, h("h2", { class: "card-title" }, "デロード"),
     h("span", { class: "muted" }, D.cur ? `デロード ${WN.daysBetween(D.cur.start, today()) + 1}日目` : D.lastDl ? `前回 ${WN.shortDate(D.lastDl.start)}〜・明けから${Math.floor(D.cycleDays / 7)}週${D.cycleDays % 7 ? `${D.cycleDays % 7}日` : ""}` : "デロードの記録なし")),
     h("div", { class: "adv-head " + head[0] }, head[1]));
+  // 今日の疲労度（その日の値）と2週平均。デロード中は終えどきの目安（0.7前後）までの距離も出す
+  const dlDay = D.cur ? WN.daysBetween(D.cur.start, today()) + 1 : 0, reached = D.today <= DELOAD_END;
+  card.append(h("div", { class: "dl-nums" },
+    h("div", { class: D.cur && reached ? "ok" : "" }, h("span", { class: "k" }, "今日の疲労度"), h("b", { class: "num" }, fmt2(D.today)),
+      h("span", { class: "s" }, D.cur ? (reached ? `終えどきの目安（${DELOAD_END}）に届きました` : `終えどきの目安 ${DELOAD_END} まで あと ${(D.today - DELOAD_END).toFixed(2)}`) : "疲労 ÷ フィットネス（1.0 がいつもどおり）")),
+    h("div", {}, h("span", { class: "k" }, "2週平均"), h("b", { class: "num" }, fmt2(D.meter)), h("span", { class: "s" }, `ふだん ${fmt2(D.usual)}・高めの目安 ${fmt2(D.high)}`))));
+  if (D.cur) card.append(h("div", { class: "muted" }, dlDay >= DELOAD_MAX_DAYS && !reached
+    ? `デロード${dlDay}日目です。目安に届いていなくても、10日を過ぎたら終えるのが無難です（長いとフィットネスが減っていきます）。`
+    : `その日の疲労度が ${DELOAD_END} 前後（0.6〜0.8）になったら終える目安です。10日を過ぎたら、届いていなくても終えるのが無難です。`));
   if (D.stage !== "deload") {
     // 点いているサイン（数字つき）
     const sig = (on, label, detail) => h("div", { class: "dl-sig" + (on ? " on" : "") }, h("span", { class: "dl-dot", "aria-hidden": "true" }), h("span", { class: "grow" }, h("b", {}, label), h("br"), h("span", { class: "muted" }, detail)));
@@ -2534,7 +2550,7 @@ function deloadCard() {
   }
   if (D.after?.length) card.append(h("div", { class: "flabel" }, `デロード明けの戻り（${D.after.filter((a) => a.back).length} / ${D.after.length} 種目がデロード前の水準）`),
     D.after.map((a) => h("div", { class: "row", style: "justify-content:space-between;font-size:13px" }, h("span", {}, a.name), h("span", { class: "num", style: `font-size:15px;color:var(${a.back ? "--good" : "--ink-2"})` }, `${WN.round1(a.before)} → ${WN.round1(a.after)}kg`))));
-  card.append(meterChart(D), h("div", { class: "muted" }, "線は疲労メーター（疲労 ÷ フィットネス。1.0 がいつもどおり）。点線は高めの目安、緑の帯はデロード期間。量は全身ぬりえと同じ効いたセット分で数えています。"));
+  card.append(meterChart(D), h("div", { class: "muted" }, "線はその日の疲労度（疲労 ÷ フィットネス。1.0 がいつもどおり）。点線は2週平均の高めの目安、緑の帯はデロード期間。量は全身ぬりえと同じ効いたセット分で数えています。"));
   if (D.cur) card.append(h("div", { class: "flabel" }, "期間（日付を押すと直せます）"), deloadDates(D.cur, "dl-cur"));
   card.append(D.cur
     ? h("button", { class: "btn secondary small", type: "button", disabled: !S.db, onclick: () => endDeload(D.cur) }, "デロードを今日で終える")
