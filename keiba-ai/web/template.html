@@ -110,6 +110,37 @@ td.num, .mono { font-family: var(--mono); }
 .total { display: flex; justify-content: space-between; font-weight: 700; padding: 0 10px; }
 .skip { font-weight: 700; color: var(--muted); padding: 10px; border-radius: 8px; background: var(--bg); }
 .tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--muted); }
+/* タブ（スマホでは画面の下に固定） */
+.tabs { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.tabs button { flex: 1; min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--muted);
+  font: 700 14px var(--body); cursor: pointer; display: grid; place-items: center; gap: 0; line-height: 1.2; }
+.tabs button .g { font-family: var(--display); font-weight: 400; font-size: 17px; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+.tabs button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+section[hidden] { display: none; }
+@media (max-width: 719px) {
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; border-radius: 0; border-width: 1px 0 0;
+    padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+  .wrap { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); gap: 14px; }
+  .lead { font-size: 13.5px; }
+  section { padding: 14px; }
+  .bet { grid-template-columns: 3.4em minmax(0, 1fr) auto; gap: 8px; }
+  .cand .what span { font-size: 11.5px; }
+}
+/* オッズ確認 */
+.check { display: grid; gap: 6px; }
+.check h3 { font-size: 14px; }
+.cand { display: grid; grid-template-columns: minmax(0, 1fr) auto 5.2em; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 8px; background: var(--bg); }
+.cand.buy { box-shadow: inset 0 0 0 2px var(--accent); }
+.cand .what { min-width: 0; display: grid; gap: 2px; }
+.cand .what b { font-size: 13.5px; }
+.cand .what span { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.cand .need { font: 500 13px var(--mono); text-align: right; white-space: nowrap; }
+.cand .need small { display: block; font: 400 11px var(--body); color: var(--muted); }
+.cand input { font: 500 16px var(--mono); width: 100%; box-sizing: border-box; padding: 8px 6px; text-align: right;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--fg); }
+.cand input.ok { border-color: var(--pos); color: var(--pos); }
+button.recalc { justify-self: start; }
 footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
 </style>
 
@@ -128,8 +159,15 @@ footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
     </div>
   </header>
 
-  <section aria-labelledby="h-data">
-    <h2 id="h-data"><span class="step">STEP 1</span>データ</h2>
+  <nav class="tabs" role="tablist" aria-label="画面">
+    <button role="tab" id="t-predict" data-tab="predict"><span class="g">◎</span>予想</button>
+    <button role="tab" id="t-data" data-tab="data"><span class="g">▤</span>データ</button>
+    <button role="tab" id="t-backtest" data-tab="backtest"><span class="g">％</span>検証</button>
+    <button role="tab" id="t-train" data-tab="train"><span class="g">↻</span>学習</button>
+  </nav>
+
+  <section aria-labelledby="h-data" id="tab-data" hidden>
+    <h2 id="h-data">データ</h2>
     <p class="hint">過去の成績・払戻の CSV を選んでください（列は README の通り。Shift_JIS でも可）。中央と南関東を1つのファイルにまとめても構いません。</p>
     <div class="files">
       <label class="file" id="f-results"><input type="file" accept=".csv,text/csv" data-name="results"><b>成績 results.csv <span class="tag">必須</span></b><span class="st">未選択</span></label>
@@ -143,9 +181,10 @@ footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
     <div id="data-msg"></div>
   </section>
 
-  <section aria-labelledby="h-bt">
-    <h2 id="h-bt"><span class="step">STEP 2</span>検証（バックテスト）</h2>
+  <section aria-labelledby="h-bt" id="tab-backtest" hidden>
+    <h2 id="h-bt">検証（バックテスト）</h2>
     <p class="hint">過去の各年を「未来」とみなし、その前の年だけで予想して買った場合の回収率を出します。最低3年分のデータが必要です。</p>
+    <div class="cfg-slot" data-for="backtest">
     <details class="cfg" id="cfg">
       <summary>買い方の設定（検証と予想で共通）</summary>
       <div class="grid-cfg">
@@ -164,26 +203,32 @@ footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
         <label><input type="checkbox" id="b-exacta" checked> 馬単</label>
       </div>
     </details>
+    </div>
     <div class="row"><button class="go" id="btn-bt" disabled>検証する</button><span class="hint" id="bt-note"></span></div>
     <div id="bt-out"></div>
   </section>
 
-  <section aria-labelledby="h-tr">
-    <h2 id="h-tr"><span class="step">STEP 3</span>学習</h2>
+  <section aria-labelledby="h-tr" id="tab-train" hidden>
+    <h2 id="h-tr">学習</h2>
     <p class="hint">入れたデータ全部で、選んでいる主催のモデルを作ります（最後の1年はオッズとの合成係数を決めるのに使います）。モデルはこのブラウザに保存され、次回も使えます。</p>
     <div class="row"><button class="go" id="btn-tr" disabled>学習する</button><span class="hint" id="tr-note"></span></div>
     <div id="tr-out"></div>
   </section>
 
-  <section aria-labelledby="h-pr">
-    <h2 id="h-pr"><span class="step">STEP 4</span>予想</h2>
+  <section aria-labelledby="h-pr" id="tab-predict" hidden>
+    <h2 id="h-pr">予想</h2>
     <div class="files">
       <label class="file" id="f-card"><input type="file" accept=".csv,text/csv" data-name="card"><b>出馬表 card.csv <span class="tag">必須</span></b><span class="st">未選択（results と同じ列、結果は空）</span></label>
     </div>
-    <label class="hint" for="odds-text">締切直前のオッズを貼り付け（任意。1行1つ。複数レースのときは「# race_id」の行で区切る）</label>
-    <textarea id="odds-text" placeholder="単勝 7 8.4&#10;馬連 3-7 12.5&#10;ワイド 3-7 4.1-4.8&#10;馬単 7-3 30.2"></textarea>
     <div class="row"><button class="go" id="btn-pr" disabled>予想する</button><span class="hint" id="pr-note"></span></div>
+    <p class="hint">予想が出たら、各レースの「オッズ確認」に締切直前の実オッズを入れて「再計算」してください。目安の倍率以上なら買い目になります。</p>
     <div id="pr-out"></div>
+    <details>
+      <summary class="hint">オッズをまとめて貼り付ける</summary>
+      <label class="hint" for="odds-text">1行1つ。複数レースのときは「# race_id」の行で区切る</label>
+      <textarea id="odds-text" placeholder="単勝 7 8.4&#10;馬連 3-7 12.5&#10;ワイド 3-7 4.1-4.8&#10;馬単 7-3 30.2"></textarea>
+    </details>
+    <div class="cfg-slot" data-for="predict"></div>
   </section>
 
   <footer>
@@ -341,7 +386,7 @@ function refreshButtons() {
   $("btn-tr").disabled = !ok || !f.results;
   $("btn-pr").disabled = !ok || !f.results || !f.card || !(lastStatus.models || {})[league];
   $("pr-note").textContent = !engine.ready ? "" : !f.card ? "出馬表を選んでください" :
-    !(lastStatus.models || {})[league] ? "先に STEP 3 で学習してください" : "";
+    !(lastStatus.models || {})[league] ? "先に「学習」タブで学習してください" : "";
   $("tr-note").textContent = (lastStatus.models || {})[league] ? "このブラウザに学習済みのモデルがあります" : "";
   for (const name of ["results", "payouts", "odds", "card"]) {
     const el = $("f-" + name), info = f[name];
@@ -418,7 +463,7 @@ function renderBacktest(o) {
   h += `<div class="scroll"><table><thead><tr><th>券種</th><th>点数</th><th>的中</th><th>的中率</th><th>投資</th><th>払戻</th><th>回収率</th><th>平均オッズ</th></tr></thead><tbody>`;
   for (const r of s.by_type) h += `<tr><td>${esc(r.name)}</td><td class="num">${r.bets}</td><td class="num">${r.hits}</td><td class="num">${pct(r.hit_rate)}</td><td class="num">${yen(r.stake)}</td><td class="num">${yen(r.return)}</td>${roiCell(r.roi)}<td class="num">${r.avg_odds.toFixed(1)}</td></tr>`;
   h += `</tbody></table></div>`;
-  h += `<h3 style="font-size:15px">期待値の帯ごとの回収率</h3><p class="hint">100%を下回る帯がある券種は、STEP 2 の設定で期待値の下限を上げて切ります。</p>`;
+  h += `<h3 style="font-size:15px">期待値の帯ごとの回収率</h3><p class="hint">100%を下回る帯がある券種は、「買い方の設定」で期待値の下限を上げて切ります。</p>`;
   h += `<div class="scroll"><table><thead><tr><th>券種</th><th>期待値</th><th>点数</th><th>的中</th><th>回収率</th></tr></thead><tbody>`;
   for (const r of s.ev_bands) h += `<tr><td>${esc(r.bet_type)}</td><td class="num">${esc(r.band)}</td><td class="num">${r.bets}</td><td class="num">${r.hits}</td>${roiCell(r.roi)}</tr>`;
   h += `</tbody></table></div>`;
@@ -464,26 +509,84 @@ function renderRace(r, example) {
       <span><span>${combo(b)}</span><br><span class="detail">的中率 ${pct(b.prob)} ・ オッズ ${b.odds.toFixed(1)} ・ 期待値 ${b.ev.toFixed(2)}${b.estimated ? ' <span class="est">推定オッズ・要確認</span>' : ""}</span></span>
       <span class="yen">${yen(b.stake)}</span></div>`).join("")}</div><div class="total"><span>合計</span><span class="mono">${yen(r.total)}</span></div>`;
   }
+  if (r.candidates && r.candidates.length) {
+    const bought = new Set(r.bets.map((b) => b.type + "|" + b.combo));
+    body += `<div class="check"><h3>オッズ確認 <span class="hint">（目安の倍率以上なら買い）</span></h3>${r.candidates.map((c) => {
+      const key = `${r.race_id}|${c.type}|${c.combo}`, v = oddsInputs[key] ?? "";
+      const ok = v !== "" && +v >= c.need;
+      return `<div class="cand${bought.has(c.type + "|" + c.combo) ? " buy" : ""}">
+        <span class="what"><b>${c.label} ${combo(c)}</b><span>的中率 ${pct(c.prob)} ・ ${c.estimated ? "推定" : "現在"} ${c.odds.toFixed(1)}倍</span></span>
+        <span class="need">${c.need.toFixed(1)}倍〜<small>買う目安</small></span>
+        <input type="text" inputmode="decimal" enterkeyhint="done" aria-label="${c.label} ${c.combo} の実オッズ" placeholder="実オッズ"
+          data-key="${esc(key)}" data-need="${c.need}" value="${esc(v)}" class="${ok ? "ok" : ""}"${example ? " disabled" : ""}>
+      </div>`; }).join("")}
+      <button class="sub recalc"${example ? " disabled" : ""}>入れたオッズで再計算</button></div>`;
+  }
   body += `<details><summary class="hint">全馬の確率</summary><div class="scroll"><table><thead><tr><th>馬</th><th>印</th><th>勝率</th><th>モデル</th><th>市場</th><th>3着内</th><th>単勝</th><th>単勝の期待値</th></tr></thead><tbody>${
     r.horses.map((h) => `<tr><td>${uma(h.number, h.frame, true)} ${esc(h.name || "")}</td><td>${h.mark}</td><td class="num">${pct(h.p)}</td><td class="num">${pct(h.model_p)}</td><td class="num">${pct(h.market_p)}</td><td class="num">${pct(h.place3_p)}</td><td class="num">${h.win_odds?.toFixed(1)}</td><td class="num ${h.win_ev >= 1 ? "good" : "bad"}">${h.win_ev?.toFixed(2)}</td></tr>`).join("")
   }</tbody></table></div></details>`;
   return `<article class="race${example ? " example" : ""}"><div class="race-head"><b>${esc(r.course)} ${esc(r.surface)}${r.distance}m</b>
     <span class="hint">${example ? '<span class="tag">表示例</span> ' : ""}${esc(r.date)} ・ ${esc(r.race_id)}</span></div><div class="race-body">${body}</div></article>`;
 }
-$("btn-pr").onclick = () => run($("btn-pr"), $("pr-out"), async () => {
-  const o = await engine.call("predict", cfg(), $("odds-text").value);
+// オッズ確認に入れた値（このタブを閉じるまで残す）
+let oddsInputs = {};
+try { oddsInputs = JSON.parse(sessionStorage.getItem("keiba:odds-inputs") || "{}"); } catch {}
+const saveInputs = () => { try { sessionStorage.setItem("keiba:odds-inputs", JSON.stringify(oddsInputs)); } catch {} };
+function oddsTextFromInputs() {
+  const by = {};
+  for (const [key, v] of Object.entries(oddsInputs)) {
+    const [rid, t, combo] = key.split("|"), x = parseFloat(String(v).replace(/[，,]/g, "."));
+    if (!isFinite(x) || x <= 1) continue;
+    (by[rid] ||= []).push(`${LABEL[t]} ${combo} ${x}`);
+  }
+  return Object.entries(by).map(([rid, lines]) => `# ${rid}\n${lines.join("\n")}`).join("\n");
+}
+async function predictNow() {
+  const text = [$("odds-text").value, oddsTextFromInputs()].filter(Boolean).join("\n");
+  const o = await engine.call("predict", cfg(), text);
   $("pr-out").innerHTML = `<div style="display:grid;gap:12px">${o.races.map((r) => renderRace(r)).join("")}</div>`;
+}
+$("btn-pr").onclick = () => run($("btn-pr"), $("pr-out"), predictNow);
+$("pr-out").addEventListener("input", (e) => {
+  const el = e.target; if (!el.dataset || !el.dataset.key) return;
+  const v = el.value.trim();
+  if (v) oddsInputs[el.dataset.key] = v; else delete oddsInputs[el.dataset.key];
+  saveInputs();
+  el.classList.toggle("ok", v !== "" && parseFloat(v) >= +el.dataset.need);
+});
+$("pr-out").addEventListener("click", (e) => {
+  const b = e.target.closest("button.recalc"); if (!b || busy || !engine.ready) return;
+  run(b, $("pr-out"), predictNow);
 });
 
 const EXAMPLE = { race_id: "202511110811", date: "2025-11-11", course: "大井", surface: "ダ", distance: 1600, honmei: 7, taikou: 4, skip: false, total: 900,
   bets: [{ type: "win", label: "単勝", combo: "7", prob: 0.142, odds: 9.8, ev: 1.39, stake: 400, estimated: false },
          { type: "quinella", label: "馬連", combo: "4-7", prob: 0.051, odds: 27.4, ev: 1.40, stake: 200, estimated: false },
          { type: "wide", label: "ワイド", combo: "4-7", prob: 0.142, odds: 8.6, ev: 1.22, stake: 300, estimated: true }],
+  candidates: [{ type: "win", label: "単勝", combo: "7", prob: 0.142, odds: 9.8, estimated: false, need: 8.1 },
+               { type: "quinella", label: "馬連", combo: "4-7", prob: 0.051, odds: 27.4, estimated: false, need: 23.5 },
+               { type: "wide", label: "ワイド", combo: "4-7", prob: 0.142, odds: 8.6, estimated: true, need: 8.1 }],
   horses: [
     { number: 4, frame: 3, name: "（例）サンプルリバー", mark: "○", p: 0.21, model_p: 0.24, market_p: 0.19, place3_p: 0.52, win_odds: 4.1, win_ev: 0.86 },
     { number: 7, frame: 5, name: "（例）サンプルスター", mark: "◎", p: 0.142, model_p: 0.19, market_p: 0.08, place3_p: 0.39, win_odds: 9.8, win_ev: 1.39 },
     { number: 1, frame: 1, name: "（例）サンプルキング", mark: "", p: 0.25, model_p: 0.2, market_p: 0.29, place3_p: 0.58, win_odds: 2.7, win_ev: 0.68 }] };
 $("pr-out").innerHTML = renderRace(EXAMPLE, true);
+
+/* ---------- タブ ---------- */
+const TABS = ["predict", "data", "backtest", "train"];
+function showTab(name, push) {
+  if (!TABS.includes(name)) name = "predict";
+  for (const t of TABS) {
+    $("tab-" + t).hidden = t !== name;
+    $("t-" + t).setAttribute("aria-selected", t === name);
+  }
+  const slot = document.querySelector(`.cfg-slot[data-for="${name}"]`);
+  if (slot && $("cfg").parentElement !== slot) slot.appendChild($("cfg"));
+  if (push && location.hash !== "#" + name) { try { history.replaceState(null, "", "#" + name); } catch {} }
+  window.scrollTo(0, 0);
+}
+for (const t of TABS) $("t-" + t).onclick = () => showTab(t, true);
+window.addEventListener("hashchange", () => showTab(location.hash.slice(1)));
 
 /* ---------- 起動 ---------- */
 async function boot() {
@@ -499,6 +602,7 @@ async function boot() {
     }
     lastStatus = await engine.call("status");
     setEngine("ready", "AIは準備できています");
+    if (!location.hash) showTab((lastStatus.models || {})[league] && lastStatus.files.results ? "predict" : "data");
   } catch (e) {
     setEngine("err", "前回のデータを戻せませんでした: " + e.message);
     try { lastStatus = await engine.call("status"); } catch {}
@@ -506,5 +610,6 @@ async function boot() {
   refreshButtons();
 }
 setLeague(league);
+showTab(location.hash.slice(1) || "predict");
 boot();
 </script>

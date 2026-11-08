@@ -538,9 +538,31 @@
       if (score[i][j] > best) { best = score[i][j]; bi = i; bj = j; }
     }
     const table = race.map((h, i) => ({ ...h, place3_p: cp.place3[i], win_ev: cp.win[i] * winO[i] }));
+    // 買い目の候補: 実オッズがこの倍率（need）以上なら買える組。券種ごとに的中率の高い順に3つ
+    const candidates = [];
+    for (const t of BET_TYPES) {
+      if (!cfg.bets.includes(t)) continue;
+      const seen = new Set(), list = [];
+      const hp = cfg.min_honmei_p, tp = cfg.min_taikou_p;
+      for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+        if (i === j || (t === "win" && j !== (i ? 0 : 1))) continue; // 単勝は馬ごとに1回
+        const w = cp.win, p = P[t][i][j];
+        const okPair = t === "win" ? w[i] >= hp
+          : t === "exacta" ? w[i] >= hp && w[j] >= tp
+          : Math.min(w[i], w[j]) >= tp && Math.max(w[i], w[j]) >= hp; // 馬連・ワイドはどちらが◎でもよい
+        if (!okPair || p < cfg.min_prob[t]) continue;
+        const need = cfg.min_ev[t] / p;
+        if (need > cfg.max_odds[t]) continue;
+        const combo = t === "win" ? String(num[i]) : t === "exacta" ? `${num[i]}-${num[j]}` : [num[i], num[j]].sort((a, b) => a - b).join("-");
+        if (seen.has(combo)) continue; seen.add(combo);
+        list.push({ type: t, label: BET_LABEL[t], combo, prob: p, odds: O[t][i][j], estimated: E[t][i][j], need, ev: p * O[t][i][j] });
+      }
+      list.sort((a, b) => b.prob - a.prob); // オッズを入れ直しても並びが変わらないよう、的中率の順
+      candidates.push(...list.slice(0, 3));
+    }
     if (bi < 0) {
       const order = cp.win.map((v, i) => i).sort((a, b) => cp.win[b] - cp.win[a]);
-      return { honmei: num[order[0]], taikou: num[order[1]], bets: [], table };
+      return { honmei: num[order[0]], taikou: num[order[1]], bets: [], table, candidates };
     }
     const bets = [];
     for (const t of BET_TYPES) {
@@ -550,7 +572,7 @@
     }
     const total = bets.reduce((a, b) => a + b.stake, 0), cap = cfg.bankroll * cfg.max_race, scale = total > 0 ? Math.min(1, cap / total) : 1;
     for (const b of bets) b.stake = Math.max(1, Math.round(b.stake * scale / cfg.unit)) * cfg.unit;
-    return { honmei: num[bi], taikou: num[bj], bets, table };
+    return { honmei: num[bi], taikou: num[bj], bets, table, candidates };
   }
 
   /* ================= 検証（backtest.py） ================= */
@@ -789,7 +811,8 @@
           if (!rec) continue;
           const horses = rec.table.slice().sort((x, y) => y.p - x.p).map((h) => ({ ...h, mark: h.number === rec.honmei ? "◎" : h.number === rec.taikou ? "○" : "" }));
           races.push({ race_id: rid, date: first.date, course: first.course, surface: first.surface, distance: first.distance,
-            honmei: rec.honmei, taikou: rec.taikou, skip: !rec.bets.length, total: rec.bets.reduce((x, y) => x + y.stake, 0), bets: rec.bets, horses });
+            honmei: rec.honmei, taikou: rec.taikou, skip: !rec.bets.length, total: rec.bets.reduce((x, y) => x + y.stake, 0), bets: rec.bets, horses,
+            candidates: rec.candidates });
         }
         return { races, a: model.a, b: model.b };
       },
