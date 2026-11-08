@@ -1,4 +1,4 @@
-"""調査用（JRA公式）: パーサーを作るための見本ページを fixtures/ に保存する。"""
+"""調査用（JRA公式）: 数年前のレースでも結果・オッズのページが残っているか確かめ、見本を保存する。"""
 import os
 import re
 import time
@@ -20,62 +20,31 @@ def get(path, cname):
     except Exception as e:
         return f"ERR {e!r}"
     finally:
-        time.sleep(2)
-
-
-def save(name, text):
-    with open(f"{OUT}/{name}.html", "w", encoding="utf-8") as f:
-        f.write(text)
-    print("saved", name, len(text))
+        time.sleep(3)
 
 
 def links(text, prefix):
-    a = re.findall(r"(/JRADB/access\w+\.html)(?:',\s*'|\?CNAME=)(" + prefix + r"[\w/]+)", text)
-    return list(dict.fromkeys(a))
+    return list(dict.fromkeys(re.findall(r"(/JRADB/access\w+\.html)(?:',\s*'|\?CNAME=)(" + prefix + r"[\w/]+)", text)))
 
 
-top = get("/JRADB/accessD.html", "pw01dli00/F3"); save("card_top", top)
-kai = links(top, "pw01drl")
-if kai:
-    k = get(*kai[-1]); save("card_kaisai", k)
-    r = links(k, "pw01dde")
-    if r:
-        save("card_race", get(*r[-1]))
-        o = links(get(*r[-1]), "pw151ou")
-        if o:
-            save("odds_win_today", get(*o[0]))
+def save(name, text):
+    open(f"{OUT}/{name}.html", "w", encoding="utf-8").write(text)
+    print("saved", name, len(text), text[:60].replace("\n", " ") if text.startswith("ERR") else "")
 
-rt = get("/JRADB/accessS.html", "pw01sli00/AF"); save("result_top", rt)
-k = links(rt, "pw01srl")
-if k:
-    kk = get(*k[0]); save("result_kaisai", kk)
+
+for ym, cname in [("202011", "pw01skl10202011/30"), ("201811", "pw01skl10201811/25")]:
+    m = get("/JRADB/accessS.html", cname)
+    save(f"m{ym}_month", m)
+    k = links(m, "pw01srl")
+    print(ym, "kaisai", len(k))
+    if not k:
+        continue
+    kk = get(*k[0]); save(f"m{ym}_kaisai", kk)
     r = links(kk, "pw01sde")
+    print(ym, "races", len(r))
     if r:
-        save("result_race", get(*r[-1]))
-
-# 月ごとの過去結果を前の月へたどる（どこまで遡れるか）
-month = get("/JRADB/accessS.html", "pw01skl00999999/B3"); save("month_current", month)
-seen = []
-for step in range(14):
-    prev = [m for m in links(month, "pw01skl10") if m[1][9:15] not in seen]
-    prev.sort(key=lambda m: m[1][9:15])
-    if not prev:
-        break
-    target = prev[0]
-    seen.append(target[1][9:15])
-    month = get(*target)
-    print("month", target[1], "kaisai links:", len(links(month, "pw01srl")))
-save("month_old", month)
-k = links(month, "pw01srl")
-if k:
-    kk = get(*k[0]); save("old_result_kaisai", kk)
-    r = links(kk, "pw01sde")
-    if r:
-        old = get(*r[-1]); save("old_result_race", old)
-        d = links(old, "pw01dde")
-        if d:
-            save("old_card_race", get(*d[0]))
-        o = links(old, "pw151ou")
+        rr = get(*r[-1]); save(f"m{ym}_result", rr)
+        o = links(rr, "pw151ou")
+        print(ym, "odds links", o[:2])
         if o:
-            save("old_odds_win", get(*o[0]))
-print("months visited:", seen)
+            save(f"m{ym}_odds", get(*o[0]))
