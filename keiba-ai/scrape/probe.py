@@ -1,54 +1,72 @@
-"""調査用: 各サイトの robots.txt と、ページの構造（先頭部分）を表示するだけ。"""
+"""調査用（JRA公式）: 出馬表・結果ページのリンクのたどり方と表の形を表示する。"""
 import re
-import sys
 import time
+import urllib.parse
 import urllib.request
 
-UA = "Mozilla/5.0 (personal keiba-ai probe; low frequency)"
+UA = "Mozilla/5.0 (personal keiba-ai; low frequency)"
+BASE = "https://www.jra.go.jp"
 
 
-def get(url, data=None):
+def get(path, cname=None):
+    url = BASE + path
+    data = urllib.parse.urlencode({"cname": cname}).encode() if cname else None
     req = urllib.request.Request(url, data=data, headers={"User-Agent": UA})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
-            raw = r.read()
-            ct = r.headers.get("Content-Type", "")
-            enc = (re.search(r"charset=([\w-]+)", ct) or re.search(rb'charset="?([\w-]+)', raw[:2000]))
-            enc = enc.group(1) if enc else "utf-8"
-            enc = enc.decode() if isinstance(enc, bytes) else enc
-            return r.status, ct, raw.decode(enc, errors="replace")
+            return r.status, r.read().decode("cp932", errors="replace")
     except Exception as e:
-        return "ERR", "", repr(e)
+        return "ERR", repr(e)
     finally:
         time.sleep(2)
 
 
-def show(title, url, n=2500, pattern=None):
-    st, ct, text = get(url)
-    print(f"\n===== {title}\n{url}\nstatus={st} type={ct} len={len(text)}")
-    if pattern:
-        for m in re.finditer(pattern, text):
-            print("  match:", m.group(0)[:200])
-    body = re.sub(r"<script.*?</script>|<style.*?</style>", "", text, flags=re.S)
+def cnames(text):
+    a = re.findall(r"doAction\('(/JRADB/access\w+\.html)',\s*'([^']+)'\)", text)
+    b = re.findall(r"(/JRADB/access\w+\.html)\?CNAME=([\w/]+)", text)
+    return list(dict.fromkeys(a + b))
+
+
+def section(title, text, n=1500):
+    print(f"\n===== {title}  len={len(text)}")
+    body = re.sub(r"<script.*?</script>|<style.*?</style>|<head.*?</head>", "", text, flags=re.S)
+    body = re.sub(r"\n\s*\n+", "\n", body)
     print(body[:n])
-    return text
 
 
-for host in ["www.jra.go.jp", "race.netkeiba.com", "db.netkeiba.com"]:
-    show(f"robots {host}", f"https://{host}/robots.txt", 3000)
+# 出馬表のトップ（開催一覧）
+st, top = get("/JRADB/accessD.html", "pw01dli00/F3")
+section("出馬表トップ", top, 1200)
+links = cnames(top)
+print("links:", links[:40])
+kaisai = [c for c in links if c[1].startswith("pw01drl")]
+print("開催ごと:", kaisai)
+if kaisai:
+    st, k = get(kaisai[0][0], kaisai[0][1])
+    section("開催のレース一覧", k, 1500)
+    races = [c for c in cnames(k) if c[1].startswith("pw01dde")]
+    print("races:", races[:15])
+    if races:
+        st, r = get(races[-1][0], races[-1][1])
+        i = r.find("<table"); section("出馬表 1レース", r[i:], 7000)
+        print("links in race:", [c for c in cnames(r)][:30])
+        print("horse links:", re.findall(r"pw01dud\w+/\w+", r)[:5], "jockey:", re.findall(r"pw04kmk\w+/\w+|pw12\w+/\w+", r)[:5])
 
-date = sys.argv[1] if len(sys.argv) > 1 else "20261108"
-lst = show("netkeiba race list", f"https://race.netkeiba.com/top/race_list_sub.html?kaisai_date={date}", 800,
-           r"race_id=\d{12}")
-ids = sorted(set(re.findall(r"race_id=(\d{12})", lst)))
-print("race ids:", ids[:40])
-if ids:
-    t = show("netkeiba shutuba", f"https://race.netkeiba.com/race/shutuba.html?race_id={ids[-1]}", 200)
-    i = t.find("Shutuba_Table")
-    print("--- shutuba table snippet ---\n", t[i:i + 6000] if i >= 0 else t[:3000])
-past = show("netkeiba db race", "https://db.netkeiba.com/race/202505021211/", 200)
-i = past.find("race_table_01")
-print("--- result table snippet ---\n", past[i:i + 4000])
-j = past.find("pay_table_01")
-print("--- payout snippet ---\n", past[j:j + 3000])
-show("jra top", "https://www.jra.go.jp/", 1500, r"accessD\.html|JRADB[^\"']*")
+# 結果のトップ
+st, rs = get("/JRADB/accessS.html", "pw01sli00/AF")
+section("結果トップ", rs, 1000)
+rl = cnames(rs)
+print("result links:", rl[:30])
+k2 = [c for c in rl if c[1].startswith("pw01srl")]
+if k2:
+    st, k = get(k2[0][0], k2[0][1])
+    res = [c for c in cnames(k) if c[1].startswith("pw01sde")]
+    print("result races:", res[:5])
+    if res:
+        st, r = get(res[-1][0], res[-1][1])
+        i = r.find("<table"); section("結果 1レース", r[i:], 6000)
+        j = r.find("払戻"); section("払戻", r[j:], 2500)
+# 過去の結果（年月で検索）
+st, past = get("/JRADB/accessS.html", "pw01skl00999999/B3")
+section("過去のレース結果検索", past, 1500)
+print("past links:", cnames(past)[:30])
