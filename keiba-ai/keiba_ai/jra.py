@@ -138,6 +138,8 @@ def race_header(page: str) -> dict:
                 break
     out["race_class"] = rc
     out["race_name"] = name
+    if "障害" in name:
+        out["surface"] = "障"
     return out
 
 
@@ -220,7 +222,8 @@ def parse_card(page: str, cname: str, going: str = "") -> list[dict]:
         m_bw = re.search(r'<div class="cell weight">([^<]*)(?:<span class="transition">\(([-+]?\d+)\)</span>)?', horse)
         m_odds = re.search(r'<span class="num">(.*?)</span>', horse, flags=re.S)
         m_pop = re.search(r'<span class="pop_rank">\((\d+)', horse)
-        name = re.search(r'<div class="name"><a[^>]*>(.*?)</a>', horse, flags=re.S)
+        # 馬名は馬のページへのリンクの文字（前に「外」「地」などの印が付くことがある）
+        name = re.search(r'accessU\.html\?CNAME=[^"]*"[^>]*>(.*?)</a>', horse, flags=re.S)
         if "取消" in text(horse) or "除外" in text(horse):
             continue  # 出走取消・競走除外
         rows.append({
