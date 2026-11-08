@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -18,4 +18,13 @@ jobs:
         with:
           python-version: '3.12'
       - name: Probe
-        run: python keiba-ai/scrape/probe.py
+        run: OUT=/tmp/fixtures python keiba-ai/scrape/probe.py
+      # 見本ページを keiba-fixtures ブランチに置く（パーサーのテスト用）
+      - name: Save fixtures
+        run: |
+          cd /tmp/fixtures
+          git init -q -b keiba-fixtures
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A && git commit -q -m "JRA 見本ページ $(date -u +%F)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" keiba-fixtures
