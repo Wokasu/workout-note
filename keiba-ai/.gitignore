@@ -5,3 +5,4 @@ __pycache__/
 *.pkl
 .venv/
 web/dist/
+data_jra/
