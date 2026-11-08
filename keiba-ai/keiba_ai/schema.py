@@ -9,6 +9,11 @@ from __future__ import annotations
 
 import pandas as pd
 
+# 任意の列
+#   league: 主催。"jra"（中央）または "nankan"（南関東 = 浦和・船橋・大井・川崎）。
+#           無ければ CLI の --league の値で埋める。中央と南関東を1つの CSV にまとめてもよい
+#           （中央からの転入馬は中央時代の成績も特徴量に使える）。
+
 # 出馬表の時点で分かる列（予想に使ってよい）
 CARD_COLUMNS = [
     "race_id",        # レースID（例: 202405020811）
@@ -17,7 +22,7 @@ CARD_COLUMNS = [
     "surface",        # 芝 / ダ / 障
     "distance",       # 距離 m
     "going",          # 馬場状態 良 / 稍 / 重 / 不
-    "race_class",     # クラスを数値化したもの（新馬・未勝利=1, 1勝=2, 2勝=3, 3勝=4, OP/L=5, G3=6, G2=7, G1=8）
+    "race_class",     # クラスを数値化したもの（主催ごとの対応は CLASS_SCALE）
     "field_size",     # 出走頭数
     "horse_id",
     "horse_name",
@@ -44,15 +49,37 @@ RESULT_COLUMNS = [
 BET_TYPES = ("win", "quinella", "wide", "exacta")
 BET_LABEL = {"win": "単勝", "quinella": "馬連", "wide": "ワイド", "exacta": "馬単"}
 
-# JRA の払戻率（控除率の裏返し）
-PAYBACK = {"win": 0.80, "quinella": 0.775, "wide": 0.775, "exacta": 0.75}
+LEAGUES = ("jra", "nankan")
+LEAGUE_LABEL = {"jra": "中央", "nankan": "南関東"}
+NANKAN_COURSES = ("浦和", "船橋", "大井", "川崎")
+
+# 払戻率（控除率の裏返し）。主催者が変えることがあるので、たまに公式で確認すること。
+PAYBACK_BY_LEAGUE = {
+    "jra": {"win": 0.80, "quinella": 0.775, "wide": 0.775, "exacta": 0.75},
+    "nankan": {"win": 0.80, "quinella": 0.75, "wide": 0.75, "exacta": 0.75},
+}
+PAYBACK = PAYBACK_BY_LEAGUE["jra"]
+
+# race_class の数値の付け方（大きいほど上のクラス。主催の中で順序が合っていればよい）
+CLASS_SCALE = {
+    "jra": {"新馬": 1, "未勝利": 1, "1勝": 2, "2勝": 3, "3勝": 4, "OP": 5, "L": 5, "G3": 6, "G2": 7, "G1": 8},
+    "nankan": {"新馬": 1, "未格付": 1, "C3": 2, "C2": 3, "C1": 4, "B3": 5, "B2": 6, "B1": 7,
+               "A2": 8, "A1": 9, "OP": 10, "S3": 11, "S2": 12, "S1": 13, "Jpn3": 13, "Jpn2": 14, "Jpn1": 15},
+}
 
 
-def load_results(path: str) -> pd.DataFrame:
+def load_results(path: str, league: str | None = None) -> pd.DataFrame:
+    """league は文字のクラス（"B1" など）を数値に直すときの既定の主催。"""
     df = pd.read_csv(path, dtype={"race_id": str, "horse_id": str, "jockey_id": str, "trainer_id": str})
     missing = [c for c in CARD_COLUMNS if c not in df.columns]
     if missing:
         raise ValueError(f"{path} に必要な列がありません: {missing}")
+    # league 列が無い・空のときは競馬場名から判断する（南関東4場以外は中央とみなす）
+    by_course = pd.Series(["nankan" if c in NANKAN_COURSES else "jra" for c in df["course"]], index=df.index)
+    df["league"] = df["league"].fillna(by_course).str.lower() if "league" in df.columns else by_course
+    if not pd.api.types.is_numeric_dtype(df["race_class"]):
+        # "B1" や "3勝" のような文字のクラスは数値に直す
+        df["race_class"] = [CLASS_SCALE.get(lg or league, {}).get(str(c), c) for lg, c in zip(df["league"], df["race_class"])]
     for c in RESULT_COLUMNS:
         if c not in df.columns:
             df[c] = pd.NA

@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from .probs import combo_probs
-from .schema import BET_LABEL, BET_TYPES, PAYBACK
+from .schema import BET_LABEL, BET_TYPES, PAYBACK_BY_LEAGUE
 
 
 @dataclass
@@ -45,6 +45,11 @@ class StrategyConfig:
     unit: int = 100
     g2: float = 0.81
     g3: float = 0.65
+    league: str = "jra"
+
+    @property
+    def payback(self) -> dict:
+        return PAYBACK_BY_LEAGUE[self.league]
 
 
 @dataclass
@@ -79,14 +84,15 @@ class Recommendation:
         return sum(b.stake for b in self.bets)
 
 
-def estimate_odds(win_odds: np.ndarray, g2: float, g3: float) -> dict[str, np.ndarray]:
-    """単勝オッズから馬連・ワイド・馬単のオッズを推定する。"""
+def estimate_odds(win_odds: np.ndarray, g2: float, g3: float, payback: dict | None = None) -> dict[str, np.ndarray]:
+    """単勝オッズから馬連・ワイド・馬単のオッズを推定する（payback は主催ごとの払戻率）。"""
+    payback = payback or PAYBACK_BY_LEAGUE["jra"]
     inv = 1.0 / np.clip(win_odds, 1.0, None)
     cp = combo_probs(inv / inv.sum(), g2, g3)
     out = {}
     for t in ("quinella", "wide", "exacta"):
         with np.errstate(divide="ignore"):
-            o = PAYBACK[t] / cp[t]
+            o = payback[t] / cp[t]
         out[t] = np.round(np.clip(o, 1.0, 9999.0), 1)
     return out
 
@@ -125,7 +131,7 @@ def recommend(race: pd.DataFrame, cfg: StrategyConfig, odds: dict[str, dict[str,
     n = len(num)
     cp = combo_probs(race["p"].to_numpy(), cfg.g2, cfg.g3)
     win_o = race["win_odds"].to_numpy(dtype=float)
-    est = {t: o * cfg.est_odds_haircut for t, o in estimate_odds(win_o, cfg.g2, cfg.g3).items()}
+    est = {t: o * cfg.est_odds_haircut for t, o in estimate_odds(win_o, cfg.g2, cfg.g3, cfg.payback).items()}
     odds = odds or {}
 
     probs, omat, estm = {}, {}, {}

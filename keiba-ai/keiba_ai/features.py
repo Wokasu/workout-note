@@ -13,12 +13,12 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-CATEGORICAL = ["course", "surface", "going", "sex"]
+CATEGORICAL = ["course", "surface", "going", "sex", "course_dist"]
 
 # レース内で順位・偏差に直す列（相手関係を見るため）
 RELATIVE = [
     "h_fp_mean5", "h_fp_last", "h_tb_mean5", "h_l3f_rank_mean5", "h_top3_rate",
-    "h_best_tb5", "h_same_surface_fp", "h_same_dist_fp", "j_win_rate", "j_top3_rate",
+    "h_best_tb5", "h_same_surface_fp", "h_same_dist_fp", "h_same_course_fp", "j_win_rate", "j_top3_rate",
     "t_win_rate", "t_top3_rate", "h_prev_pop_resid", "weight_carried",
 ]
 
@@ -65,7 +65,16 @@ def _horse_history(df: pd.DataFrame) -> pd.DataFrame:
     df["h_top3_rate"] = top3 / n
     df["h_days_since"] = (df["date"] - g["date"].shift(1)).dt.days
     df["h_dist_change"] = df["distance"] - g["distance"].shift(1)
-    df["h_class_change"] = df["race_class"] - g["race_class"].shift(1)
+    # 主催が変わる（中央→南関東の転入など）とクラスの物差しが違うので、クラスの差は使わない
+    prev_league = g["league"].shift(1)
+    same_league = prev_league == df["league"]
+    df["h_class_change"] = (df["race_class"] - g["race_class"].shift(1)).where(same_league)
+    df["h_league_switch"] = (prev_league.notna() & ~same_league).astype(float)   # 転入初戦
+    df["h_from_jra"] = g["league"].transform(lambda s: (s == "jra").shift(1, fill_value=False).cummax()).astype(float)
+    df["h_runs_in_league"] = df.groupby(["horse_id", "league"], sort=False).cumcount()
+    # 同じ競馬場での過去の着順（小回り・坂など、南関東は場ごとの得手不得手が大きい）
+    df["h_same_course_fp"] = df.groupby(["horse_id", "course"], sort=False)["fp_pct"].transform(
+        lambda s: s.shift(1).expanding().mean())
     df["h_weight_carried_change"] = df["weight_carried"] - g["weight_carried"].shift(1)
 
     # 同じ芝ダ・同じ距離帯での過去の着順
@@ -107,6 +116,8 @@ def build_features(raw: pd.DataFrame) -> pd.DataFrame:
     df = _people_rates(df, "trainer_id", "t")
 
     df["frame_pct"] = df["number"] / df["field_size"]
+    # 競馬場×距離（南関東はコースごとにスタート位置やコーナー数の影響が大きい）
+    df["course_dist"] = df["course"].astype(str) + df["distance"].astype("Int64").astype(str)
     for c in RELATIVE:
         grp = df.groupby("race_id")[c]
         df[f"{c}_rank"] = grp.rank(pct=True)
@@ -123,7 +134,8 @@ def feature_columns(df: pd.DataFrame) -> list[str]:
         "h_runs", "h_fp_last", "h_fp_last2", "h_fp_mean5", "h_tb_mean5", "h_best_tb5",
         "h_l3f_rank_mean5", "h_prev_pop_resid", "h_win_rate", "h_top3_rate", "h_days_since",
         "h_dist_change", "h_class_change", "h_weight_carried_change",
-        "h_same_surface_fp", "h_same_dist_fp",
+        "h_same_surface_fp", "h_same_dist_fp", "h_same_course_fp",
+        "h_league_switch", "h_from_jra", "h_runs_in_league",
         "j_win_rate", "j_top3_rate", "j_rides", "t_win_rate", "t_top3_rate", "t_rides",
     ] + CATEGORICAL
     rel = [f"{c}_{s}" for c in RELATIVE for s in ("rank", "diff")]

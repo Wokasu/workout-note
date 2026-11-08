@@ -49,8 +49,10 @@ def _settle(bet, race: pd.DataFrame, pay: dict) -> float:
 def walk_forward(raw: pd.DataFrame, payouts: pd.DataFrame | None = None, odds: pd.DataFrame | None = None,
                  cfg: StrategyConfig | None = None, test_years: list[int] | None = None,
                  verbose: bool = True) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """cfg.league の主催のレースだけを学習・検証する（特徴量は全主催の過去走から作る）。"""
     cfg = cfg or StrategyConfig()
     feats = build_features(raw)
+    feats = feats[feats["league"] == cfg.league]
     years = sorted(feats["date"].dt.year.unique())
     test_years = test_years or years[2:]
     olk = odds_lookup(odds)

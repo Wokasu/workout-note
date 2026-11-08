@@ -71,3 +71,42 @@ def test_real_odds_override_estimate():
     race = _race(p, np.round(0.8 / market, 1))
     rec = recommend(race, StrategyConfig(enabled=("quinella",)), {"quinella": {"1-2": 1.5}})
     assert not any(b.combo == "1-2" for b in rec.bets)  # 実オッズが安すぎれば買わない
+
+
+def test_nankan_uses_lower_payback_for_estimated_odds():
+    from keiba_ai.strategy import estimate_odds
+    from keiba_ai.schema import PAYBACK_BY_LEAGUE
+    w = np.array([2.5, 4.0, 6.0, 10.0, 20.0, 30.0])
+    jra = estimate_odds(w, 0.81, 0.65, PAYBACK_BY_LEAGUE["jra"])
+    nk = estimate_odds(w, 0.81, 0.65, PAYBACK_BY_LEAGUE["nankan"])
+    assert (nk["quinella"][0, 1] < jra["quinella"][0, 1])
+    assert StrategyConfig(league="nankan").payback["wide"] == 0.75
+
+
+def test_league_inferred_from_course_and_class_strings(tmp_path):
+    from keiba_ai.schema import CARD_COLUMNS, load_results
+    rows = []
+    for course, cls in [("大井", "B1"), ("東京", "2勝")]:
+        r = {c: 1 for c in CARD_COLUMNS}
+        r.update(race_id=course, date="2025-01-01", course=course, surface="ダ", going="良",
+                 sex="牡", race_class=cls, horse_id="H", jockey_id="J", trainer_id="T", horse_name="x")
+        rows.append(r)
+    path = tmp_path / "r.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    df = load_results(str(path))
+    assert df["league"].tolist() == ["nankan", "jra"]
+    assert df["race_class"].tolist() == [7, 3]
+
+
+def test_transfer_from_jra_features():
+    jra, _ = generate(n_years=1, races_per_year=60, seed=2, league="jra")
+    nk, _ = generate(n_years=1, races_per_year=60, seed=3, league="nankan")
+    nk["date"] = (pd.to_datetime(nk["date"]) + pd.DateOffset(years=1)).dt.strftime("%Y-%m-%d")
+    nk["race_id"] = "N" + nk["race_id"]
+    raw = pd.concat([jra, nk], ignore_index=True)
+    raw["date"] = pd.to_datetime(raw["date"])
+    f = build_features(raw)
+    moved = f[(f["league"] == "nankan") & (f["h_league_switch"] == 1)]
+    assert len(moved) > 0                                   # 同じ horse_id が中央→南関東に出ている
+    assert moved["h_class_change"].isna().all()             # 物差しの違うクラス差は使わない
+    assert (moved["h_from_jra"] == 1).all()

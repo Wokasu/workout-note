@@ -6,13 +6,19 @@ import numpy as np
 import pandas as pd
 
 from .probs import combo_probs
-from .schema import PAYBACK
+from .schema import PAYBACK_BY_LEAGUE
 
 COURSES = ["東京", "中山", "阪神", "京都", "中京", "新潟", "福島", "小倉", "札幌", "函館"]
+# 南関東: (競馬場, 距離の候補, 最大頭数, 内枠の有利さ)
+NANKAN = [("浦和", [800, 1400, 1500, 2000], 12, 0.5), ("船橋", [1000, 1200, 1500, 1600, 1800], 14, 0.25),
+          ("大井", [1000, 1200, 1400, 1600, 1800, 2000], 16, 0.1), ("川崎", [900, 1400, 1500, 1600, 2100], 14, 0.4)]
 
 
-def generate(n_years: int = 4, races_per_year: int = 1200, seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
+def generate(n_years: int = 4, races_per_year: int = 1200, seed: int = 0,
+             league: str = "jra") -> tuple[pd.DataFrame, pd.DataFrame]:
     rng = np.random.default_rng(seed)
+    PAYBACK = PAYBACK_BY_LEAGUE[league]
+    nk = league == "nankan"
     n_horses, n_jockeys, n_trainers = 4000, 120, 200
     ability = rng.normal(0, 1, n_horses)
     turf_apt = rng.normal(0, 0.5, n_horses)
@@ -29,9 +35,15 @@ def generate(n_years: int = 4, races_per_year: int = 1200, seed: int = 0) -> tup
     for r in range(n_years * races_per_year):
         date = start + pd.DateOffset(years=r // races_per_year) + pd.Timedelta(days=int(r % races_per_year / races_per_year * 350))
         rid = f"{date:%Y%m%d}{r % 100000:05d}"
-        surface = rng.choice(["芝", "ダ"])
-        dist = int(rng.choice([1200, 1400, 1600, 1800, 2000, 2400]))
-        fs = int(rng.integers(8, 17))
+        if nk:
+            course, dists, max_fs, inner_bias = NANKAN[r % 4]
+            surface, dist = "ダ", int(rng.choice(dists))
+            fs = int(rng.integers(7, max_fs + 1))
+        else:
+            course, inner_bias = COURSES[r % len(COURSES)], 0.0
+            surface = rng.choice(["芝", "ダ"])
+            dist = int(rng.choice([1200, 1400, 1600, 1800, 2000, 2400]))
+            fs = int(rng.integers(8, 17))
         cls = int(rng.integers(1, 9))
         # クラスが高いほど能力の高い馬が集まる
         cand = np.argsort(ability + rng.normal(0, 1.2, n_horses) - (cls - 4.5) * 0.35)
@@ -40,7 +52,9 @@ def generate(n_years: int = 4, races_per_year: int = 1200, seed: int = 0) -> tup
         jockeys = rng.integers(0, n_jockeys, fs)
         apt = (turf_apt[horses] * (1 if surface == "芝" else -1)
                - np.abs(best_dist[horses] - dist) / 800)
-        strength = ability[horses] + apt + jockey_skill[jockeys] + trainer_skill[trainer_of[horses]]
+        # 小回りのコースほど内枠が有利（短距離ほど強く効く）
+        frame_eff = inner_bias * (1 - np.arange(fs) / max(fs - 1, 1)) * (1600 / max(dist, 800))
+        strength = ability[horses] + apt + jockey_skill[jockeys] + trainer_skill[trainer_of[horses]] + frame_eff
         perf = strength + rng.gumbel(0, 0.9, fs)
         order = np.argsort(-perf)
         finish = np.empty(fs, int)
@@ -57,7 +71,7 @@ def generate(n_years: int = 4, races_per_year: int = 1200, seed: int = 0) -> tup
         for k in range(fs):
             h = horses[k]
             rows.append(dict(
-                race_id=rid, date=date.date().isoformat(), course=COURSES[r % len(COURSES)], surface=surface,
+                race_id=rid, date=date.date().isoformat(), course=course, surface=surface, league=league,
                 distance=dist, going=rng.choice(["良", "稍", "重", "不"], p=[0.7, 0.15, 0.1, 0.05]),
                 race_class=cls, field_size=fs, horse_id=f"H{h:05d}", horse_name=f"ホース{h}",
                 frame=min(8, k // 2 + 1), number=k + 1, sex=sex[h], age=date.year - birth[h],

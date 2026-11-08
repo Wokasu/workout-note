@@ -1,4 +1,6 @@
-# 競馬予想AI（JRA・個人用）🏇
+# 競馬予想AI（JRA・南関東・個人用）🏇
+
+中央（JRA）と南関東（浦和・船橋・大井・川崎）に対応しています。
 
 ◎ と ○ の2頭を選び、**回収率が上がる時だけ**次の買い目を出します。
 
@@ -44,9 +46,14 @@ python -m keiba_ai.cli backtest --results data/results.csv --payouts data/payout
 
 # 2) 本番: 自分のデータで検証 → 学習 → 予想
 python -m keiba_ai.cli backtest --results data/results.csv --payouts data/payouts.csv
-python -m keiba_ai.cli train    --results data/results.csv --model models/model.pkl
+python -m keiba_ai.cli train    --results data/results.csv --model models/model_jra.pkl
 python -m keiba_ai.cli predict  --results data/results.csv --card data/card.csv \
                                 --odds data/odds_today.csv --bankroll 100000 --table
+
+# 南関東は全部のコマンドに --league nankan を付ける（モデルは models/model_nankan.pkl に別に保存）
+python -m keiba_ai.cli backtest --league nankan --results data/results.csv --payouts data/payouts.csv
+python -m keiba_ai.cli train    --league nankan --results data/results.csv
+python -m keiba_ai.cli predict  --league nankan --results data/results.csv --card data/card_oi.csv
 
 pytest -q tests
 ```
@@ -84,6 +91,30 @@ pytest -q tests
 - netkeiba などのサイトから取る方法もあるが、各サイトの利用規約を確認すること（自動取得を禁止しているサイトが多い）。
 
 最低でも **3年分**（学習・合成係数・検証で1年ずつ）、できれば 5〜10 年分。
+
+## 南関東について
+
+| | 中央 | 南関東 |
+| --- | --- | --- |
+| 払戻率 | 単勝80% 馬連・ワイド77.5% 馬単75% | 単勝80% 馬連・ワイド・馬単75% |
+| モデル | `models/model_jra.pkl` | `models/model_nankan.pkl` |
+| クラス（`race_class`） | 新馬・未勝利=1 … G1=8 | 未格付=1, C3=2 … A1=9, OP=10, S3=11 … Jpn1=15 |
+
+- **主催ごとに別のモデル**を学習します（馬の層・騎手・コースがまったく違うため）。合成係数・期待値の基準も別。
+- **中央と南関東を1つの CSV にまとめてよい。** `league` 列（`jra` / `nankan`）が無ければ競馬場名で判断します。
+  まとめておくと、**中央からの転入馬**の中央時代の成績が特徴量に入ります（`h_from_jra`, `h_league_switch`）。
+  クラスの物差しが違うので、主催をまたぐ「クラスの上下」は使いません。
+- `race_class` は数値でも、`B1`・`C2`・`3勝` のような文字でもよい（`keiba_ai/schema.py` の `CLASS_SCALE` で数値に直す）。
+- 南関東向けの特徴量: **同じ競馬場での成績**（`h_same_course_fp`）、**競馬場×距離**（`course_dist`）と馬番の組み合わせ
+  （浦和・川崎のような小回りでは内枠の有利不利が大きい）。
+- 南関東は1レースの売上が中央より小さいので、締切直前にオッズが大きく動きます。**実オッズは締切直前の値で判断**し、
+  金額を厚くしすぎない（自分の馬券でオッズが下がる）こと。
+
+### 南関東のデータ
+
+JRA-VAN には地方競馬のデータがありません。地方競馬の公式データ配信（地方競馬全国協会）や、
+南関東4場・地方競馬情報サイトの成績・払戻ページから、上と同じ列の CSV を作ります。サイトから取る場合は利用規約を確認すること。
+最低3年分、できれば5年分以上。
 
 ## 回収率を上げるための調整の手順
 
