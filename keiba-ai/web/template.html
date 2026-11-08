@@ -127,6 +127,25 @@ section[hidden] { display: none; }
   .bet { grid-template-columns: 3.4em minmax(0, 1fr) auto; gap: 8px; }
   .cand .what span { font-size: 11.5px; }
 }
+/* 今日の予想（自動） */
+.daily-head { display: grid; gap: 4px; }
+.daily-head .meta { font-size: 12.5px; color: var(--muted); }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.chips button { flex: none; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px;
+  padding: 6px 12px; font: 700 13px var(--body); cursor: pointer; min-height: 36px; }
+.chips button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.rlist { display: grid; gap: 6px; }
+.rrow { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%;
+  text-align: left; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg);
+  padding: 10px 12px; font: 400 14px var(--body); cursor: pointer; }
+.rrow.buy { border-color: var(--accent); }
+.rrow .no { font: 500 15px var(--mono); }
+.rrow .ti { min-width: 0; display: grid; }
+.rrow .ti b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rrow .ti span { font-size: 12px; color: var(--muted); }
+.rrow .st { text-align: right; font-size: 13px; white-space: nowrap; }
+.rrow .st b { font-family: var(--mono); font-size: 15px; }
+.rrow .marks { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
 /* オッズ確認 */
 .check { display: grid; gap: 6px; }
 .check h3 { font-size: 14px; }
@@ -217,12 +236,15 @@ footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
 
   <section aria-labelledby="h-pr" id="tab-predict" hidden>
     <h2 id="h-pr">予想</h2>
-    <div class="files">
-      <label class="file" id="f-card"><input type="file" accept=".csv,text/csv" data-name="card"><b>出馬表 card.csv <span class="tag">必須</span></b><span class="st">未選択（results と同じ列、結果は空）</span></label>
-    </div>
-    <div class="row"><button class="go" id="btn-pr" disabled>予想する</button><span class="hint" id="pr-note"></span></div>
-    <p class="hint">予想が出たら、各レースの「オッズ確認」に締切直前の実オッズを入れて「再計算」してください。目安の倍率以上なら買い目になります。</p>
-    <div id="pr-out"></div>
+    <div id="daily"><p class="hint">今日の予想を読み込み中…</p></div>
+    <details id="manual">
+      <summary class="hint">自分の出馬表 CSV で予想する</summary>
+      <div class="files" style="margin-top:10px">
+        <label class="file" id="f-card"><input type="file" accept=".csv,text/csv" data-name="card"><b>出馬表 card.csv <span class="tag">必須</span></b><span class="st">未選択（results と同じ列、結果は空）</span></label>
+      </div>
+      <div class="row" style="margin-top:10px"><button class="go" id="btn-pr" disabled>予想する</button><span class="hint" id="pr-note"></span></div>
+      <div id="pr-out" style="margin-top:10px"></div>
+    </details>
     <details>
       <summary class="hint">オッズをまとめて貼り付ける</summary>
       <label class="hint" for="odds-text">1行1つ。複数レースのときは「# race_id」の行で区切る</label>
@@ -234,7 +256,7 @@ footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
   <footer>
     <p>過去の回収率は将来を保証しません。馬券は20歳から。推定オッズの買い目は、買う前に実オッズで確かめてください。</p>
     <p>払戻率: 中央 単勝80%・馬連/ワイド77.5%・馬単75% ／ 南関東 単勝80%・馬連/ワイド/馬単75%</p>
-    <p>このページの能力モデルは条件付きロジット（レース内の線形モデル）。Python 版（keiba-ai/）は LightGBM を使います。特徴量・オッズとの合成・買い目の決め方は同じです。</p>
+    <p>「今日の予想」は JRA 公式サイトの出馬表・結果を毎朝 GitHub Actions で集め、LightGBM で計算したものです。CSV を入れて自分で学習するときの能力モデルは条件付きロジット（レース内の線形モデル）。オッズとの合成・買い目の決め方はどちらも同じです。</p>
   </footer>
 </div>
 
@@ -263,7 +285,8 @@ const featureLabel = (n) => {
   if (n.startsWith("frame@")) return n.slice(6) + "の馬番（外ほど）";
   return FEATURE_LABEL[n] || n;
 };
-const pct = (x, d = 1) => (x == null ? "-" : (x * 100).toFixed(d) + "%");
+const pct = (x, d = 1) => (x == null || !isFinite(x) ? "-" : (x * 100).toFixed(d) + "%");
+const fx = (x, d = 1) => (x == null || !isFinite(x) ? "-" : Number(x).toFixed(d));
 const yen = (x) => (x == null ? "-" : Math.round(x).toLocaleString("ja-JP") + "円");
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
@@ -373,6 +396,7 @@ const CFG_IDS = ["c-bankroll", "c-kelly", "c-maxrace", "c-ev-win", "c-ev-quinell
   for (const id of CFG_IDS) $(id).addEventListener("change", () => {
     const o = {}; for (const k of CFG_IDS) { const el = $(k); o[k] = el.type === "checkbox" ? el.checked : el.value; }
     store.set("cfg", o);
+    if (daily && engine.ready && !busy) computeDaily().catch(() => {});
   });
   try { $("odds-text").value = sessionStorage.getItem("keiba:odds") || ""; } catch {}
   $("odds-text").addEventListener("input", () => { try { sessionStorage.setItem("keiba:odds", $("odds-text").value); } catch {} });
@@ -499,7 +523,7 @@ const uma = (n, frame, sm) => `<span class="uma w${frame || 1}${sm ? " sm" : ""}
 function renderRace(r, example) {
   const horse = (n) => r.horses.find((h) => h.number === n) || {};
   const pick = (mark, n) => { const h = horse(n);
-    return `<div class="pick"><span class="mark">${mark}</span>${uma(n, h.frame)}<span class="nm"><b>${esc(h.name || n + "番")}</b><span>勝率 ${pct(h.p)} ・ 単勝 ${h.win_odds?.toFixed(1)}倍 ・ 3着内 ${pct(h.place3_p, 0)}</span></span></div>`; };
+    return `<div class="pick"><span class="mark">${mark}</span>${uma(n, h.frame)}<span class="nm"><b>${esc(h.name || n + "番")}</b><span>勝率 ${pct(h.p)} ・ 単勝 ${fx(h.win_odds)}倍 ・ 3着内 ${pct(h.place3_p, 0)}</span></span></div>`; };
   const sep = (t) => (t === "exacta" ? "→" : "-");
   const combo = (b) => b.combo.split("-").map((n) => uma(+n, horse(+n).frame, true)).join(`<span class="hint"> ${sep(b.type)} </span>`);
   let body = `<div class="picks">${pick("◎", r.honmei)}${pick("○", r.taikou)}</div>`;
@@ -523,7 +547,7 @@ function renderRace(r, example) {
       <button class="sub recalc"${example ? " disabled" : ""}>入れたオッズで再計算</button></div>`;
   }
   body += `<details><summary class="hint">全馬の確率</summary><div class="scroll"><table><thead><tr><th>馬</th><th>印</th><th>勝率</th><th>モデル</th><th>市場</th><th>3着内</th><th>単勝</th><th>単勝の期待値</th></tr></thead><tbody>${
-    r.horses.map((h) => `<tr><td>${uma(h.number, h.frame, true)} ${esc(h.name || "")}</td><td>${h.mark}</td><td class="num">${pct(h.p)}</td><td class="num">${pct(h.model_p)}</td><td class="num">${pct(h.market_p)}</td><td class="num">${pct(h.place3_p)}</td><td class="num">${h.win_odds?.toFixed(1)}</td><td class="num ${h.win_ev >= 1 ? "good" : "bad"}">${h.win_ev?.toFixed(2)}</td></tr>`).join("")
+    r.horses.map((h) => `<tr><td>${uma(h.number, h.frame, true)} ${esc(h.name || "")}</td><td>${h.mark}</td><td class="num">${pct(h.p)}</td><td class="num">${pct(h.model_p)}</td><td class="num">${pct(h.market_p)}</td><td class="num">${pct(h.place3_p)}</td><td class="num">${fx(h.win_odds)}</td><td class="num ${h.win_ev >= 1 ? "good" : "bad"}">${fx(h.win_ev, 2)}</td></tr>`).join("")
   }</tbody></table></div></details>`;
   return `<article class="race${example ? " example" : ""}"><div class="race-head"><b>${esc(r.course)} ${esc(r.surface)}${r.distance}m</b>
     <span class="hint">${example ? '<span class="tag">表示例</span> ' : ""}${esc(r.date)} ・ ${esc(r.race_id)}</span></div><div class="race-body">${body}</div></article>`;
@@ -547,16 +571,17 @@ async function predictNow() {
   $("pr-out").innerHTML = `<div style="display:grid;gap:12px">${o.races.map((r) => renderRace(r)).join("")}</div>`;
 }
 $("btn-pr").onclick = () => run($("btn-pr"), $("pr-out"), predictNow);
-$("pr-out").addEventListener("input", (e) => {
+$("tab-predict").addEventListener("input", (e) => {
   const el = e.target; if (!el.dataset || !el.dataset.key) return;
   const v = el.value.trim();
   if (v) oddsInputs[el.dataset.key] = v; else delete oddsInputs[el.dataset.key];
   saveInputs();
   el.classList.toggle("ok", v !== "" && parseFloat(v) >= +el.dataset.need);
 });
-$("pr-out").addEventListener("click", (e) => {
+$("tab-predict").addEventListener("click", (e) => {
   const b = e.target.closest("button.recalc"); if (!b || busy || !engine.ready) return;
-  run(b, $("pr-out"), predictNow);
+  if ($("daily").contains(b)) run(b, $("daily"), computeDaily);
+  else run(b, $("pr-out"), predictNow);
 });
 
 const EXAMPLE = { race_id: "202511110811", date: "2025-11-11", course: "大井", surface: "ダ", distance: 1600, honmei: 7, taikou: 4, skip: false, total: 900,
@@ -571,6 +596,69 @@ const EXAMPLE = { race_id: "202511110811", date: "2025-11-11", course: "大井",
     { number: 7, frame: 5, name: "（例）サンプルスター", mark: "◎", p: 0.142, model_p: 0.19, market_p: 0.08, place3_p: 0.39, win_odds: 9.8, win_ev: 1.39 },
     { number: 1, frame: 1, name: "（例）サンプルキング", mark: "", p: 0.25, model_p: 0.2, market_p: 0.29, place3_p: 0.58, win_odds: 2.7, win_ev: 0.68 }] };
 $("pr-out").innerHTML = renderRace(EXAMPLE, true);
+
+/* ---------- 今日の予想（GitHub Actions が毎朝作る data/predictions.json） ---------- */
+let daily = null, dailyView = null, dailyGroup = store.get("daily-group", ""), openRaces = new Set();
+const groupKey = (r) => `${r.date} ${r.course}`;
+function dailyOddsText() { return [$("odds-text").value, oddsTextFromInputs()].filter(Boolean).join("\n"); }
+async function computeDaily() {
+  if (!daily) return;
+  dailyView = await engine.call("fromPredictions", daily, cfg(), dailyOddsText());
+  renderDaily();
+}
+function renderDaily() {
+  const el = $("daily"), o = dailyView;
+  if (!o) return;
+  const fmtDate = (d) => { const [y, m, dd] = d.split("-").map(Number); return `${m}/${dd}(${"日月火水木金土"[new Date(y, m - 1, dd).getDay()]})`; };
+  let h = `<div class="daily-head"><h3 style="font-size:16px">今日の予想 <span class="tag">中央・自動更新</span></h3>
+    <span class="meta">更新 ${esc(o.generated_at || "")}${o.history ? ` ・ 過去 ${o.history.races.toLocaleString()} レース（${esc(o.history.span)}）で学習` : ""}${o.races.length ? ` ・ a=${o.a.toFixed(2)} b=${o.b.toFixed(2)}` : ""}</span></div>`;
+  if (o.error) h += `<p class="msg">${esc(o.error)}</p>`;
+  if (!o.races.length) {
+    if (!o.error) h += `<p class="msg">出馬表が出ているレースはまだありません。出馬表は開催の前日〜前々日に出ます。</p>`;
+    el.innerHTML = h; return;
+  }
+  const groups = [...new Set(o.races.map(groupKey))];
+  if (!groups.includes(dailyGroup)) dailyGroup = groups[0];
+  h += `<div class="chips" role="group" aria-label="開催">${groups.map((g) => { const [d, c] = g.split(" ");
+    return `<button data-group="${esc(g)}" aria-pressed="${g === dailyGroup}">${fmtDate(d)} ${esc(c)}</button>`; }).join("")}</div>`;
+  const list = o.races.filter((r) => groupKey(r) === dailyGroup);
+  const buys = list.filter((r) => !r.skip);
+  h += `<p class="hint">${buys.length ? `買い目のあるレース ${buys.length} / ${list.length}（合計 ${yen(buys.reduce((a, r) => a + r.total, 0))}）` : `買い目のあるレースはありません（${list.length} レースとも見送り）`}。レースを押すと詳しく出ます。</p>`;
+  h += `<div class="rlist">${list.map((r) => {
+    const open = openRaces.has(r.race_id);
+    return `<button class="rrow${r.skip ? "" : " buy"}" data-race="${esc(r.race_id)}" aria-expanded="${open}">
+      <span class="no">${r.race_no}R</span>
+      <span class="ti"><b>${esc(r.race_name || "")}</b><span>${esc(r.surface)}${r.distance}m ・ ${r.horses.length}頭</span></span>
+      <span class="st">${r.skip ? `<span class="marks">◎${r.honmei} ○${r.taikou}</span><br>見送り` : `<span class="marks">◎${r.honmei} ○${r.taikou}</span><br><b>${yen(r.total)}</b>`}</span>
+    </button>${open ? `<div>${renderRace(r)}</div>` : ""}`;
+  }).join("")}</div>`;
+  el.innerHTML = h;
+}
+$("daily").addEventListener("click", (e) => {
+  const g = e.target.closest("button[data-group]");
+  if (g) { dailyGroup = g.dataset.group; store.set("daily-group", dailyGroup); renderDaily(); return; }
+  const r = e.target.closest("button.rrow");
+  if (r) { const id = r.dataset.race; openRaces.has(id) ? openRaces.delete(id) : openRaces.add(id); renderDaily(); }
+});
+async function loadDaily() {
+  try {
+    const res = await fetch("data/predictions.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(String(res.status));
+    daily = await res.json();
+    await computeDaily();
+  } catch {
+    daily = null;
+    $("daily").innerHTML = `<p class="hint">自動の予想はまだ届いていません。届くまでは下の「自分の出馬表 CSV で予想する」から使えます。</p>`;
+    $("manual").open = true;
+  }
+  try {
+    const res = await fetch("data/backtest.json", { cache: "no-store" });
+    if (res.ok) {
+      const bt = await res.json();
+      if (bt.summary && bt.summary.races) $("bt-out").innerHTML = `<p class="hint">自動検証（中央・LightGBM、${esc(bt.generated_at)} 更新）</p>` + renderBacktest(bt);
+    }
+  } catch {}
+}
 
 /* ---------- タブ ---------- */
 const TABS = ["predict", "data", "backtest", "train"];
@@ -602,7 +690,8 @@ async function boot() {
     }
     lastStatus = await engine.call("status");
     setEngine("ready", "AIは準備できています");
-    if (!location.hash) showTab((lastStatus.models || {})[league] && lastStatus.files.results ? "predict" : "data");
+    await loadDaily();
+    if (!location.hash) showTab(daily || ((lastStatus.models || {})[league] && lastStatus.files.results) ? "predict" : "data");
   } catch (e) {
     setEngine("err", "前回のデータを戻せませんでした: " + e.message);
     try { lastStatus = await engine.call("status"); } catch {}

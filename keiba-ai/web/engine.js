@@ -790,6 +790,7 @@
         S.models[league] = model;
         return { model, a: model.a, b: model.b, importance: importance(model) };
       },
+      fromPredictions(doc, c, oddsText) { return fromPredictions(doc, c, oddsText); },
       predict(c, oddsText) {
         const cfg = mergeConfig(c), model = S.models[cfg.league];
         if (!model) throw new Error("先に「学習」をしてください");
@@ -819,7 +820,43 @@
     };
   }
 
-  const api = { parseCSV, toCSV, loadResults, loadPayouts, loadOdds, parseOddsText, normalizeCombo, buildFeatures,
+  /* ================= 毎朝の予想ファイル（predictions.json）から買い目を出す ================= */
+  // doc.races[].horses[] に LightGBM の勝率 model_p と朝の単勝オッズがある。
+  // 貼り付けた単勝オッズがあればそれで市場の勝率を作り直し、合成係数 a, b で最終の勝率にする。
+  function fromPredictions(doc, c, oddsText) {
+    const cfg = mergeConfig({ ...(c || {}), league: doc.league || (c && c.league) || "jra" });
+    const a = doc.model ? doc.model.a : 1, b = doc.model ? doc.model.b : 0;
+    const rids = (doc.races || []).map((r) => r.race_id), pasted = parseOddsText(oddsText, rids);
+    const races = [];
+    for (const r of doc.races || []) {
+      const win = (pasted[r.race_id] || {}).win || {};
+      const hs = r.horses.map((h) => ({ ...h, win_odds: fin(win[String(h.number)]) ? win[String(h.number)] : h.win_odds }));
+      const allOdds = hs.every((h) => fin(h.win_odds) && h.win_odds > 0);
+      let z = 0; const inv = hs.map((h) => (allOdds ? 1 / Math.max(h.win_odds, 1) : 0)); const zi = inv.reduce((x, y) => x + y, 0);
+      for (const [i, h] of hs.entries()) {
+        h.market_p = allOdds ? inv[i] / zi : nan;
+        h.s = allOdds ? a * Math.log(Math.max(h.model_p, 1e-6)) + b * Math.log(Math.max(h.market_p, 1e-6)) : Math.log(Math.max(h.model_p, 1e-6));
+      }
+      const mx = Math.max(...hs.map((h) => h.s));
+      for (const h of hs) { h.p = Math.exp(h.s - mx); z += h.p; }
+      for (const h of hs) { h.p /= z; delete h.s; }
+      const od = {}; if (pasted[r.race_id]) for (const [t, m] of Object.entries(pasted[r.race_id])) if (t !== "win") od[t] = m;
+      const rec = allOdds ? recommend(hs.map((h) => ({ ...h, win_odds: h.win_odds })), cfg, od) : null;
+      const base = { race_id: r.race_id, date: r.date, course: r.course, surface: r.surface, distance: r.distance, race_name: r.race_name, race_no: r.race_no };
+      if (!rec) {
+        const sorted = hs.slice().sort((x, y) => y.p - x.p);
+        races.push({ ...base, honmei: sorted[0].number, taikou: sorted[1] ? sorted[1].number : sorted[0].number, skip: true, total: 0, bets: [],
+          horses: sorted.map((h, i) => ({ ...h, mark: i === 0 ? "◎" : i === 1 ? "○" : "", place3_p: nan, win_ev: nan })), candidates: [], no_odds: true });
+        continue;
+      }
+      const horses = rec.table.slice().sort((x, y) => y.p - x.p).map((h) => ({ ...h, mark: h.number === rec.honmei ? "◎" : h.number === rec.taikou ? "○" : "" }));
+      races.push({ ...base, honmei: rec.honmei, taikou: rec.taikou, skip: !rec.bets.length, total: rec.bets.reduce((x, y) => x + y.stake, 0),
+        bets: rec.bets, horses, candidates: rec.candidates });
+    }
+    return { races, a, b, generated_at: doc.generated_at, error: doc.error, history: doc.history };
+  }
+
+  const api = { fromPredictions, parseCSV, toCSV, loadResults, loadPayouts, loadOdds, parseOddsText, normalizeCombo, buildFeatures,
     comboProbs, recommend, defaultConfig, mergeConfig, estimateOdds, summaryData, synth, createSession, trainModel,
     predictIdx, leagueIdx, walkForward, PAYBACK_BY_LEAGUE, BET_LABEL };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
