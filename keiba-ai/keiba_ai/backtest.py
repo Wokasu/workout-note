@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
-import numpy as np
 import pandas as pd
 
 from .features import build_features
@@ -48,7 +47,7 @@ def _settle(bet, race: pd.DataFrame, pay: dict) -> float:
 
 def walk_forward(raw: pd.DataFrame, payouts: pd.DataFrame | None = None, odds: pd.DataFrame | None = None,
                  cfg: StrategyConfig | None = None, test_years: list[int] | None = None,
-                 verbose: bool = True) -> tuple[pd.DataFrame, pd.DataFrame]:
+                 verbose: bool = True, log=print) -> tuple[pd.DataFrame, pd.DataFrame]:
     """cfg.league の主催のレースだけを学習・検証する（特徴量は全主催の過去走から作る）。"""
     cfg = cfg or StrategyConfig()
     feats = build_features(raw)
@@ -72,7 +71,7 @@ def walk_forward(raw: pd.DataFrame, payouts: pd.DataFrame | None = None, odds: p
         preds.append(pred.assign(test_year=y))
         if verbose:
             ll = log_loss_report(pred)
-            print(f"[{y}] 合成係数 a(モデル)={model.a:.2f} b(市場)={model.b:.2f}  "
+            log(f"[{y}] 合成係数 a(モデル)={model.a:.2f} b(市場)={model.b:.2f}  "
                   f"勝ち馬の平均対数尤度 モデル{ll['model_p']:.3f} 市場{ll['market_p']:.3f} 合成{ll['p']:.3f}")
         for rid, race in pred.groupby("race_id", sort=False):
             if race["finish_pos"].notna().sum() < 3:
@@ -86,45 +85,61 @@ def walk_forward(raw: pd.DataFrame, payouts: pd.DataFrame | None = None, odds: p
     return bets, pd.concat(preds) if preds else pd.DataFrame()
 
 
-def summarize(bets: pd.DataFrame, preds: pd.DataFrame, n_races: int | None = None) -> str:
-    out = []
-    if bets.empty:
-        return "買い目がありませんでした（基準が厳しすぎるか、データが少なすぎます）。"
-    bets = bets.sort_values("date")
-    races = bets["race_id"].nunique()
-    total_races = preds["race_id"].nunique() if not preds.empty else n_races
-    out.append(f"検証レース {total_races} / 購入レース {races}（購入率 {races / max(total_races, 1):.1%}）")
-
-    def row(name, g):
-        st, rt = g["stake"].sum(), g["return"].sum()
-        return {"券種": name, "点数": len(g), "的中": int((g["return"] > 0).sum()),
-                "的中率": f"{(g['return'] > 0).mean():.1%}", "投資": int(st), "払戻": int(rt),
-                "回収率": f"{rt / st:.1%}" if st else "-", "平均オッズ": round(g["odds"].mean(), 1)}
-
-    rows = [row(BET_LABEL[t], g) for t, g in bets.groupby("bet_type")] + [row("合計", bets)]
-    out.append(pd.DataFrame(rows).to_string(index=False))
-
-    # 期待値の帯ごとの回収率（min_ev の決め方の材料）
-    b = bets.assign(ev_band=pd.cut(bets["ev"], [1.0, 1.15, 1.3, 1.5, 2.0, 99]))
-    band = b.groupby(["bet_type", "ev_band"], observed=True).apply(
-        lambda g: pd.Series({"点数": len(g), "回収率": g["return"].sum() / g["stake"].sum()}), include_groups=False)
-    band["回収率"] = band["回収率"].map("{:.1%}".format)
-    out.append("期待値の帯ごとの回収率:\n" + band.to_string())
-
-    by_year = bets.assign(year=bets["date"].dt.year).groupby("year").apply(
-        lambda g: f"{g['return'].sum() / g['stake'].sum():.1%}（投資 {int(g['stake'].sum()):,}円）", include_groups=False)
-    out.append("年ごとの回収率:\n" + by_year.to_string())
-
-    cum = (bets["return"] - bets["stake"]).cumsum()
-    dd = (cum.cummax() - cum).max()
-    out.append(f"収支 {int(cum.iloc[-1]):+,}円 / 最大ドローダウン {int(dd):,}円")
-
+def summary_data(bets: pd.DataFrame, preds: pd.DataFrame) -> dict:
+    """検証結果を数字のまとまりにする（CLI の文章とブラウザの表の両方がこれを使う）。"""
+    total_races = int(preds["race_id"].nunique()) if not preds.empty else 0
+    out: dict = {"races": total_races, "bought_races": 0, "by_type": [], "ev_bands": [], "by_year": [],
+                 "profit": 0, "max_drawdown": 0, "baselines": [], "curve": []}
     if not preds.empty:
         p = preds.dropna(subset=["finish_pos"])
-        base = []
         for name, col in [("モデル単体の1位の単勝", "model_p"), ("合成確率の1位の単勝", "p"), ("1番人気の単勝", "market_p")]:
             top = p.loc[p.groupby("race_id")[col].idxmax()]
-            r = (top["win_odds"] * (top["finish_pos"] == 1)).sum() / len(top)
-            base.append(f"  {name}を毎レース100円: 的中率 {(top['finish_pos'] == 1).mean():.1%} 回収率 {r:.1%}")
-        out.append("比較（期待値を見ずに買った場合）:\n" + "\n".join(base))
+            won = top["finish_pos"] == 1
+            out["baselines"].append({"name": name, "hit_rate": float(won.mean()),
+                                     "roi": float((top["win_odds"] * won).sum() / len(top))})
+    if bets.empty:
+        return out
+    bets = bets.sort_values("date")
+    out["bought_races"] = int(bets["race_id"].nunique())
+
+    def row(name, g):
+        st, rt = float(g["stake"].sum()), float(g["return"].sum())
+        return {"name": name, "bets": int(len(g)), "hits": int((g["return"] > 0).sum()),
+                "hit_rate": float((g["return"] > 0).mean()), "stake": st, "return": rt,
+                "roi": rt / st if st else 0.0, "avg_odds": float(g["odds"].mean())}
+
+    order = [t for t in ("win", "quinella", "wide", "exacta") if t in set(bets["bet_type"])]
+    out["by_type"] = [row(BET_LABEL[t], bets[bets["bet_type"] == t]) for t in order] + [row("合計", bets)]
+    edges = [1.0, 1.15, 1.3, 1.5, 2.0, 99]
+    b = bets.assign(ev_band=pd.cut(bets["ev"], edges))
+    for (t, band), g in b.groupby(["bet_type", "ev_band"], observed=True):
+        lo, hi = band.left, band.right
+        out["ev_bands"].append({"bet_type": BET_LABEL[t], "band": f"{lo:.2f}〜{hi:.2f}" if hi < 99 else f"{lo:.2f}〜",
+                                **{k: v for k, v in row("", g).items() if k != "name"}})
+    for y, g in bets.groupby(bets["date"].dt.year):
+        out["by_year"].append({"year": int(y), **{k: v for k, v in row("", g).items() if k != "name"}})
+    cum = (bets["return"] - bets["stake"]).cumsum()
+    out["profit"] = float(cum.iloc[-1])
+    out["max_drawdown"] = float((cum.cummax() - cum).max())
+    # 収支の推移（多すぎると重いので間引く）
+    step = max(1, len(cum) // 300)
+    out["curve"] = [float(x) for x in cum.iloc[::step]] + [float(cum.iloc[-1])]
+    return out
+
+
+def summarize(bets: pd.DataFrame, preds: pd.DataFrame) -> str:
+    d = summary_data(bets, preds)
+    if not d["by_type"]:
+        return "買い目がありませんでした（基準が厳しすぎるか、データが少なすぎます）。"
+    pct = "{:.1%}".format
+    out = [f"検証レース {d['races']} / 購入レース {d['bought_races']}（購入率 {d['bought_races'] / max(d['races'], 1):.1%}）"]
+    out.append(pd.DataFrame([{"券種": r["name"], "点数": r["bets"], "的中": r["hits"], "的中率": pct(r["hit_rate"]),
+                              "投資": int(r["stake"]), "払戻": int(r["return"]), "回収率": pct(r["roi"]),
+                              "平均オッズ": round(r["avg_odds"], 1)} for r in d["by_type"]]).to_string(index=False))
+    out.append("期待値の帯ごとの回収率:\n" + pd.DataFrame([{"券種": r["bet_type"], "期待値": r["band"], "点数": r["bets"],
+                                                   "回収率": pct(r["roi"])} for r in d["ev_bands"]]).to_string(index=False))
+    out.append("年ごとの回収率:\n" + "\n".join(f"  {r['year']}  {pct(r['roi'])}（投資 {int(r['stake']):,}円）" for r in d["by_year"]))
+    out.append(f"収支 {int(d['profit']):+,}円 / 最大ドローダウン {int(d['max_drawdown']):,}円")
+    out.append("比較（期待値を見ずに買った場合）:\n" + "\n".join(
+        f"  {r['name']}を毎レース100円: 的中率 {pct(r['hit_rate'])} 回収率 {pct(r['roi'])}" for r in d["baselines"]))
     return "\n\n".join(out)

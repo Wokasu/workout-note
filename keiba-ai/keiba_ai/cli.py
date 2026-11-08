@@ -14,11 +14,10 @@ import argparse
 import os
 import pickle
 
-import pandas as pd
 
 from .backtest import odds_lookup, summarize, walk_forward
-from .features import build_features
 from .model import KeibaModel
+from .pipeline import predict_card, train_model
 from .schema import LEAGUE_LABEL, LEAGUES, load_odds, load_payouts, load_results
 from .strategy import StrategyConfig, format_recommendation, recommend
 
@@ -98,12 +97,10 @@ def main(argv=None):
         print(f"\n買い目の明細: {a.out}")
 
     elif a.cmd == "train":
-        feats = build_features(load_results(a.results, a.league))
-        feats = feats[feats["finish_pos"].notna() & (feats["league"] == a.league)]
-        if feats.empty:
-            raise SystemExit(f"{LEAGUE_LABEL[a.league]}のレースがありません（league 列か --league を確認）")
-        last = feats["date"].max() - pd.DateOffset(years=1)
-        model = KeibaModel().fit(feats[feats["date"] <= last], feats[feats["date"] > last])
+        try:
+            model = train_model(load_results(a.results, a.league), a.league)
+        except ValueError as e:
+            raise SystemExit(str(e))
         os.makedirs(os.path.dirname(a.model) or ".", exist_ok=True)
         with open(a.model, "wb") as f:
             pickle.dump(model, f)
@@ -113,12 +110,7 @@ def main(argv=None):
     elif a.cmd == "predict":
         with open(a.model, "rb") as f:
             model: KeibaModel = pickle.load(f)
-        hist, card = load_results(a.results, a.league), load_results(a.card, a.league)
-        card[["finish_pos", "time_sec", "last3f"]] = float("nan")
-        hist = hist[~hist["race_id"].isin(card["race_id"])]
-        feats = build_features(pd.concat([hist, card], ignore_index=True))
-        target = feats[feats["race_id"].isin(card["race_id"].unique()) & (feats["league"] == a.league)]
-        pred = model.predict(target)
+        pred = predict_card(model, load_results(a.results, a.league), load_results(a.card, a.league), a.league)
         olk = odds_lookup(load_odds(a.odds)) if a.odds else {}
         cfg = _cfg(a)
         for rid, race in pred.groupby("race_id", sort=False):

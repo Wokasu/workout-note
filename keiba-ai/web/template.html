@@ -1,0 +1,510 @@
+<title>◎○ 競馬AI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=IBM+Plex+Mono:wght@500&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap">
+<style>
+/* Layout: one narrow working column, four steps (データ→検証→学習→予想); the result of each step sits right under its button. */
+:root {
+  --bg: #eef1ec; --surface: #ffffff; --sunk: #e4e9e2; --fg: #16201a; --muted: #5a675f; --line: #d3dbd2;
+  --turf: #1d6b45; --dirt: #9a5a22; --accent: var(--turf); --accent-ink: #ffffff;
+  --pos: #0f7a63; --neg: #b03a2e; --warn: #8a6100; --warn-bg: #fbf1d6;
+  --f1: #ffffff; --f2: #1f1f1f; --f3: #e2342c; --f4: #2c5fd4; --f5: #f2cf00; --f6: #1f9a4b; --f7: #f08700; --f8: #f39bc0;
+  --display: "Dela Gothic One", "Hiragino Kaku Gothic StdN", "Yu Gothic", sans-serif;
+  --body: "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111613; --surface: #19201c; --sunk: #0d110f; --fg: #e5ece6; --muted: #98a69d; --line: #2c3630;
+  --turf: #4fbf86; --dirt: #e0a062; --accent-ink: #0d110f; --pos: #4fd1b1; --neg: #f08a7e; --warn: #f2c25c; --warn-bg: #2d2611;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111613; --surface: #19201c; --sunk: #0d110f; --fg: #e5ece6; --muted: #98a69d; --line: #2c3630;
+  --turf: #4fbf86; --dirt: #e0a062; --accent-ink: #0d110f; --pos: #4fd1b1; --neg: #f08a7e; --warn: #f2c25c; --warn-bg: #2d2611;
+  color-scheme: dark }
+body.nankan { --accent: var(--dirt); }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.65; }
+.wrap { max-width: 920px; margin: 0 auto; padding-block: 20px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 18px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(26px, 6vw, 36px); letter-spacing: .02em; line-height: 1.2; }
+h1 .m { color: var(--accent); }
+h2 { font-size: 18px; display: flex; gap: 10px; align-items: baseline; }
+h2 .step { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .08em; }
+p { margin: 0; }
+.lead { color: var(--muted); max-width: 62ch; }
+header { display: grid; gap: 10px; }
+.bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; background: var(--sunk); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--muted); font: 700 14px var(--body); padding: 6px 16px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.pill { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.dot.busy { background: var(--warn); animation: pulse 1s infinite alternate; }
+.dot.ready { background: var(--pos); }
+.dot.err { background: var(--neg); }
+@keyframes pulse { from { opacity: .35 } to { opacity: 1 } }
+@media (prefers-reduced-motion: reduce) { .dot.busy { animation: none; } }
+section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button.go { border: 0; background: var(--accent); color: var(--accent-ink); font: 700 15px var(--body); padding: 10px 18px; border-radius: 8px; cursor: pointer; }
+button.sub { border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: 700 14px var(--body); padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, label.file:focus-within { outline: 3px solid var(--accent); outline-offset: 2px; }
+.hint { font-size: 13px; color: var(--muted); }
+.files { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+label.file { display: grid; gap: 4px; border: 1px dashed var(--line); border-radius: 8px; padding: 12px; cursor: pointer; background: var(--bg); min-width: 0; }
+label.file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+label.file b { font-size: 14px; }
+label.file .st { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+label.file.has { border-style: solid; border-color: var(--accent); }
+details.cfg { border-top: 1px solid var(--line); padding-top: 12px; }
+details.cfg summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+.grid-cfg { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 14px; margin-top: 12px; }
+.grid-cfg label { display: grid; gap: 3px; font-size: 13px; color: var(--muted); }
+input[type=number], textarea { font: 500 14px var(--mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; box-sizing: border-box; }
+textarea { min-height: 96px; resize: vertical; font-family: var(--mono); line-height: 1.5; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 14px; }
+.msg { font-size: 14px; padding: 10px 12px; border-radius: 8px; background: var(--warn-bg); color: var(--fg); border-left: 4px solid var(--warn); }
+.msg.err { border-left-color: var(--neg); }
+.scroll { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-size: 12px; color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+td.num, .mono { font-family: var(--mono); }
+.good { color: var(--pos); font-weight: 700; }
+.bad { color: var(--muted); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.kpi { background: var(--bg); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; }
+.kpi span { font-size: 12px; color: var(--muted); }
+.kpi b { font: 500 20px var(--mono); }
+.curve { width: 100%; height: 90px; display: block; }
+.imp { display: grid; grid-template-columns: minmax(0, 14em) 1fr; gap: 4px 10px; font-size: 13px; align-items: center; }
+.imp i { display: block; height: 8px; border-radius: 4px; background: var(--accent); }
+/* 予想カード */
+.race { border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: grid; }
+.race.example { border-style: dashed; }
+.race-head { display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: space-between; align-items: baseline; padding: 10px 14px; background: var(--sunk); }
+.race-head b { font-size: 16px; }
+.race-head .hint { font-family: var(--mono); }
+.race-body { padding: 14px; display: grid; gap: 14px; }
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.pick { display: grid; grid-template-columns: auto auto 1fr; gap: 10px; align-items: center; min-width: 0; }
+.mark { font-family: var(--display); font-size: 34px; line-height: 1; color: var(--accent); width: 1.1em; text-align: center; }
+.uma { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 4px; border-radius: 5px; font: 500 16px var(--mono); box-sizing: border-box; }
+.uma.sm { min-width: 24px; height: 24px; font-size: 13px; }
+.w1 { background: var(--f1); color: #1f1f1f; border: 1.5px solid #9aa39d; } .w2 { background: var(--f2); color: #fff; }
+.w3 { background: var(--f3); color: #fff; } .w4 { background: var(--f4); color: #fff; } .w5 { background: var(--f5); color: #1f1f1f; }
+.w6 { background: var(--f6); color: #fff; } .w7 { background: var(--f7); color: #1f1f1f; } .w8 { background: var(--f8); color: #1f1f1f; }
+.pick .nm { min-width: 0; display: grid; }
+.pick .nm b { overflow-wrap: anywhere; }
+.pick .nm span { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+.bets { display: grid; gap: 6px; }
+.bet { display: grid; grid-template-columns: 5.5em minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 8px 10px; background: var(--bg); border-radius: 8px; }
+.bet .kind { font-weight: 700; }
+.bet .detail { font-size: 12.5px; color: var(--muted); font-family: var(--mono); overflow-wrap: anywhere; }
+.bet .yen { font: 500 17px var(--mono); }
+.est { color: var(--warn); font-family: var(--body); }
+.total { display: flex; justify-content: space-between; font-weight: 700; padding: 0 10px; }
+.skip { font-weight: 700; color: var(--muted); padding: 10px; border-radius: 8px; background: var(--bg); }
+.tag { font-size: 11px; font-weight: 700; letter-spacing: .06em; border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--muted); }
+footer { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <h1><span class="m">◎○</span> 競馬AI</h1>
+      <div class="seg" role="group" aria-label="主催">
+        <button id="lg-jra" aria-pressed="true">中央</button>
+        <button id="lg-nankan" aria-pressed="false">南関東</button>
+      </div>
+    </div>
+    <p class="lead">◎と○の2頭を選び、期待値が基準を超えるときだけ ◎単勝・◎-○馬連／ワイド・◎→○馬単を出します。計算はすべてこのブラウザの中で行い、データはどこにも送りません。</p>
+    <div class="bar">
+      <span class="pill"><span class="dot" id="eng-dot"></span><span id="eng-text">AIを準備中…</span></span>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-data">
+    <h2 id="h-data"><span class="step">STEP 1</span>データ</h2>
+    <p class="hint">過去の成績・払戻の CSV を選んでください（列は README の通り。Shift_JIS でも可）。中央と南関東を1つのファイルにまとめても構いません。</p>
+    <div class="files">
+      <label class="file" id="f-results"><input type="file" accept=".csv,text/csv" data-name="results"><b>成績 results.csv <span class="tag">必須</span></b><span class="st">未選択</span></label>
+      <label class="file" id="f-payouts"><input type="file" accept=".csv,text/csv" data-name="payouts"><b>払戻 payouts.csv</b><span class="st">未選択（検証に使う）</span></label>
+      <label class="file" id="f-odds"><input type="file" accept=".csv,text/csv" data-name="odds"><b>組み合わせオッズ odds.csv</b><span class="st">未選択（無ければ単勝から推定）</span></label>
+    </div>
+    <div class="row">
+      <button class="sub" id="btn-synth" disabled>架空データで試す</button>
+      <span class="hint">本物のレースではありません。動きを見るためのデータです。</span>
+    </div>
+    <div id="data-msg"></div>
+  </section>
+
+  <section aria-labelledby="h-bt">
+    <h2 id="h-bt"><span class="step">STEP 2</span>検証（バックテスト）</h2>
+    <p class="hint">過去の各年を「未来」とみなし、その前の年だけで予想して買った場合の回収率を出します。最低3年分のデータが必要です。</p>
+    <details class="cfg" id="cfg">
+      <summary>買い方の設定（検証と予想で共通）</summary>
+      <div class="grid-cfg">
+        <label>資金（円）<input type="number" id="c-bankroll" min="1000" step="1000" value="100000"></label>
+        <label>ケリーの割合<input type="number" id="c-kelly" min="0.01" max="1" step="0.01" value="0.15"></label>
+        <label>1レースの上限（資金比）<input type="number" id="c-maxrace" min="0.005" max="0.2" step="0.005" value="0.03"></label>
+        <label>単勝 期待値の下限<input type="number" id="c-ev-win" min="1" step="0.05" value="1.15"></label>
+        <label>馬連 期待値の下限<input type="number" id="c-ev-quinella" min="1" step="0.05" value="1.20"></label>
+        <label>ワイド 期待値の下限<input type="number" id="c-ev-wide" min="1" step="0.05" value="1.15"></label>
+        <label>馬単 期待値の下限<input type="number" id="c-ev-exacta" min="1" step="0.05" value="1.30"></label>
+      </div>
+      <div class="checks" style="margin-top:12px">
+        <label><input type="checkbox" id="b-win" checked> 単勝</label>
+        <label><input type="checkbox" id="b-quinella" checked> 馬連</label>
+        <label><input type="checkbox" id="b-wide" checked> ワイド</label>
+        <label><input type="checkbox" id="b-exacta" checked> 馬単</label>
+      </div>
+    </details>
+    <div class="row"><button class="go" id="btn-bt" disabled>検証する</button><span class="hint" id="bt-note"></span></div>
+    <div id="bt-out"></div>
+  </section>
+
+  <section aria-labelledby="h-tr">
+    <h2 id="h-tr"><span class="step">STEP 3</span>学習</h2>
+    <p class="hint">入れたデータ全部で、選んでいる主催のモデルを作ります（最後の1年はオッズとの合成係数を決めるのに使います）。モデルはこのブラウザに保存され、次回も使えます。</p>
+    <div class="row"><button class="go" id="btn-tr" disabled>学習する</button><span class="hint" id="tr-note"></span></div>
+    <div id="tr-out"></div>
+  </section>
+
+  <section aria-labelledby="h-pr">
+    <h2 id="h-pr"><span class="step">STEP 4</span>予想</h2>
+    <div class="files">
+      <label class="file" id="f-card"><input type="file" accept=".csv,text/csv" data-name="card"><b>出馬表 card.csv <span class="tag">必須</span></b><span class="st">未選択（results と同じ列、結果は空）</span></label>
+    </div>
+    <label class="hint" for="odds-text">締切直前のオッズを貼り付け（任意。1行1つ。複数レースのときは「# race_id」の行で区切る）</label>
+    <textarea id="odds-text" placeholder="単勝 7 8.4&#10;馬連 3-7 12.5&#10;ワイド 3-7 4.1-4.8&#10;馬単 7-3 30.2"></textarea>
+    <div class="row"><button class="go" id="btn-pr" disabled>予想する</button><span class="hint" id="pr-note"></span></div>
+    <div id="pr-out"></div>
+  </section>
+
+  <footer>
+    <p>過去の回収率は将来を保証しません。馬券は20歳から。推定オッズの買い目は、買う前に実オッズで確かめてください。</p>
+    <p>払戻率: 中央 単勝80%・馬連/ワイド77.5%・馬単75% ／ 南関東 単勝80%・馬連/ワイド/馬単75%</p>
+    <p>このページの能力モデルは条件付きロジット（レース内の線形モデル）。Python 版（keiba-ai/）は LightGBM を使います。特徴量・オッズとの合成・買い目の決め方は同じです。</p>
+  </footer>
+</div>
+
+<script id="engine-src" type="text/plain">/*__ENGINE__*/</script>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const LABEL = { win: "単勝", quinella: "馬連", wide: "ワイド", exacta: "馬単" };
+const FEATURE_LABEL = {
+  h_fp_mean5: "近5走の着順", h_fp_last: "前走の着順", h_fp_last2: "2走前の着順", h_tb_mean5: "近5走の勝ち馬とのタイム差",
+  h_best_tb5: "近5走の最小タイム差", h_l3f_rank_mean5: "近5走の上がり順位", h_prev_pop_resid: "人気以上に走ったか",
+  h_win_rate: "勝率", h_top3_rate: "複勝率", h_days_since: "前走からの間隔", h_dist_change: "距離の増減",
+  h_class_change: "クラスの上下", h_same_surface_fp: "同じ芝ダの成績", h_same_dist_fp: "同じ距離帯の成績",
+  h_same_course_fp: "同じ競馬場の成績", h_league_switch: "転入初戦", h_from_jra: "中央からの転入",
+  j_win_rate: "騎手の勝率", j_top3_rate: "騎手の複勝率", t_win_rate: "調教師の勝率", t_top3_rate: "調教師の複勝率",
+  course_dist: "競馬場×距離", field_size: "頭数", body_weight: "馬体重", weight_carried: "斤量", frame_pct: "馬番（外ほど）",
+  age: "年齢", body_weight_diff: "馬体重の増減", h_weight_carried_change: "斤量の増減", log_runs: "出走数",
+  log_days: "前走からの間隔", layoff_long: "休み明け（90日超）", log_runs_league: "同じ主催での出走数",
+  log_j_rides: "騎手の騎乗数", log_t_rides: "調教師の出走数", dist_change_400: "距離の延長",
+  abs_dist_change_400: "距離変更の大きさ", no_history: "初出走", sex_f: "牝馬", sex_g: "セン馬",
+  sq_fp_mean5: "近5走の着順（極端さ）", sq_tb_mean5: "タイム差（極端さ）", frame_x_short: "短距離での馬番（外ほど）",
+};
+const featureLabel = (n) => {
+  const m = n.match(/^(.*)_(rank|diff)$/);
+  if (m && FEATURE_LABEL[m[1]]) return FEATURE_LABEL[m[1]] + (m[2] === "rank" ? "（レース内の順位）" : "（レース内の差）");
+  if (n.startsWith("frame@")) return n.slice(6) + "の馬番（外ほど）";
+  return FEATURE_LABEL[n] || n;
+};
+const pct = (x, d = 1) => (x == null ? "-" : (x * 100).toFixed(d) + "%");
+const yen = (x) => (x == null ? "-" : Math.round(x).toLocaleString("ja-JP") + "円");
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+/* ---------- 保存（このブラウザの中だけ） ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("keiba:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("keiba:" + k, JSON.stringify(v)); } catch {} },
+};
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try {
+      const r = indexedDB.open("keiba-ai", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("files");
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    } catch (e) { rej(e); }
+  }));
+  const tx = async (mode, fn) => {
+    try {
+      const db = await open();
+      return await new Promise((res, rej) => {
+        const t = db.transaction("files", mode); const req = fn(t.objectStore("files"));
+        t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error);
+      });
+    } catch { return undefined; }
+  };
+  return {
+    put: (k, v) => tx("readwrite", (s) => s.put(v, k)),
+    get: (k) => tx("readonly", (s) => s.get(k)),
+    keys: () => tx("readonly", (s) => s.getAllKeys()),
+  };
+})();
+
+/* ---------- AIエンジン（Web Worker の中で動かす。画面が固まらないように） ---------- */
+const WORKER_SRC = $("engine-src").textContent + `
+const S = self.KeibaEngine.createSession();
+self.onmessage = (e) => {
+  const { id, fn, args } = e.data;
+  const progress = (text) => self.postMessage({ progress: text });
+  try {
+    let result;
+    if (fn === "backtest") result = S.backtest(args[0], progress);
+    else if (fn === "train") result = S.train(args[0], progress);
+    else result = S[fn](...args);
+    self.postMessage({ id, result });
+  } catch (err) {
+    self.postMessage({ id, error: String((err && err.message) || err) });
+  }
+};`;
+
+const engine = {
+  worker: null, ready: false, seq: 0, wait: new Map(),
+  start() {
+    this.worker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: "text/javascript" })));
+    this.worker.onmessage = (e) => {
+      const m = e.data;
+      if (m.progress) return setEngine("busy", m.progress);
+      const w = this.wait.get(m.id); if (!w) return; this.wait.delete(m.id);
+      m.error ? w.rej(new Error(m.error)) : w.res(m.result);
+    };
+    this.worker.onerror = (e) => setEngine("err", "AIを起動できませんでした: " + (e.message || "読み込みエラー"));
+    this.ready = true;
+  },
+  call(fn, ...args) {
+    return new Promise((res, rej) => {
+      const id = ++this.seq; this.wait.set(id, { res, rej });
+      this.worker.postMessage({ id, fn, args });
+    });
+  },
+};
+
+function setEngine(state, text) {
+  $("eng-dot").className = "dot " + state;
+  $("eng-text").textContent = text;
+}
+
+/* ---------- 画面の状態 ---------- */
+let league = store.get("league", "jra");
+let busy = false;
+let lastStatus = { files: {}, models: {} };
+
+function setLeague(lg) {
+  league = lg; store.set("league", lg);
+  document.body.classList.toggle("nankan", lg === "nankan");
+  $("lg-jra").setAttribute("aria-pressed", lg === "jra");
+  $("lg-nankan").setAttribute("aria-pressed", lg === "nankan");
+  refreshButtons();
+}
+$("lg-jra").onclick = () => setLeague("jra");
+$("lg-nankan").onclick = () => setLeague("nankan");
+
+function cfg() {
+  const n = (id, d) => { const v = parseFloat($(id).value); return isFinite(v) ? v : d; };
+  return {
+    league, bankroll: n("c-bankroll", 100000), kelly: n("c-kelly", 0.15), max_race: n("c-maxrace", 0.03),
+    bets: ["win", "quinella", "wide", "exacta"].filter((t) => $("b-" + t).checked),
+    min_ev: { win: n("c-ev-win", 1.15), quinella: n("c-ev-quinella", 1.2), wide: n("c-ev-wide", 1.15), exacta: n("c-ev-exacta", 1.3) },
+  };
+}
+const CFG_IDS = ["c-bankroll", "c-kelly", "c-maxrace", "c-ev-win", "c-ev-quinella", "c-ev-wide", "c-ev-exacta", "b-win", "b-quinella", "b-wide", "b-exacta"];
+(function restoreCfg() {
+  const saved = store.get("cfg", {});
+  for (const id of CFG_IDS) {
+    if (!(id in saved)) continue;
+    const el = $(id); if (el.type === "checkbox") el.checked = saved[id]; else el.value = saved[id];
+  }
+  for (const id of CFG_IDS) $(id).addEventListener("change", () => {
+    const o = {}; for (const k of CFG_IDS) { const el = $(k); o[k] = el.type === "checkbox" ? el.checked : el.value; }
+    store.set("cfg", o);
+  });
+  try { $("odds-text").value = sessionStorage.getItem("keiba:odds") || ""; } catch {}
+  $("odds-text").addEventListener("input", () => { try { sessionStorage.setItem("keiba:odds", $("odds-text").value); } catch {} });
+})();
+
+function refreshButtons() {
+  const ok = engine.ready && !busy;
+  const f = lastStatus.files || {};
+  $("btn-synth").disabled = !ok;
+  $("btn-bt").disabled = !ok || !f.results;
+  $("btn-tr").disabled = !ok || !f.results;
+  $("btn-pr").disabled = !ok || !f.results || !f.card || !(lastStatus.models || {})[league];
+  $("pr-note").textContent = !engine.ready ? "" : !f.card ? "出馬表を選んでください" :
+    !(lastStatus.models || {})[league] ? "先に STEP 3 で学習してください" : "";
+  $("tr-note").textContent = (lastStatus.models || {})[league] ? "このブラウザに学習済みのモデルがあります" : "";
+  for (const name of ["results", "payouts", "odds", "card"]) {
+    const el = $("f-" + name), info = f[name];
+    el.classList.toggle("has", !!info);
+    if (info) el.querySelector(".st").textContent =
+      `${info.races ?? "-"} レース・${info.rows.toLocaleString()} 行` + (info.from ? `（${info.from.slice(0, 10)}〜${info.to.slice(0, 10)}）` : "");
+  }
+}
+
+
+
+async function run(btn, outEl, fn) {
+  busy = true; refreshButtons();
+  const label = btn.textContent; btn.textContent = "計算中…";
+  setEngine("busy", "計算中…（データが多いと1〜2分かかります）");
+  try { await fn(); setEngine("ready", "AIは準備できています"); }
+  catch (e) { outEl.innerHTML = `<p class="msg err">${esc(e.message)}</p>`; setEngine("ready", "AIは準備できています"); }
+  finally { btn.textContent = label; busy = false; refreshButtons(); }
+}
+
+/* ---------- ファイル ---------- */
+function toText(buf) {
+  let text;
+  try { text = new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch { text = new TextDecoder("shift_jis").decode(buf); }
+  return text.replace(/^\uFEFF/, "");
+}
+async function putFile(name, text) {
+  lastStatus = await engine.call("setFile", name, text);
+  await idb.put("data:" + name, text);
+  refreshButtons();
+}
+for (const input of document.querySelectorAll('label.file input')) {
+  input.addEventListener("change", async () => {
+    const file = input.files[0]; if (!file || !engine.ready) return;
+    const out = input.dataset.name === "card" ? $("pr-out") : $("data-msg");
+    try { await putFile(input.dataset.name, toText(await file.arrayBuffer())); if (out === $("data-msg")) out.innerHTML = ""; }
+    catch (e) { out.innerHTML = `<p class="msg err">${esc(file.name)}: ${esc(e.message)}</p>`; }
+    input.value = "";
+  });
+}
+
+$("btn-synth").onclick = () => run($("btn-synth"), $("data-msg"), async () => {
+  const d = await engine.call("synth", league, 4);
+  for (const n of ["results", "payouts", "card"]) await putFile(n, d[n]);
+  await putFile("odds", "");
+  $("data-msg").innerHTML = `<p class="msg">${league === "nankan" ? "南関東" : "中央"}の架空データ（4年分）を入れました。回収率の数字に意味はありません。</p>`;
+});
+
+/* ---------- 検証 ---------- */
+function roiCell(r) { return `<td class="num ${r >= 1 ? "good" : "bad"}">${pct(r)}</td>`; }
+function curveSvg(pts) {
+  if (!pts || pts.length < 2) return "";
+  const w = 600, h = 90, pad = 6, min = Math.min(0, ...pts), max = Math.max(0, ...pts), span = max - min || 1;
+  const x = (i) => pad + (i / (pts.length - 1)) * (w - 2 * pad), y = (v) => pad + (1 - (v - min) / span) * (h - 2 * pad);
+  const d = pts.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const last = pts[pts.length - 1];
+  return `<svg class="curve" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="収支の推移">
+    <line x1="${pad}" x2="${w - pad}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)" stroke-width="1"/>
+    <path d="${d}L${x(pts.length - 1)},${y(0)}L${pad},${y(0)}Z" fill="var(--accent)" fill-opacity=".12"/>
+    <path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    <circle cx="${x(pts.length - 1)}" cy="${y(last)}" r="3.5" fill="var(--accent)"/></svg>`;
+}
+function renderBacktest(o) {
+  const s = o.summary;
+  if (!s.by_type.length) return `<p class="msg">基準を満たす買い目が1つもありませんでした。期待値の下限を下げるか、データを増やしてください。</p>`;
+  const total = s.by_type[s.by_type.length - 1];
+  let h = `<div class="kpis">
+    <div class="kpi"><span>回収率（合計）</span><b class="${total.roi >= 1 ? "good" : ""}">${pct(total.roi)}</b></div>
+    <div class="kpi"><span>収支</span><b>${(s.profit >= 0 ? "+" : "") + yen(s.profit)}</b></div>
+    <div class="kpi"><span>購入レース</span><b>${s.bought_races} / ${s.races}</b></div>
+    <div class="kpi"><span>最大ドローダウン</span><b>${yen(s.max_drawdown)}</b></div></div>`;
+  h += curveSvg(s.curve);
+  h += `<div class="scroll"><table><thead><tr><th>券種</th><th>点数</th><th>的中</th><th>的中率</th><th>投資</th><th>払戻</th><th>回収率</th><th>平均オッズ</th></tr></thead><tbody>`;
+  for (const r of s.by_type) h += `<tr><td>${esc(r.name)}</td><td class="num">${r.bets}</td><td class="num">${r.hits}</td><td class="num">${pct(r.hit_rate)}</td><td class="num">${yen(r.stake)}</td><td class="num">${yen(r.return)}</td>${roiCell(r.roi)}<td class="num">${r.avg_odds.toFixed(1)}</td></tr>`;
+  h += `</tbody></table></div>`;
+  h += `<h3 style="font-size:15px">期待値の帯ごとの回収率</h3><p class="hint">100%を下回る帯がある券種は、STEP 2 の設定で期待値の下限を上げて切ります。</p>`;
+  h += `<div class="scroll"><table><thead><tr><th>券種</th><th>期待値</th><th>点数</th><th>的中</th><th>回収率</th></tr></thead><tbody>`;
+  for (const r of s.ev_bands) h += `<tr><td>${esc(r.bet_type)}</td><td class="num">${esc(r.band)}</td><td class="num">${r.bets}</td><td class="num">${r.hits}</td>${roiCell(r.roi)}</tr>`;
+  h += `</tbody></table></div>`;
+  h += `<h3 style="font-size:15px">年ごと</h3><div class="scroll"><table><thead><tr><th>年</th><th>点数</th><th>投資</th><th>回収率</th></tr></thead><tbody>`;
+  for (const r of s.by_year) h += `<tr><td class="num">${r.year}</td><td class="num">${r.bets}</td><td class="num">${yen(r.stake)}</td>${roiCell(r.roi)}</tr>`;
+  h += `</tbody></table></div>`;
+  h += `<h3 style="font-size:15px">比べると（期待値を見ずに毎レース100円）</h3><div class="scroll"><table><thead><tr><th>買い方</th><th>的中率</th><th>回収率</th></tr></thead><tbody>`;
+  for (const r of s.baselines) h += `<tr><td>${esc(r.name)}</td><td class="num">${pct(r.hit_rate)}</td>${roiCell(r.roi)}</tr>`;
+  h += `</tbody></table></div>`;
+  h += `<p class="hint">${o.logs.map(esc).join("<br>")}</p>`;
+  if (o.estimated_odds) h += `<p class="hint">馬連・ワイド・馬単は単勝オッズからの推定オッズで判断し、払戻は payouts.csv の実績で計算しています。</p>`;
+  return h;
+}
+$("btn-bt").onclick = () => run($("btn-bt"), $("bt-out"), async () => {
+  const o = await engine.call("backtest", cfg());
+  $("bt-out").innerHTML = renderBacktest(o);
+});
+
+/* ---------- 学習 ---------- */
+$("btn-tr").onclick = () => run($("btn-tr"), $("tr-out"), async () => {
+  const o = await engine.call("train", league);
+  await idb.put("model:" + league, o.model);
+  const max = Math.max(...o.importance.map((r) => Math.abs(r.weight)), 1e-9);
+  $("tr-out").innerHTML = `<p>モデルの重み <b class="mono">a = ${o.a.toFixed(2)}</b> ／ 市場（オッズ）の重み <b class="mono">b = ${o.b.toFixed(2)}</b></p>
+    <p class="hint">a が 0 に近いほど、モデルにオッズ以上の情報が少ないということです。そのときは買い目がほとんど出ません。</p>
+    <h3 style="font-size:15px">効いている要素（上位12）</h3>
+    <div class="imp">${o.importance.map((r) => `<span>${esc(featureLabel(r.name))}<br><span class="hint">${r.weight > 0 ? "大きいほど有利" : "小さいほど有利"}</span></span><i style="width:${(100 * Math.abs(r.weight) / max).toFixed(1)}%"></i>`).join("")}</div>`;
+  lastStatus = await engine.call("status");
+});
+
+/* ---------- 予想 ---------- */
+const uma = (n, frame, sm) => `<span class="uma w${frame || 1}${sm ? " sm" : ""}">${n}</span>`;
+function renderRace(r, example) {
+  const horse = (n) => r.horses.find((h) => h.number === n) || {};
+  const pick = (mark, n) => { const h = horse(n);
+    return `<div class="pick"><span class="mark">${mark}</span>${uma(n, h.frame)}<span class="nm"><b>${esc(h.name || n + "番")}</b><span>勝率 ${pct(h.p)} ・ 単勝 ${h.win_odds?.toFixed(1)}倍 ・ 3着内 ${pct(h.place3_p, 0)}</span></span></div>`; };
+  const sep = (t) => (t === "exacta" ? "→" : "-");
+  const combo = (b) => b.combo.split("-").map((n) => uma(+n, horse(+n).frame, true)).join(`<span class="hint"> ${sep(b.type)} </span>`);
+  let body = `<div class="picks">${pick("◎", r.honmei)}${pick("○", r.taikou)}</div>`;
+  if (r.skip) body += `<p class="skip">見送り：期待値の基準を満たす買い目がありません（◎○は参考の上位2頭）</p>`;
+  else {
+    body += `<div class="bets">${r.bets.map((b) => `<div class="bet"><span class="kind">${b.label}</span>
+      <span><span>${combo(b)}</span><br><span class="detail">的中率 ${pct(b.prob)} ・ オッズ ${b.odds.toFixed(1)} ・ 期待値 ${b.ev.toFixed(2)}${b.estimated ? ' <span class="est">推定オッズ・要確認</span>' : ""}</span></span>
+      <span class="yen">${yen(b.stake)}</span></div>`).join("")}</div><div class="total"><span>合計</span><span class="mono">${yen(r.total)}</span></div>`;
+  }
+  body += `<details><summary class="hint">全馬の確率</summary><div class="scroll"><table><thead><tr><th>馬</th><th>印</th><th>勝率</th><th>モデル</th><th>市場</th><th>3着内</th><th>単勝</th><th>単勝の期待値</th></tr></thead><tbody>${
+    r.horses.map((h) => `<tr><td>${uma(h.number, h.frame, true)} ${esc(h.name || "")}</td><td>${h.mark}</td><td class="num">${pct(h.p)}</td><td class="num">${pct(h.model_p)}</td><td class="num">${pct(h.market_p)}</td><td class="num">${pct(h.place3_p)}</td><td class="num">${h.win_odds?.toFixed(1)}</td><td class="num ${h.win_ev >= 1 ? "good" : "bad"}">${h.win_ev?.toFixed(2)}</td></tr>`).join("")
+  }</tbody></table></div></details>`;
+  return `<article class="race${example ? " example" : ""}"><div class="race-head"><b>${esc(r.course)} ${esc(r.surface)}${r.distance}m</b>
+    <span class="hint">${example ? '<span class="tag">表示例</span> ' : ""}${esc(r.date)} ・ ${esc(r.race_id)}</span></div><div class="race-body">${body}</div></article>`;
+}
+$("btn-pr").onclick = () => run($("btn-pr"), $("pr-out"), async () => {
+  const o = await engine.call("predict", cfg(), $("odds-text").value);
+  $("pr-out").innerHTML = `<div style="display:grid;gap:12px">${o.races.map((r) => renderRace(r)).join("")}</div>`;
+});
+
+const EXAMPLE = { race_id: "202511110811", date: "2025-11-11", course: "大井", surface: "ダ", distance: 1600, honmei: 7, taikou: 4, skip: false, total: 900,
+  bets: [{ type: "win", label: "単勝", combo: "7", prob: 0.142, odds: 9.8, ev: 1.39, stake: 400, estimated: false },
+         { type: "quinella", label: "馬連", combo: "4-7", prob: 0.051, odds: 27.4, ev: 1.40, stake: 200, estimated: false },
+         { type: "wide", label: "ワイド", combo: "4-7", prob: 0.142, odds: 8.6, ev: 1.22, stake: 300, estimated: true }],
+  horses: [
+    { number: 4, frame: 3, name: "（例）サンプルリバー", mark: "○", p: 0.21, model_p: 0.24, market_p: 0.19, place3_p: 0.52, win_odds: 4.1, win_ev: 0.86 },
+    { number: 7, frame: 5, name: "（例）サンプルスター", mark: "◎", p: 0.142, model_p: 0.19, market_p: 0.08, place3_p: 0.39, win_odds: 9.8, win_ev: 1.39 },
+    { number: 1, frame: 1, name: "（例）サンプルキング", mark: "", p: 0.25, model_p: 0.2, market_p: 0.29, place3_p: 0.58, win_odds: 2.7, win_ev: 0.68 }] };
+$("pr-out").innerHTML = renderRace(EXAMPLE, true);
+
+/* ---------- 起動 ---------- */
+async function boot() {
+  try {
+    engine.start();
+    // 前回入れたデータとモデルを戻す
+    const keys = (await idb.keys()) || [];
+    if (keys.length) setEngine("busy", "前回のデータを読み込み中…");
+    for (const k of keys) {
+      const v = await idb.get(k);
+      if (k.startsWith("data:") && v) lastStatus = await engine.call("setFile", k.slice(5), v);
+      else if (k.startsWith("model:") && v && v.kind === "logit") lastStatus = await engine.call("setModel", k.slice(6), v);
+    }
+    lastStatus = await engine.call("status");
+    setEngine("ready", "AIは準備できています");
+  } catch (e) {
+    setEngine("err", "前回のデータを戻せませんでした: " + e.message);
+    try { lastStatus = await engine.call("status"); } catch {}
+  }
+  refreshButtons();
+}
+setLeague(league);
+boot();
+</script>
