@@ -1,20 +1,22 @@
 ﻿# AKB48 申込ランチャー（Windows）
-# 推しが出る公演の申込ページを、Chromeのプロファイル（申込アカウント）ごとに順番に開く。
+# 公演の申込ページを、Chromeのプロファイル（申込アカウント）ごとに順番に開く。
 # ページを開くだけで、ログイン・入力・申込ボタンは自分で操作する。
 #
 # 使い方: launcher.bat をダブルクリックして、モードを選ぶ
-#   1. 申込ページを開く … 選んだ公演の申込ページを、アカウントごとに順番に開く
-#   2. ログイン確認    … チケットセンターを、アカウントごとに順番に開く（申込前にログインを確かめる）
+#   1. 推しメンが出る公演 … 推しが出る公演の一覧から選び、申込ページをアカウントごとに順番に開く
+#   2. 全公演             … 推しメンが出ていない公演も含めた一覧から選ぶ（開き方は 1 と同じ）
 #   3. 申込状況・キャンセル … 申込履歴のページを、全アカウントで一度に開く（キャンセルは自分でボタンを押す）
+#   （ログイン確認は -Mode login で起動したときだけ使える）
 # 準備: Chromeのプロファイル名を「AKB 01」「AKB 02」…のように「AKB」で始め、番号は2桁にしておく
 param(
-  [ValidateSet('', 'apply', 'login', 'applications')]
-  [string]$Mode,            # apply=申込ページを開く / login=ログイン確認 / applications=申込状況・キャンセル。指定すると質問しない
+  [ValidateSet('', 'apply', 'all', 'login', 'applications')]
+  [string]$Mode,            # apply=推しメンが出る公演 / all=全公演 / applications=申込状況・キャンセル / login=ログイン確認。指定すると質問しない
   [string]$Select,          # 開く公演の番号（例 "1-5"）。指定すると質問しない
   [switch]$DryRun,          # Chromeを起動せず、開く内容を表示するだけ
   [switch]$NoWait,          # Enterを待たずに次のアカウントへ進む（テスト用）
   [string]$LocalState = "$env:LOCALAPPDATA\Google\Chrome\User Data\Local State",
   [string]$Links = 'https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/links.json',
+  [string]$LinksAll = 'https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/links-all.json',
   [string]$ProfilePrefix = 'AKB',
   [string]$LoginUrl = 'https://akb48.zaiko.io/ja',
   [string]$ApplicationsUrl = 'https://zaiko.io/account/applications',
@@ -95,7 +97,7 @@ function Get-Text([string]$url) {
 }
 
 # 申込する公演の一覧。urls.txt があればそちらを優先（1行に1つURL）
-function Get-Shows {
+function Get-Shows([string]$Links) {
   $manual = Join-Path $here 'urls.txt'
   if (Test-Path $manual) {
     $urls = Get-Content -Encoding UTF8 $manual | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^https?://' }
@@ -109,7 +111,7 @@ function Get-Shows {
     return @($json | ConvertFrom-Json)
   }
   # 前回読めた一覧を残しておき、読み込めなかったときに使う
-  $cache = Join-Path $here 'links-cache.json'
+  $cache = Join-Path $here ([IO.Path]::GetFileNameWithoutExtension($Links) + '-cache.json')
   Write-Host '公演の一覧を読み込んでいます…'
   $watch = [Diagnostics.Stopwatch]::StartNew()
   try {
@@ -172,10 +174,10 @@ function Open-PerProfile([string[]]$urls, [string]$waitMessage) {
 
 if (-not $Mode) {
   Write-Host ''
-  Write-Host '  1. 申込ページを開く'
-  Write-Host '  2. 全アカウントのログイン確認'
+  Write-Host '  1. 申込ページを開く（推しメンが出る公演）'
+  Write-Host '  2. 申込ページを開く（全公演）'
   Write-Host '  3. 申込状況の確認・キャンセル（全アカウントで一度に開く）'
-  $Mode = switch (Read-Host '番号を選んでください') { '1' { 'apply' } '2' { 'login' } '3' { 'applications' } default { Stop-WithMessage '1〜3 を入力してください。' } }
+  $Mode = switch (Read-Host '番号を選んでください') { '1' { 'apply' } '2' { 'all' } '3' { 'applications' } default { Stop-WithMessage '1〜3 を入力してください。' } }
 }
 
 if ($Mode -eq 'login') {
@@ -209,7 +211,8 @@ if ($Mode -eq 'applications') {
   exit 0
 }
 
-try { $shows = Get-Shows } catch { Stop-WithMessage "公演の一覧を読み込めませんでした: $($_.Exception.Message)" }
+$listUrl = if ($Mode -eq 'all') { $LinksAll } else { $Links }
+try { $shows = Get-Shows $listUrl } catch { Stop-WithMessage "公演の一覧を読み込めませんでした: $($_.Exception.Message)" }
 if ($shows.Count -eq 0) { Stop-WithMessage '申込できる公演がありません。' }
 
 Write-Host ''
