@@ -27,6 +27,16 @@ foreach ($e in @(
 )) {
   if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
 }
+# 全公演モード（推しメンが出ていない公演も選べる）
+$out = & "$dir\launcher.ps1" -Mode all -DryRun -NoWait -Select '2' -LocalState "$dir\test\Local State" -LinksAll "$dir\test\links-all.json" *>&1 | Out-String -Width 1000
+Write-Host $out
+foreach ($e in @(
+  '[ 2] 11/08(日) 13:00 「ここからだ」公演',
+  'chrome --profile-directory="Profile 1" --new-window https://akb48.zaiko.io/ja/e/2026-koko-1108-1300'
+)) {
+  if (-not $out.Contains($e)) { throw "出力に見つかりません: $e" }
+}
+
 # 本物の公演一覧（GitHub）をネットから読み込めること
 $out = & "$dir\launcher.ps1" -Mode apply -DryRun -NoWait -Select '1' -LocalState "$dir\test\Local State" *>&1 | Out-String -Width 1000
 Write-Host $out

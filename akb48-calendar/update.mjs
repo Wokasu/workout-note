@@ -326,12 +326,13 @@ if (blogLinks.length) {
 // 申込受付が終わった公演（座席もロビー観覧も締切を過ぎたもの）は除く。座席が締め切られロビー観覧だけ受付中なら【ロビー観覧のみ】を付ける
 const todayKey = Number(today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }).replace(/-/g, ''));
 const pad = (n) => String(n).padStart(2, '0');
-const links = events
+const toLinks = (list) => list
   .filter((s) => s.year * 10000 + s.month * 100 + s.day >= todayKey)
   .filter((s) => s.kind !== 'event' && !(config.launcherExclude ?? []).includes(s.title))
   .filter((s) => !s.tag?.includes('女性限定'))
   .map((s) => ({ ...s, lobbyOnly: applicationClosed(s, today, config.generalDeadline) }))
   .filter((s) => !s.lobbyOnly || lobbyOpen(s, today, config.lobbyDeadline ?? { daysBefore: 3, hour: 16 }))
+  .sort((a, b) => showKey(a).localeCompare(showKey(b)))
   .map((s) => ({
     date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
     time: s.hour == null ? null : `${pad(s.hour)}:${pad(s.minute)}`,
@@ -340,8 +341,25 @@ const links = events
     members: s.members,
     url: s.applyUrl,
   }));
+const links = toLinks(events);
 await writeFile(join(outDir, 'links.json'), JSON.stringify(links, null, 2) + '\n');
 console.log(`links.json: ${links.length} 件（URLあり ${links.filter((l) => l.url).length} 件）`);
+
+// 申込ランチャーの「全公演」用: 推しメンが出ていない公演も含めた一覧（links-all.json）。members は出演する推しメンだけ（いなければ空）
+{
+  const everyone = [...new Set(casts.flatMap((c) => c.names))].map((name) => ({ name }));
+  const all = new Map(buildShows(casts, schedule, everyone).shows.map((s) => [showKey(s), s]));
+  for (const s of all.values()) {
+    s.members = allMembers
+      .filter((m) => [m.name, ...(m.aliases ?? [])].some((n) => s.members.includes(n)))
+      .map((m) => m.name);
+  }
+  // 推しメンが出る公演は、前回までに読めた申込リンク・締切を持つ events の方を使う
+  for (const s of events) if (s.kind !== 'event') all.set(showKey(s), s);
+  const linksAll = toLinks([...all.values()]);
+  await writeFile(join(outDir, 'links-all.json'), JSON.stringify(linksAll, null, 2) + '\n');
+  console.log(`links-all.json: ${linksAll.length} 件（URLあり ${linksAll.filter((l) => l.url).length} 件）`);
+}
 if (fetchedPages === 0) {
   console.error('公式サイトから1ページも取得できませんでした（前回の予定をそのまま残しています）');
   process.exitCode = 1;
