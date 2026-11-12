@@ -1030,8 +1030,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
-      "applyUrl": null,
-      "deadlines": [],
+      "applyUrl": "https://akb48.zaiko.io/e/2026te-1123-1300",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 16,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 18,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
@@ -1057,8 +1074,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
-      "applyUrl": null,
-      "deadlines": [],
+      "applyUrl": "https://akb48.zaiko.io/e/2026wo-1123-1730",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 16,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 18,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
@@ -1084,8 +1118,25 @@
         "渡邉葵心"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
-      "applyUrl": null,
-      "deadlines": [],
+      "applyUrl": "https://akb48.zaiko.io/e/2026ew-1126-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 19,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 21,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
@@ -1137,8 +1188,25 @@
         "近藤沙樹"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
-      "applyUrl": null,
-      "deadlines": [],
+      "applyUrl": "https://akb48.zaiko.io/e/mt2026-1128-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 22,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 24,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },
@@ -1163,8 +1231,25 @@
         "森川優"
       ],
       "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
-      "applyUrl": null,
-      "deadlines": [],
+      "applyUrl": "https://akb48.zaiko.io/e/2026-1130-1830",
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 23,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 25,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
       "lobby": null,
       "tag": null
     },

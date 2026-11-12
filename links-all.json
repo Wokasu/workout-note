@@ -1,22 +1,8 @@
 [
   {
-    "date": "2026-11-14",
-    "time": "13:00",
-    "title": "「夢のポップスター」公演【ロビー観覧のみ】",
-    "members": [],
-    "url": "https://akb48.zaiko.io/e/2026s-1114-1300"
-  },
-  {
-    "date": "2026-11-14",
-    "time": "17:30",
-    "title": "「夢のポップスター」公演【ロビー観覧のみ】",
-    "members": [],
-    "url": "https://akb48.zaiko.io/e/y2026-1114-1700"
-  },
-  {
     "date": "2026-11-16",
     "time": "18:30",
-    "title": "「RESET」公演",
+    "title": "「RESET」公演【ロビー観覧のみ】",
     "members": [],
     "url": "https://akb48.zaiko.io/e/2026-nov16-1830"
   },
@@ -49,7 +35,7 @@
       "奥本カイリ",
       "渡邉葵心"
     ],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/2026te-1123-1300"
   },
   {
     "date": "2026-11-23",
@@ -59,7 +45,7 @@
       "奥本カイリ",
       "渡邉葵心"
     ],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/2026wo-1123-1730"
   },
   {
     "date": "2026-11-26",
@@ -69,21 +55,21 @@
       "奥本カイリ",
       "渡邉葵心"
     ],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/2026ew-1126-1830"
   },
   {
     "date": "2026-11-27",
     "time": "18:30",
     "title": "「RESET」公演",
     "members": [],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/2026re-nov27-1830"
   },
   {
     "date": "2026-11-28",
     "time": "14:00",
     "title": "「RESET」公演",
     "members": [],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/2026-nov28-1400"
   },
   {
     "date": "2026-11-29",
@@ -92,7 +78,7 @@
     "members": [
       "伊藤百花"
     ],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/mt2026-1128-1830"
   },
   {
     "date": "2026-11-30",
@@ -101,6 +87,6 @@
     "members": [
       "奥本カイリ"
     ],
-    "url": null
+    "url": "https://akb48.zaiko.io/e/2026-1130-1830"
   }
 ]

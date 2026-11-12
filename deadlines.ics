@@ -8,4 +8,78 @@ X-WR-TIMEZONE:Asia/Tokyo
 X-APPLE-CALENDAR-COLOR:#FF9500
 REFRESH-INTERVAL;VALUE=DURATION:PT6H
 X-PUBLISHED-TTL:PT6H
+BEGIN:VEVENT
+UID:deadline-20261116T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261112T024646Z
+DTSTART:20261116T063000Z
+DTEND:20261116T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/23(月)「手をつなぎな
+ がら」公演 ほか1公演
+DESCRIPTION:柱の会会員枠の受付は 11/16(月) 16:00 までです。
+ \n\n11/23(月) 13:00 「手をつなぎながら」公演（奥本カイ
+ リ・渡邉葵心）\n申込: https://akb48.zaiko.io/e/2026te-1123-1300\n
+ 11/23(月) 17:30 「手をつなぎながら」公演（奥本カイリ・
+ 渡邉葵心）\n申込: https://akb48.zaiko.io/e/2026wo-1123-1730
+URL:https://akb48.zaiko.io/e/2026te-1123-1300
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/23(月)「
+ 手をつなぎながら」公演 ほか1公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261119T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261112T024646Z
+DTSTART:20261119T063000Z
+DTEND:20261119T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/26(木)「手をつなぎな
+ がら」公演
+DESCRIPTION:柱の会会員枠の受付は 11/19(木) 16:00 までです。
+ \n\n11/26(木) 18:30 「手をつなぎながら」公演（奥本カイ
+ リ・渡邉葵心）\n申込: https://akb48.zaiko.io/e/2026ew-1126-1830
+URL:https://akb48.zaiko.io/e/2026ew-1126-1830
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/26(木)「
+ 手をつなぎながら」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261122T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261112T024646Z
+DTSTART:20261122T063000Z
+DTEND:20261122T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/29(日)「M.T.に捧ぐ」
+ 公演
+DESCRIPTION:柱の会会員枠の受付は 11/22(日) 16:00 までです。
+ \n\n11/29(日) 18:30 「M.T.に捧ぐ」公演（伊藤百花）\n申込: 
+ https://akb48.zaiko.io/e/mt2026-1128-1830
+URL:https://akb48.zaiko.io/e/mt2026-1128-1830
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/29(日)「
+ M.T.に捧ぐ」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:deadline-20261123T070000Z-e69fb1e381aee4bc@akb48-calendar
+DTSTAMP:20261112T024646Z
+DTSTART:20261123T063000Z
+DTEND:20261123T070000Z
+SUMMARY:📝申込締切 柱の会会員枠 11/30(月)「手をつなぎな
+ がら」公演
+DESCRIPTION:柱の会会員枠の受付は 11/23(月) 16:00 までです。
+ \n\n11/30(月) 18:30 「手をつなぎながら」公演（奥本カイ
+ リ）\n申込: https://akb48.zaiko.io/e/2026-1130-1830
+URL:https://akb48.zaiko.io/e/2026-1130-1830
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:明日締切: 📝申込締切 柱の会会員枠 11/30(月)「
+ 手をつなぎながら」公演
+TRIGGER:-PT23H30M
+END:VALARM
+END:VEVENT
 END:VCALENDAR
