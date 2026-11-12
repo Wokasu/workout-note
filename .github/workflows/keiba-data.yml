@@ -1,0 +1,102 @@
+name: 競馬AI データ更新と予想
+
+# JRA 公式サイト（robots.txt で巡回を許可）から出馬表・結果・単勝オッズ・払戻を集め、
+# LightGBM で予想を作って keiba-data ブランチに置く。1回ごとに3秒あけて取りに行く。
+on:
+  schedule:
+    - cron: '41 22 * * *'   # 毎朝 7:41（日本時間）: 出馬表・直近の結果・予想
+    - cron: '23 1 * * 5,6,0' # 金土日 10:23: オッズを取り直して予想し直す
+    - cron: '17 14 * * *'   # 毎晩 23:17: 過去の結果の取り込み（最大5時間半。取り終われば数分）
+  push:
+    branches: [claude/epic-tesla-0chqik]
+    paths: [.github/workflows/keiba-data.yml, keiba-ai/keiba_ai/jra.py, keiba-ai/keiba_ai/jra_update.py, keiba-ai/keiba_ai/daily.py]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'daily（出馬表と予想）か backfill（過去の結果）'
+        default: daily
+      since:
+        description: '過去の結果をこの年月（YYYYMM）から集める'
+        default: '202301'
+      budget:
+        description: '過去の結果の取り込みに使う分数の上限'
+        default: '330'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: keiba-data
+  cancel-in-progress: false
+
+env:
+  DATA_BRANCH: keiba-data
+  SINCE: ${{ github.event.inputs.since || '202301' }}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout data branch
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin "$DATA_BRANCH" >/dev/null; then
+            git clone --depth 1 --branch "$DATA_BRANCH" "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" keiba-ai/data_jra
+          else
+            mkdir -p keiba-ai/data_jra && cd keiba-ai/data_jra && git init -q -b "$DATA_BRANCH"
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: keiba-ai/requirements.txt
+      - run: pip install -r keiba-ai/requirements.txt
+
+      - name: Decide mode
+        id: mode
+        run: |
+          mode="${{ github.event.inputs.mode }}"
+          if [ -z "$mode" ]; then
+            if [ "${{ github.event.schedule }}" = '17 14 * * *' ]; then mode=backfill; else mode=daily; fi
+          fi
+          budget="${{ github.event.inputs.budget }}"
+          if [ "${{ github.event_name }}" = push ]; then mode=daily; budget=8; fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "budget=${budget:-330}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit helper
+        run: |
+          cat > /tmp/commit.sh <<'SH'
+          cd keiba-ai/data_jra
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -q -m "$1"
+          for i in 1 2 3; do git push -q origin "HEAD:$DATA_BRANCH" && exit 0; sleep $((i*5)); git pull -q --rebase origin "$DATA_BRANCH" || true; done
+          exit 1
+          SH
+          chmod +x /tmp/commit.sh
+
+      - name: Daily (card, recent results, predictions)
+        if: steps.mode.outputs.mode == 'daily'
+        working-directory: keiba-ai
+        run: |
+          python -m keiba_ai.jra_update card --data data_jra
+          python -m keiba_ai.jra_update results --data data_jra --since "$(date -u -d '40 days ago' +%Y%m)" --budget-min ${{ steps.mode.outputs.budget == '330' && '40' || steps.mode.outputs.budget }}
+          backtest=""; [ "$(date -u +%u)" = 1 ] && backtest="--backtest"
+          python -m keiba_ai.daily --data data_jra $backtest || echo "予想を作れませんでした（データ不足など）"
+          cd .. && /tmp/commit.sh "出馬表・予想 $(TZ=Asia/Tokyo date +'%F %R')"
+
+      - name: Backfill past results
+        if: steps.mode.outputs.mode == 'backfill'
+        working-directory: keiba-ai
+        run: |
+          python -m keiba_ai.jra_update results --data data_jra --since "$SINCE" --budget-min ${{ steps.mode.outputs.budget }} || true
+          cd .. && /tmp/commit.sh "過去の結果 $(TZ=Asia/Tokyo date +'%F %R')"
+          cd keiba-ai && python -m keiba_ai.daily --data data_jra --backtest || true
+          cd .. && /tmp/commit.sh "予想・検証 $(TZ=Asia/Tokyo date +'%F %R')"
