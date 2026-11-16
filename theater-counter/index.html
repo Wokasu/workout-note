@@ -13,9 +13,11 @@
   --pink:#e8457f; --pink-soft:#ffd6e5; --ok:#2e8a5e; --warn:#a86a00; --danger:#c8364b;
 }
 @media (prefers-color-scheme: dark){
-  :root{ --bg:#17121a; --card:#221b27; --ink:#f3eaf2; --sub:#a796ad; --line:#3a2f40;
-         --pink:#ff6b9d; --pink-soft:#4a2536; --ok:#4cc38a; --warn:#e0a63a; --danger:#ff6b7d; }
+  :root:not([data-theme="light"]){ --bg:#17121a; --card:#221b27; --ink:#f3eaf2; --sub:#a796ad; --line:#3a2f40;
+         --pink:#ff6b9d; --pink-soft:#4a2536; --ok:#4cc38a; --warn:#e0a63a; --danger:#ff6b7d; color-scheme:dark; }
 }
+:root[data-theme="dark"]{ --bg:#17121a; --card:#221b27; --ink:#f3eaf2; --sub:#a796ad; --line:#3a2f40;
+       --pink:#ff6b9d; --pink-soft:#4a2536; --ok:#4cc38a; --warn:#e0a63a; --danger:#ff6b7d; color-scheme:dark; }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);
@@ -285,6 +287,28 @@ dialog form{padding:16px}
   </form>
 </dialog>
 
+<dialog id="askDlg">
+  <form method="dialog" id="askForm">
+    <h2 id="askTitle"></h2>
+    <p id="askMsg" style="white-space:pre-wrap;font-size:14px;margin:0"></p>
+    <div id="askFields"></div>
+    <div class="row" id="askBtns" style="margin-top:16px;flex-wrap:wrap"></div>
+  </form>
+</dialog>
+
+<dialog id="bkDlg">
+  <form method="dialog" id="bkForm">
+    <h2>バックアップを保存</h2>
+    <p style="font-size:12px;color:var(--sub);margin:0 0 6px">下の文字をすべてコピーして、メモアプリなどに保存してください。復元するときは「チケット情報を貼り付けて…」に貼り付けるか、ファイルにして「バックアップから復元」で読み込みます。</p>
+    <textarea id="bkText" readonly style="min-height:160px;font-size:12px;font-family:ui-monospace,Menlo,monospace"></textarea>
+    <div class="row" style="margin-top:12px;flex-wrap:wrap">
+      <button type="button" class="ghost" id="bkClose">閉じる</button>
+      <button type="button" class="ghost" id="bkFile">ファイルに保存</button>
+      <button type="button" class="primary" id="bkCopy" style="width:auto">コピー</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast"></div>
 <div class="celebrate" id="cele"><div class="box"><b id="celeNum"></b><div id="celeMsg"></div>
   <button class="ghost small" style="margin-top:14px;color:#fff;border-color:#fff" onclick="this.closest('.celebrate').classList.remove('show')">閉じる</button></div></div>
@@ -502,11 +526,16 @@ dialog form{padding:16px}
     const ed = e.target.closest('[data-acc-edit]');
     if (ed) {
       const a = state.accounts.find(a => a.id === ed.dataset.accEdit);
-      const name = prompt('表示名', a.name); if (name === null) return;
-      const hint = prompt('自動判別キーワード（任意）\n貼り付けた文面にこの文字（メールアドレスやZAIKOの登録名など）が含まれていれば、このIDを自動で設定します', a.hint || '');
-      if (name.trim()) a.name = name.trim();
-      if (hint !== null) a.hint = hint.trim();
-      save(); render();
+      ask({ title: '当選IDを編集', fields: [
+          { id: 'name', label: '表示名', value: a.name },
+          { id: 'hint', label: '自動判別キーワード（任意）', value: a.hint || '', note: '貼り付けた文面にこの文字（ID番号やメールアドレス）があれば、このIDを自動で設定します' }],
+        buttons: [{ label: 'キャンセル', value: null }, { label: '保存', value: 'ok', primary: true }] })
+        .then(r => {
+          if (r.value !== 'ok') return;
+          if (r.fields.name.trim()) a.name = r.fields.name.trim();
+          a.hint = r.fields.hint.trim();
+          save(); render();
+        });
     }
     const def = e.target.closest('[data-acc-def]');
     if (def) { state.defaultAccount = def.dataset.accDef; save(); render(); toast(`既定の当選IDを「${accName(state.defaultAccount)}」にしました`); }
@@ -514,11 +543,13 @@ dialog form{padding:16px}
     if (del) {
       const a = state.accounts.find(a => a.id === del.dataset.accDel);
       const n = state.visits.filter(v => v.account === a.id).length;
-      if (!confirm(`当選ID「${a.name}」を削除しますか？${n ? `\n紐づいている${n}件の記録は「未設定」になります` : ''}`)) return;
-      state.accounts = state.accounts.filter(x => x !== a);
-      if (state.defaultAccount === a.id) state.defaultAccount = '';
-      state.visits.forEach(v => { if (v.account === a.id) v.account = ''; });
-      save(); render();
+      askYes(`当選ID「${a.name}」を削除しますか？${n ? `\n紐づいている${n}件の記録は「未設定」になります。` : ''}`, '削除').then(ok => {
+        if (!ok) return;
+        state.accounts = state.accounts.filter(x => x !== a);
+        if (state.defaultAccount === a.id) state.defaultAccount = '';
+        state.visits.forEach(v => { if (v.account === a.id) v.account = ''; });
+        save(); render();
+      });
     }
   });
 
@@ -660,6 +691,10 @@ dialog form{padding:16px}
     return out.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   }
   $('impParse').onclick = () => {
+    try {
+      const b = JSON.parse($('impText').value.trim());
+      if (b && Array.isArray(b.visits)) { $('impDlg').close(); restoreData(b); return; }   // バックアップの貼り付け
+    } catch (e) {}
     parsed = parseTicketJSON($('impText').value) || parseTickets($('impText').value);
     const def = $('impAccount').value;
     if (def) parsed.forEach(r => { if (!r.account) r.account = def; });
@@ -902,9 +937,11 @@ dialog form{padding:16px}
   let known = [];
   async function loadKnown() {
     try {
-      const r = await fetch('../events.json', { cache: 'no-store' });
-      if (!r.ok) return;
-      const d = await r.json();
+      // アーティファクト版はページに埋め込んだ公演データを使う
+      const emb = document.getElementById('events-data');
+      let d;
+      if (emb) d = JSON.parse(emb.textContent);
+      else { const r = await fetch('../events.json', { cache: 'no-store' }); if (!r.ok) return; d = await r.json(); }
       known = (d.events || [])
         .filter(e => !e.kind && /公演/.test(e.title || ''))
         .map(e => ({
@@ -985,9 +1022,13 @@ dialog form{padding:16px}
   $('addBtn').onclick = () => openDialog();
   $('cancelBtn').onclick = () => $('dlg').close();
   $('delBtn').onclick = () => {
-    if (!confirm('この記録を削除しますか？')) return;
-    state.visits = state.visits.filter(v => v.id !== editing);
-    save(); $('dlg').close(); render(); toast('削除しました');
+    const id = editing;
+    $('dlg').close();
+    askYes('この記録を削除しますか？', '削除').then(ok => {
+      if (!ok) { openDialog(state.visits.find(v => v.id === id)); return; }
+      state.visits = state.visits.filter(v => v.id !== id);
+      save(); render(); toast('削除しました');
+    });
   };
   $('form').addEventListener('submit', e => {
     e.preventDefault();
@@ -1032,8 +1073,18 @@ dialog form{padding:16px}
     const g = parseInt(e.target.value, 10);
     if (g > 0) { state.goal = g; save(); render(); }
   });
-  $('exportBtn').onclick = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  // ファイル保存が使えない環境（Claudeのアーティファクトなど）でも、文字のコピーで保存できる
+  $('exportBtn').onclick = () => { $('bkText').value = JSON.stringify(state); $('bkDlg').showModal(); };
+  $('bkClose').onclick = () => $('bkDlg').close();
+  if (document.getElementById('events-data')) $('bkFile').hidden = true;   // アーティファクト版ではファイル保存できないのでコピーのみ
+  $('bkCopy').onclick = () => {
+    const t = $('bkText');
+    const done = () => toast('コピーしました');
+    const fallback = () => { t.focus(); t.select(); toast('選択しました。コピーしてください'); };
+    try { navigator.clipboard.writeText(t.value).then(done, fallback); } catch (e) { fallback(); }
+  };
+  $('bkFile').onclick = () => {
+    const blob = new Blob([$('bkText').value], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `theater-counter-${today()}.json`;
@@ -1042,15 +1093,22 @@ dialog form{padding:16px}
   $('importBtn').onclick = () => $('importFile').click();
   $('importFile').onchange = async e => {
     const f = e.target.files[0]; if (!f) return;
-    try {
-      const d = JSON.parse(await f.text());
-      if (!Array.isArray(d.visits)) throw 0;
+    let d = null;
+    try { d = JSON.parse(await f.text()); } catch (err) {}
+    e.target.value = '';
+    if (!d || !Array.isArray(d.visits)) { toast('ファイルを読み込めませんでした'); return; }
+    restoreData(d);
+  };
+  async function restoreData(d) {
       const inc = normalize(d);
       if (!state.visits.length) {
-        if (!confirm(`${inc.visits.length}件の記録を読み込みますか？`)) return;
+        if (!await askYes(`${inc.visits.length}件の記録を読み込みますか？`, '読み込む')) return;
         state = inc; save(); render(); toast('復元しました'); return;
       }
-      if (confirm(`今の記録（${state.visits.length}件）に、ファイルの記録（${inc.visits.length}件）を追加しますか？\n同じ日時の公演は追加しません。\n\n「キャンセル」を押すと、置き換えるかどうかを確認します。`)) {
+      const choice = (await ask({ title: 'バックアップの読み込み',
+        message: `今の記録は${state.visits.length}件、バックアップは${inc.visits.length}件です。\n「追加」は同じ日時の公演を除いて今の記録に足します。「置き換え」は今の記録を消してバックアップの内容にします。`,
+        buttons: [{ label: 'キャンセル', value: null }, { label: '置き換え', value: 'replace', danger: true }, { label: '追加', value: 'merge', primary: true }] })).value;
+      if (choice === 'merge') {
         // 当選IDは表示名で突き合わせ、なければ追加
         const accMap = {};
         inc.accounts.forEach(a => {
@@ -1073,12 +1131,29 @@ dialog form{padding:16px}
         });
         if (!state.deadline && inc.deadline) state.deadline = inc.deadline;
         save(); render(); toast(`${n}件追加しました${upd ? `（${upd}件をカウント対象に更新）` : ''}`);
-      } else if (confirm(`今の記録をすべて消して、ファイルの${inc.visits.length}件に置き換えますか？`)) {
+      } else if (choice === 'replace' && await askYes(`今の記録${state.visits.length}件をすべて消して、バックアップの${inc.visits.length}件に置き換えます。よろしいですか？`, '置き換える')) {
         state = inc; save(); render(); toast('置き換えました');
       }
-    } catch (err) { toast('ファイルを読み込めませんでした'); }
-    e.target.value = '';
-  };
+  }
+
+  // ---------- 確認ダイアログ（confirm/prompt の代わり） ----------
+  function ask({ title = '', message = '', fields = [], buttons = [] }) {
+    $('askTitle').textContent = title; $('askTitle').hidden = !title;
+    $('askMsg').textContent = message; $('askMsg').hidden = !message;
+    $('askFields').innerHTML = fields.map(f => `<label for="ask-${f.id}">${esc(f.label)}</label><input id="ask-${f.id}" value="${esc(f.value || '')}">${f.note ? `<p style="font-size:12px;color:var(--sub);margin:4px 0 0">${esc(f.note)}</p>` : ''}`).join('');
+    $('askBtns').innerHTML = buttons.map((b, i) => `<button type="button" data-ask="${i}" class="${b.primary ? 'primary' : 'ghost'}"${b.primary ? ' style="width:auto"' : b.danger ? ' style="color:var(--danger)"' : ''}>${esc(b.label)}</button>`).join('');
+    $('askDlg').showModal();
+    return new Promise(res => {
+      const finish = v => {
+        const out = {}; fields.forEach(f => out[f.id] = $('ask-' + f.id).value);
+        $('askBtns').onclick = null; $('askDlg').onclose = null; $('askDlg').close();
+        res({ value: v, fields: out });
+      };
+      $('askBtns').onclick = ev => { const b = ev.target.closest('[data-ask]'); if (b) finish(buttons[+b.dataset.ask].value); };
+      $('askDlg').onclose = () => finish(null);
+    });
+  }
+  const askYes = (message, yes = 'OK') => ask({ message, buttons: [{ label: 'キャンセル', value: false }, { label: yes, value: true, primary: true }] }).then(r => !!r.value);
 
   render();
   loadKnown();
