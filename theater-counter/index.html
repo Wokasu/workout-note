@@ -127,6 +127,7 @@ dialog form{padding:16px}
     <div class="tabs" role="tablist">
       <button class="tab on" data-tab="show" role="tab">公演別</button>
       <button class="tab" data-tab="member" role="tab">メンバー別</button>
+      <button class="tab" data-tab="bingo" role="tab">入場順</button>
     </div>
     <div id="agg"></div>
     <button class="ghost small" id="moreBtn" hidden style="width:100%;margin-top:8px">すべて表示</button>
@@ -172,7 +173,9 @@ dialog form{padding:16px}
       <option value="lobby">ロビー観覧</option>
       <option value="other">その他</option>
     </select>
-    <label for="fSeat">座席・整理番号など</label>
+    <label for="fBingo">ビンゴ抽選の入場順</label>
+    <select id="fBingo"></select>
+    <label for="fSeat">座席など</label>
     <input id="fSeat" placeholder="例：3列目 / 立ち見 / 抽選12番">
     <label for="fCast">出演メンバー（任意）</label>
     <input id="fCast" placeholder="カンマ区切り">
@@ -219,6 +222,16 @@ dialog form{padding:16px}
   const wd = ['日','月','火','水','木','金','土'];
   const fmtDate = s => { const [y,m,d] = s.split('-').map(Number); return `${y}/${m}/${d}(${wd[new Date(y,m-1,d).getDay()]})`; };
   const typeLabel = { theater: '劇場', lobby: 'ロビー', other: 'その他' };
+  // ビンゴ抽選の入場順: '1'〜'25' または 'up'（ロビ観繰り上がり）。'' は未記録
+  const BINGO_MAX = 25, BINGO_UP = 'up';
+  const bingoLabel = b => b === BINGO_UP ? 'ロビ観繰り上がり' : b ? `入場順 ${b}番` : '';
+  $('fBingo').innerHTML = '<option value="">未記録</option>'
+    + Array.from({ length: BINGO_MAX }, (_, i) => `<option value="${i + 1}">${i + 1}番</option>`).join('')
+    + `<option value="${BINGO_UP}">ロビ観繰り上がり</option>`;
+  $('fBingo').addEventListener('change', e => {
+    // 繰り上がり入場は劇場観覧としてカウント
+    if (e.target.value === BINGO_UP) { $('fType').value = 'theater'; $('fCount').checked = true; }
+  });
   const sorted = () => [...state.visits].sort((a, b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')) || a.created - b.created);
   const counted = () => sorted().filter(v => v.count);
 
@@ -247,14 +260,16 @@ dialog form{padding:16px}
     // list (newest first)
     const list = sorted().reverse().filter(matchFilter);
     $('filterBar').hidden = !filter;
-    if (filter) $('filterLabel').textContent = `${filter.kind === 'show' ? '公演' : 'メンバー'}：${filter.key}（${list.length}件）`;
+    if (filter) $('filterLabel').textContent = filter.kind === 'bingo'
+      ? `${bingoLabel(filter.key)}（${list.length}件）`
+      : `${filter.kind === 'show' ? '公演' : 'メンバー'}：${filter.key}（${list.length}件）`;
     $('list').innerHTML = list.length ? list.map(v => `
       <li class="item" data-id="${v.id}">
         <div class="no ${v.count ? '' : 'off'}">${v.count ? '#' + noMap.get(v.id) : '対象外'}</div>
         <div class="meta">
           <div class="t">${esc(v.show)}</div>
           <div class="d">${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}
-            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${v.seat ? esc(v.seat) : ''}</div>
+            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}</div>
           ${(v.cast || []).length ? `<div class="d">👥 ${v.cast.map(esc).join('、')}</div>` : ''}
           ${v.memo ? `<div class="m">${esc(v.memo)}</div>` : ''}
         </div>
@@ -289,7 +304,33 @@ dialog form{padding:16px}
     });
     return [...m.values()].sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
   }
+  function renderBingo() {
+    const vs = state.visits.filter(v => v.bingo);
+    const nums = vs.filter(v => v.bingo !== BINGO_UP).map(v => +v.bingo);
+    const up = vs.length - nums.length;
+    const cnt = {};
+    vs.forEach(v => cnt[v.bingo] = (cnt[v.bingo] || 0) + 1);
+    const keys = [...Array.from({ length: BINGO_MAX }, (_, i) => String(i + 1)), BINGO_UP].filter(k => cnt[k]);
+    const max = Math.max(1, ...Object.values(cnt));
+    const avg = nums.length ? (nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1) : '-';
+    const top5 = nums.filter(n => n <= 5).length;
+    $('agg').innerHTML = vs.length ? `
+      <div class="stats" style="margin-bottom:12px">
+        <div><b>${avg}</b><span>平均入場順</span></div>
+        <div><b>${nums.length ? Math.min(...nums) + '番' : '-'}</b><span>最高</span></div>
+        <div><b>${top5}</b><span>1〜5番</span></div>
+      </div>` + keys.map(k => `
+      <div class="bar" data-filter="${k}" style="cursor:pointer">
+        <span class="name">${k === BINGO_UP ? 'ロビ観繰り上がり' : k + '番'}</span>
+        <span class="track"><span class="fill" style="display:block;width:${cnt[k] / max * 100}%"></span></span>
+        <span class="c">${cnt[k]}</span></div>`).join('')
+      + `<p class="agg-note">記録 ${vs.length}件（うち繰り上がり ${up}件）／入場順が未記録の公演は含みません</p>`
+      : '<div class="empty">入場順が記録された公演がありません</div>';
+    $('moreBtn').hidden = true;
+  }
   function renderAgg(c) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === aggTab));
+    if (aggTab === 'bingo') return renderBingo();
     const rows = aggregate(c, aggTab);
     const shown = aggAll ? rows : rows.slice(0, 10);
     const max = rows.length ? rows[0].n : 1;
@@ -308,7 +349,10 @@ dialog form{padding:16px}
   document.querySelectorAll('.tab').forEach(t => t.onclick = () => { aggTab = t.dataset.tab; aggAll = false; render(); });
   $('moreBtn').onclick = () => { aggAll = !aggAll; render(); };
   $('clearFilter').onclick = () => { filter = null; render(); };
-  const matchFilter = v => !filter || (filter.kind === 'show' ? v.show === filter.key : (v.cast || []).includes(filter.key));
+  const matchFilter = v => !filter
+    || (filter.kind === 'show' ? v.show === filter.key
+      : filter.kind === 'bingo' ? v.bingo === filter.key
+      : (v.cast || []).includes(filter.key));
 
   // ---------- suggestions from ../events.json (same repo) ----------
   let known = [];
@@ -354,6 +398,7 @@ dialog form{padding:16px}
     $('fShow').value = s.show || '';
     $('fType').value = s.type || 'theater';
     $('fSeat').value = s.seat || '';
+    $('fBingo').value = s.bingo || '';
     $('fCast').value = (s.cast || []).join(', ');
     $('fMemo').value = s.memo || (preset && preset.tag ? preset.tag : '');
     $('fCount').checked = s.count ?? true;
@@ -373,7 +418,7 @@ dialog form{padding:16px}
     const before = counted().length;
     const data = {
       date: $('fDate').value, time: $('fTime').value, show: $('fShow').value.trim(),
-      type: $('fType').value, seat: $('fSeat').value.trim(),
+      type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value,
       cast: $('fCast').value.split(/[,、，]/).map(s => s.trim()).filter(Boolean),
       memo: $('fMemo').value.trim(), count: $('fCount').checked
     };
