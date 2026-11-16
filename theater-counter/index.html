@@ -74,6 +74,9 @@ li.item:first-child{border-top:0}
 .tab{flex:1;padding:8px;font-size:14px;background:transparent;color:var(--sub);border-radius:9px}
 .tab.on{background:var(--card);color:var(--pink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .agg-note{font-size:12px;color:var(--sub);margin:8px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips:empty{display:none}
+.chips button.on{background:var(--pink);color:#fff;border-color:var(--pink)}
 .pagetabs{position:sticky;top:0;z-index:5;margin-bottom:14px;border:1px solid var(--line)}
 /* pace dashboard */
 .pace-hero{text-align:center}
@@ -210,6 +213,7 @@ dialog form{padding:16px}
       <div><label for="fDate">日付</label><input id="fDate" type="date" required></div>
       <div><label for="fTime">開演</label><input id="fTime" type="time"></div>
     </div>
+    <div class="chips" id="dayShows"></div>
     <label for="fShow">公演名</label>
     <input id="fShow" list="showList" placeholder="例：「手をつなぎながら」公演" required>
     <datalist id="showList"></datalist>
@@ -221,7 +225,15 @@ dialog form{padding:16px}
     </select>
     <label for="fBingo">ビンゴ抽選の入場順</label>
     <select id="fBingo"></select>
-    <label for="fAccount">当選ID</label>
+    <label for="fRole">当選者</label>
+    <select id="fRole">
+      <option value="">自分の当選</option>
+      <option value="companion">同伴（相手の当選に同行）</option>
+    </select>
+    <label for="fPartner" id="fPartnerLabel">同伴者（任意）</label>
+    <input id="fPartner" list="partnerList" placeholder="名前・ニックネーム">
+    <datalist id="partnerList"></datalist>
+    <label for="fAccount" id="fAccountLabel">当選ID</label>
     <select id="fAccount"></select>
     <label for="fSeat">座席など</label>
     <input id="fSeat" placeholder="例：3列目 / 立ち見 / 抽選12番">
@@ -253,9 +265,15 @@ dialog form{padding:16px}
     </p>
     <textarea id="impText" style="min-height:140px" placeholder="例：&#10;AKB48劇場「手をつなぎながら」公演&#10;2026年11月23日(月) 13:00開演&#10;https://akb48.zaiko.io/e/2026te-1123-1300"></textarea>
     <div class="row" style="margin-top:8px">
+      <div><label for="impRole">当選者（まとめて設定）</label>
+        <select id="impRole"><option value="">自分の当選</option><option value="companion">同伴（相手の当選）</option></select></div>
+      <div><label for="impPartner" id="impPartnerLabel">同伴者（任意）</label><input id="impPartner" list="partnerList" placeholder="名前"></div>
+    </div>
+    <div class="row" style="margin-top:0">
       <div><label for="impAccount">当選ID（まとめて設定）</label><select id="impAccount"></select></div>
       <div style="flex:0 0 auto;align-self:flex-end"><button type="button" class="ghost" id="impParse">読み取る</button></div>
     </div>
+    <p style="font-size:12px;color:var(--sub);margin:6px 0 0">同伴で入った公演は、当選した相手からメール文面やスクショを送ってもらい、「同伴」を選んで取り込めます。</p>
     <ul id="impPreview" style="margin-top:10px"></ul>
     <div class="row" style="margin-top:16px">
       <button type="button" class="ghost" id="impCancel">閉じる</button>
@@ -349,8 +367,9 @@ dialog form{padding:16px}
         <div class="meta">
           <div class="t">${esc(v.show)}</div>
           <div class="d">${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}
-            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${attendTag[attendState(v)] ? `<span class="tag" style="background:var(--bg);border:1px solid var(--line)">${attendTag[attendState(v)]}</span>` : ''}${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}
+            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${attendTag[attendState(v)] ? `<span class="tag" style="background:var(--bg);border:1px solid var(--line)">${attendTag[attendState(v)]}</span>` : ''}${v.role === 'companion' ? '<span class="tag">同伴</span>' : ''}${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}
             ${accName(v.account) ? `<span style="opacity:.75">・ID: ${esc(accName(v.account))}</span>` : ''}</div>
+          ${v.partner ? `<div class="d">${v.role === 'companion' ? `🎫 ${esc(v.partner)}さんの当選に同伴` : `👫 同伴者: ${esc(v.partner)}`}</div>` : ''}
           ${(v.cast || []).length ? `<div class="d">👥 ${v.cast.map(esc).join('、')}</div>` : ''}
           ${v.memo ? `<div class="m">${esc(v.memo)}</div>` : ''}
         </div>
@@ -364,7 +383,8 @@ dialog form{padding:16px}
     $('sDays').textContent = c.length ? Math.floor((new Date(today()) - new Date(c[0].date)) / 864e5) : '-';
     const st = { attended: 0, absent: 0, planned: 0 };
     c.forEach(v => st[attendState(v)]++);
-    $('attendLine').textContent = c.length ? `うち入場 ${st.attended}回${st.absent ? ` ・ 欠席 ${st.absent}回` : ''}${st.planned ? ` ・ 今後 ${st.planned}回` : ''}` : '';
+    $('attendLine').textContent = c.length ? `うち入場 ${st.attended}回${st.absent ? ` ・ 欠席 ${st.absent}回` : ''}${st.planned ? ` ・ 今後 ${st.planned}回` : ''}${c.some(v => v.role === 'companion') ? ` ／ 同伴 ${c.filter(v => v.role === 'companion').length}回` : ''}` : '';
+    $('partnerList').innerHTML = [...new Set(state.visits.map(v => v.partner).filter(Boolean))].map(p => `<option value="${esc(p)}">`).join('');
     renderAgg(c);
 
     // datalist of known shows
@@ -587,6 +607,7 @@ dialog form{padding:16px}
   $('importTextBtn').onclick = () => {
     $('impText').value = ''; parsed = []; $('impPreview').innerHTML = ''; $('impSave').disabled = true;
     fillAccountSelect($('impAccount'), '');
+    $('impRole').value = ''; $('impPartner').value = ''; updateRoleUI();
     $('impDlg').showModal();
   };
   $('impCancel').onclick = () => $('impDlg').close();
@@ -607,7 +628,8 @@ dialog form{padding:16px}
       state.visits.push({
         id: uid(), created: Date.now() + i, date: r.date, time: r.time, show: r.show,
         type: 'theater', seat: '', bingo: '', cast: r.cast || [], memo: r.tag || '', count: true, attend: '',
-        account: document.querySelector(`[data-imp-acc="${i}"]`).value
+        account: document.querySelector(`[data-imp-acc="${i}"]`).value,
+        role: $('impRole').value, partner: $('impPartner').value.trim()
       });
       n++;
     });
@@ -850,6 +872,31 @@ dialog form{padding:16px}
     renderSuggestions.items = items;
   }
 
+  // ---------- 同伴 / その日の公演から選ぶ ----------
+  function updateRoleUI() {
+    const comp = $('fRole').value === 'companion';
+    $('fPartnerLabel').textContent = comp ? '当選した人（同伴相手）' : '同伴者（任意）';
+    $('fAccountLabel').textContent = comp ? '同伴で使った自分のID（任意）' : '当選ID';
+    $('impPartnerLabel').textContent = $('impRole').value === 'companion' ? '当選した人' : '同伴者（任意）';
+  }
+  $('fRole').addEventListener('change', updateRoleUI);
+  $('impRole').addEventListener('change', updateRoleUI);
+  // 日付を入れると、その日の公演（events.json）をワンタップで選べる
+  function renderDayShows() {
+    const day = known.filter(e => e.date === $('fDate').value).sort((a, b) => a.time.localeCompare(b.time));
+    $('dayShows').innerHTML = day.map((e, i) => `<button type="button" class="ghost small${$('fShow').value === e.show && $('fTime').value === e.time ? ' on' : ''}" data-day="${i}">${esc(e.time)} ${esc(e.show)}</button>`).join('');
+    renderDayShows.items = day;
+  }
+  $('fDate').addEventListener('change', renderDayShows);
+  $('dayShows').addEventListener('click', e => {
+    const b = e.target.closest('[data-day]'); if (!b) return;
+    const k = renderDayShows.items[+b.dataset.day];
+    $('fShow').value = k.show; $('fTime').value = k.time;
+    if (!$('fCast').value) $('fCast').value = k.cast.join(', ');
+    if (!$('fMemo').value && k.tag) $('fMemo').value = k.tag;
+    renderDayShows();
+  });
+
   // ---------- dialog ----------
   let editing = null;
   function openDialog(v, preset) {
@@ -863,6 +910,9 @@ dialog form{padding:16px}
     $('fSeat').value = s.seat || '';
     $('fBingo').value = s.bingo || '';
     fillAccountSelect($('fAccount'), v ? (s.account || '') : lastAccount());
+    $('fRole').value = s.role || '';
+    $('fPartner').value = s.partner || '';
+    updateRoleUI(); renderDayShows();
     $('fCast').value = (s.cast || []).join(', ');
     $('fMemo').value = s.memo || (preset && preset.tag ? preset.tag : '');
     $('fCount').checked = s.count ?? true;
@@ -884,7 +934,7 @@ dialog form{padding:16px}
     const data = {
       date: $('fDate').value, time: $('fTime').value, show: $('fShow').value.trim(),
       type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value,
-      account: $('fAccount').value,
+      account: $('fAccount').value, role: $('fRole').value, partner: $('fPartner').value.trim(),
       cast: $('fCast').value.split(/[,、，]/).map(s => s.trim()).filter(Boolean),
       memo: $('fMemo').value.trim(), count: $('fCount').checked, attend: $('fAttend').value
     };
