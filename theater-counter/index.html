@@ -195,6 +195,7 @@ dialog form{padding:16px}
   <section class="card" id="suggCard" hidden>
     <h2>最近・今後の劇場公演から追加</h2>
     <ul class="sugg" id="sugg"></ul>
+    <button class="ghost small" id="suggMore" hidden style="width:100%;margin-top:8px"></button>
   </section>
 
   <section class="card">
@@ -1168,24 +1169,45 @@ dialog form{padding:16px}
           date: `${e.year}-${pad(e.month)}-${pad(e.day)}`,
           time: e.hour != null ? `${pad(e.hour)}:${pad(e.minute || 0)}` : '',
           show: e.title, cast: e.cast || e.members || [], tag: e.tag || '',
-          slug: zaikoSlug(e.applyUrl || '')
+          slug: zaikoSlug(e.applyUrl || ''), oshi: e.members || []
         }));
+      // 全公演の一覧（schedule）を足す：推しメン以外の公演も候補に出すため
+      try {
+        const se = document.getElementById('schedule-data');
+        let sd;
+        if (se) sd = JSON.parse(se.textContent);
+        else { const r2 = await fetch('../theater-schedule.json', { cache: 'no-store' }); if (r2.ok) sd = await r2.json(); }
+        ((sd && sd.shows) || []).forEach(x => {
+          const k = known.find(e => e.date === x.date && e.time === x.time);
+          if (!k) known.push({ date: x.date, time: x.time, show: x.show, cast: x.cast || [], tag: x.tag || '', slug: '', oshi: [] });
+          else {
+            if (!(k.cast || []).length && (x.cast || []).length) k.cast = x.cast;
+            if (x.tag && !(k.tag || '').includes(x.tag)) k.tag = [k.tag, x.tag].filter(Boolean).join(' / ');
+          }
+        });
+      } catch (e) { /* 一覧なし */ }
       render();
     } catch (e) { /* standalone use: no suggestions */ }
   }
+  let suggAll = false;
   function renderSuggestions() {
     const now = new Date(), from = new Date(now - 30 * 864e5), to = new Date(+now + 30 * 864e5);
-    const has = new Set(state.visits.map(v => v.date + '|' + (v.time || '') + '|' + v.show));
-    const items = known
-      .filter(e => { const d = new Date(e.date + 'T' + (e.time || '00:00')); return d <= to && d >= from; })
-      .filter(e => !has.has(e.date + '|' + e.time + '|' + e.show))
-      .sort((a, b) => Math.abs(new Date(a.date + 'T' + (a.time || '00:00')) - now) - Math.abs(new Date(b.date + 'T' + (b.time || '00:00')) - now))
-      .slice(0, 8);
-    $('suggCard').hidden = !items.length;
+    const has = new Set(state.visits.map(v => v.date + '|' + (v.time || '')));   // 同じ日時は記録済み
+    const at = e => new Date(e.date + 'T' + (e.time || '00:00'));
+    const all = known
+      .filter(e => { const d = at(e); return d <= to && d >= from; })
+      .filter(e => !has.has(e.date + '|' + e.time));
+    // 閉じているときは今日に近い8件、「すべて表示」では日付順（今後→過去）
+    const items = suggAll
+      ? [...all.filter(e => at(e) >= now).sort((a, b) => at(a) - at(b)), ...all.filter(e => at(e) < now).sort((a, b) => at(b) - at(a))]
+      : [...all].sort((a, b) => Math.abs(at(a) - now) - Math.abs(at(b) - now)).slice(0, 8);
+    $('suggCard').hidden = !all.length;
     $('sugg').innerHTML = items.map((e, i) => `
-      <li><div><div class="t">${esc(e.show)}</div>
+      <li><div><div class="t">${esc(e.show)}${(e.oshi || []).length ? ' <span class="tag">推し出演</span>' : ''}</div>
       <div class="d">${e.date > today() ? '<span class="tag">今後</span>' : ''}${fmtDate(e.date)} ${esc(e.time)}${e.tag ? ' ・' + esc(e.tag) : ''}</div></div>
       <button class="ghost small" data-sugg="${i}">記録</button></li>`).join('');
+    $('suggMore').hidden = all.length <= 8;
+    $('suggMore').textContent = suggAll ? '近い8件だけ表示' : `すべて表示（前後30日・${all.length}公演）`;
     renderSuggestions.items = items;
   }
 
@@ -1240,6 +1262,7 @@ dialog form{padding:16px}
   }
   $('fType').addEventListener('change', e => { if (!editing) $('fCount').checked = e.target.value !== 'other'; });   // 劇場・ロビー観覧はカウント対象
   $('addBtn').onclick = () => openDialog();
+  $('suggMore').onclick = () => { suggAll = !suggAll; renderSuggestions(); };
   $('cancelBtn').onclick = () => $('dlg').close();
   $('delBtn').onclick = () => {
     const id = editing;

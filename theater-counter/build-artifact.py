@@ -30,6 +30,10 @@ members_path = here.parent / "members.json"
 if members_path.exists():
     mdata = json.dumps(json.loads(members_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
     embed += f'<script type="application/json" id="members-data">{mdata}</script>\n'
+sched_path = here.parent / "theater-schedule.json"
+if sched_path.exists():
+    scdata = json.dumps(json.loads(sched_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
+    embed += f'<script type="application/json" id="schedule-data">{scdata}</script>\n'
 seitan_path = here.parent / "seitansai.json"
 if seitan_path.exists():
     sdata = json.dumps(json.loads(seitan_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
