@@ -196,6 +196,8 @@ dialog form{padding:16px}
     <h2>最近・今後の劇場公演から追加</h2>
     <ul class="sugg" id="sugg"></ul>
     <button class="ghost small" id="suggMore" hidden style="width:100%;margin-top:8px"></button>
+    <p class="agg-note" id="dataStatus"></p>
+    <button class="ghost small" id="feedBtn" hidden style="width:100%;margin-top:6px">最新の公演データを読み込む（GitHub）</button>
   </section>
 
   <section class="card">
@@ -1156,38 +1158,131 @@ dialog form{padding:16px}
 
   // ---------- suggestions from ../events.json (same repo) ----------
   let known = [];
+  // 公演データの出どころ：ページに埋め込んだもの → 同じサイトの ../*.json → GitHub コネクタで読んだ最新版（新しいものを優先）
+  const FEED = { owner: 'Wokasu', repo: 'workout-note', ref: 'refs/heads/akb48-calendar-feed' };
+  const GITHUB_SERVERS = ['github', 'GitHub'];
+  const dataSrc = { events: null, schedule: [], remoteEvents: null, remoteSchedule: null, remoteAt: 0, remoteState: '' };
+  const readEmbedded = id => { try { const el = document.getElementById(id); return el ? JSON.parse(el.textContent) : null; } catch (e) { return null; } };
+  async function readSameSite(name) {
+    try { const r = await fetch('../' + name, { cache: 'no-store' }); return r.ok ? await r.json() : null; } catch (e) { return null; }
+  }
+  function rebuildKnown() {
+    const ev = dataSrc.remoteEvents || dataSrc.events;
+    known = ((ev && ev.events) || [])
+      .filter(e => !e.kind && /公演/.test(e.title || ''))
+      .map(e => ({
+        date: `${e.year}-${pad(e.month)}-${pad(e.day)}`,
+        time: e.hour != null ? `${pad(e.hour)}:${pad(e.minute || 0)}` : '',
+        show: e.title, cast: e.cast || e.members || [], tag: e.tag || '',
+        slug: zaikoSlug(e.applyUrl || ''), oshi: e.members || []
+      }));
+    // 全公演（推しメン以外も）。過去の公演はページ内の記録を優先、今日以降は最新の取得結果を優先
+    const rows = new Map();
+    (dataSrc.schedule || []).forEach(x => rows.set(x.date + '|' + x.time, x));
+    ((dataSrc.remoteSchedule && dataSrc.remoteSchedule.shows) || []).forEach(x => {
+      const k = x.date + '|' + x.time;
+      if (!rows.has(k) || x.date >= today()) rows.set(k, x);
+    });
+    rows.forEach(x => {
+      const k = known.find(e => e.date === x.date && e.time === x.time);
+      if (!k) known.push({ date: x.date, time: x.time, show: x.show, cast: x.cast || [], tag: x.tag || '', slug: '', oshi: [] });
+      else {
+        if ((x.cast || []).length && (!(k.cast || []).length || x.date >= today())) k.cast = x.cast;
+        if (x.tag && !(k.tag || '').includes(x.tag)) k.tag = [k.tag, x.tag].filter(Boolean).join(' / ');
+      }
+    });
+    renderDataStatus();
+  }
   async function loadKnown() {
+    dataSrc.events = readEmbedded('events-data') || await readSameSite('events.json');
+    const sd = readEmbedded('schedule-data') || await readSameSite('theater-schedule.json');
+    dataSrc.schedule = (sd && sd.shows) || [];
+    dataSrc.builtAsOf = (sd && sd.asOf) || '';
+    rebuildKnown();
+    render();
+    watchFeed();
+  }
+
+  // ---- GitHub コネクタで公開ブランチの最新データを読む（アーティファクト版） ----
+  // get_file_contents の結果は「ダウンロードしました」の文と、ファイル本文を持つ resource ブロック
+  function fileJson(result) {
+    for (const b of (result && result.content) || []) {
+      const t = b.type === 'resource' ? b.resource && b.resource.text : b.type === 'text' ? b.text : null;
+      if (!t) continue;
+      try { return JSON.parse(t); } catch (e) { /* 次のブロック */ }
+    }
+    if (result && result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)) return result.payload;
+    return null;
+  }
+  let mcpNs = null, ghServer = null;
+  async function feedServer() {
+    if (ghServer) return ghServer;
     try {
-      // アーティファクト版はページに埋め込んだ公演データを使う
-      const emb = document.getElementById('events-data');
-      let d;
-      if (emb) d = JSON.parse(emb.textContent);
-      else { const r = await fetch('../events.json', { cache: 'no-store' }); if (!r.ok) return; d = await r.json(); }
-      known = (d.events || [])
-        .filter(e => !e.kind && /公演/.test(e.title || ''))
-        .map(e => ({
-          date: `${e.year}-${pad(e.month)}-${pad(e.day)}`,
-          time: e.hour != null ? `${pad(e.hour)}:${pad(e.minute || 0)}` : '',
-          show: e.title, cast: e.cast || e.members || [], tag: e.tag || '',
-          slug: zaikoSlug(e.applyUrl || ''), oshi: e.members || []
-        }));
-      // 全公演の一覧（schedule）を足す：推しメン以外の公演も候補に出すため
-      try {
-        const se = document.getElementById('schedule-data');
-        let sd;
-        if (se) sd = JSON.parse(se.textContent);
-        else { const r2 = await fetch('../theater-schedule.json', { cache: 'no-store' }); if (r2.ok) sd = await r2.json(); }
-        ((sd && sd.shows) || []).forEach(x => {
-          const k = known.find(e => e.date === x.date && e.time === x.time);
-          if (!k) known.push({ date: x.date, time: x.time, show: x.show, cast: x.cast || [], tag: x.tag || '', slug: '', oshi: [] });
-          else {
-            if (!(k.cast || []).length && (x.cast || []).length) k.cast = x.cast;
-            if (x.tag && !(k.tag || '').includes(x.tag)) k.tag = [k.tag, x.tag].filter(Boolean).join(' / ');
-          }
-        });
-      } catch (e) { /* 一覧なし */ }
-      render();
-    } catch (e) { /* standalone use: no suggestions */ }
+      const list = await mcpNs.listTools();
+      const hit = list.servers.find(s => GITHUB_SERVERS.includes(s.server));
+      ghServer = hit ? hit.server : GITHUB_SERVERS[0];
+    } catch (e) { ghServer = GITHUB_SERVERS[0]; }
+    return ghServer;
+  }
+  const feedInput = path => ({ owner: FEED.owner, repo: FEED.repo, path, ref: FEED.ref });
+  function onFeed(kind) {
+    return ev => {
+      if (ev.type === 'data') {
+        const j = fileJson(ev.result);
+        if (!j) return;
+        if (kind === 'events' && Array.isArray(j.events)) dataSrc.remoteEvents = j;
+        if (kind === 'schedule' && Array.isArray(j.shows)) dataSrc.remoteSchedule = j;
+        dataSrc.remoteAt = (ev.result.cache && ev.result.cache.storedAt) || Date.now();
+        dataSrc.remoteState = 'ok';
+        rebuildKnown(); render();
+      } else {
+        const c = ev.error && ev.error.code;
+        // theater-schedule.json がまだない（自動更新の反映前）など、ファイル単位の失敗は無視する
+        if (c === 'tool_error' && kind === 'schedule') return;
+        if (['approval_required', 'not_in_manifest', 'consent_required'].includes(c)) dataSrc.remoteState = 'ask';
+        else if (['server_not_connected', 'selection_required', 'needs_reauth', 'blocked_by_policy'].includes(c)) dataSrc.remoteState = 'noconn';
+        else if (dataSrc.remoteState !== 'ok') dataSrc.remoteState = 'error';
+        renderDataStatus();
+      }
+    };
+  }
+  async function watchFeed() {
+    try { mcpNs = window.claude && window.claude.use ? await window.claude.use('mcp') : null; } catch (e) { mcpNs = null; }
+    if (!mcpNs) return;   // GitHub Pages やファイルで開いたとき：ページ内／同じサイトのデータだけ使う
+    const srv = await feedServer();
+    const opts = { cache: { staleTime: 30 * 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 }, refetchInterval: 3 * 3600 * 1000 };
+    mcpNs.watchTool(srv, 'get_file_contents', feedInput('events.json'), onFeed('events'), opts);
+    mcpNs.watchTool(srv, 'get_file_contents', feedInput('theater-schedule.json'), onFeed('schedule'), opts);
+    dataSrc.remoteState = dataSrc.remoteState || 'loading';
+    renderDataStatus();
+  }
+  // ボタンから：初回は GitHub コネクタの利用許可を聞かれる
+  async function fetchFeedNow() {
+    if (!mcpNs) return;
+    const srv = await feedServer();
+    $('feedBtn').disabled = true;
+    try {
+      for (const [kind, path] of [['events', 'events.json'], ['schedule', 'theater-schedule.json']]) {
+        try {
+          const r = await mcpNs.callTool(srv, 'get_file_contents', feedInput(path), { cache: { refresh: true, staleTime: 30 * 60 * 1000, gcTime: 7 * 24 * 3600 * 1000 } });
+          onFeed(kind)({ type: 'data', result: r });
+        } catch (e) { onFeed(kind)({ type: 'error', error: e }); }
+      }
+      if (dataSrc.remoteState === 'ok') toast('最新の公演データを読み込みました');
+    } finally { $('feedBtn').disabled = false; }
+  }
+  function renderDataStatus() {
+    const el = $('dataStatus'); if (!el) return;
+    const st = dataSrc.remoteState;
+    const fmtAt = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+    const msg = st === 'ok' ? `公演データ：最新（${fmtAt(dataSrc.remoteAt)} 取得・GitHub）`
+      : st === 'loading' ? '公演データ：最新版を確認中…'
+      : st === 'ask' ? '公演データ：ページ内のデータを表示中。最新版を読むには GitHub の利用を許可してください'
+      : st === 'noconn' ? '公演データ：ページ内のデータを表示中（claude.ai の設定 → コネクタで GitHub を接続すると自動で最新になります）'
+      : st === 'error' ? '公演データ：最新版を読めなかったので、ページ内のデータを表示中'
+      : dataSrc.builtAsOf ? `公演データ：${dataSrc.builtAsOf.replace(/-/g, '/')} 時点` : '';
+    el.textContent = msg;
+    $('feedBtn').hidden = !mcpNs || st === 'ok' || st === 'loading' || st === 'noconn';
   }
   let suggAll = false;
   function renderSuggestions() {
@@ -1263,6 +1358,7 @@ dialog form{padding:16px}
   $('fType').addEventListener('change', e => { if (!editing) $('fCount').checked = e.target.value !== 'other'; });   // 劇場・ロビー観覧はカウント対象
   $('addBtn').onclick = () => openDialog();
   $('suggMore').onclick = () => { suggAll = !suggAll; renderSuggestions(); };
+  $('feedBtn').onclick = () => fetchFeedNow();
   $('cancelBtn').onclick = () => $('dlg').close();
   $('delBtn').onclick = () => {
     const id = editing;
