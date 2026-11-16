@@ -17,6 +17,7 @@
          --pink:#ff6b9d; --pink-soft:#4a2536; }
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
   padding:env(safe-area-inset-top) 0 calc(env(safe-area-inset-bottom) + 24px)}
@@ -68,6 +69,11 @@ li.item:first-child{border-top:0}
 .bar .track{flex:1;height:8px;background:var(--bg);border-radius:99px;overflow:hidden}
 .bar .fill{height:100%;background:var(--pink)}
 .bar .c{width:28px;text-align:right;color:var(--sub)}
+.bar .sub{display:block;font-size:11px;color:var(--sub)}
+.tabs{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:12px;margin-bottom:12px}
+.tab{flex:1;padding:8px;font-size:14px;background:transparent;color:var(--sub);border-radius:9px}
+.tab.on{background:var(--card);color:var(--pink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.agg-note{font-size:12px;color:var(--sub);margin:8px 0 0}
 .empty{color:var(--sub);font-size:13px;text-align:center;padding:8px}
 .tools{display:flex;flex-wrap:wrap;gap:8px}
 dialog{border:0;border-radius:16px;padding:0;max-width:520px;width:calc(100% - 24px);background:var(--card);color:var(--ink)}
@@ -115,11 +121,23 @@ dialog form{padding:16px}
       <div><b id="sMonth">0</b><span>今月</span></div>
       <div><b id="sDays">-</b><span>初入場から(日)</span></div>
     </div>
-    <div id="byShow" style="margin-top:12px"></div>
   </section>
 
   <section class="card">
-    <h2>入場履歴</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-tab="show" role="tab">公演別</button>
+      <button class="tab" data-tab="member" role="tab">メンバー別</button>
+    </div>
+    <div id="agg"></div>
+    <button class="ghost small" id="moreBtn" hidden style="width:100%;margin-top:8px">すべて表示</button>
+  </section>
+
+  <section class="card">
+    <h2 id="histTitle">入場履歴</h2>
+    <div id="filterBar" hidden style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span class="tag" id="filterLabel" style="font-size:13px;padding:4px 10px"></span>
+      <button class="ghost small" id="clearFilter">解除</button>
+    </div>
     <ul id="list"></ul>
   </section>
 
@@ -227,7 +245,9 @@ dialog form{padding:16px}
     const noMap = new Map(c.map((v, i) => [v.id, i + 1]));
 
     // list (newest first)
-    const list = sorted().reverse();
+    const list = sorted().reverse().filter(matchFilter);
+    $('filterBar').hidden = !filter;
+    if (filter) $('filterLabel').textContent = `${filter.kind === 'show' ? '公演' : 'メンバー'}：${filter.key}（${list.length}件）`;
     $('list').innerHTML = list.length ? list.map(v => `
       <li class="item" data-id="${v.id}">
         <div class="no ${v.count ? '' : 'off'}">${v.count ? '#' + noMap.get(v.id) : '対象外'}</div>
@@ -235,6 +255,7 @@ dialog form{padding:16px}
           <div class="t">${esc(v.show)}</div>
           <div class="d">${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}
             <span class="tag">${typeLabel[v.type] || '劇場'}</span>${v.seat ? esc(v.seat) : ''}</div>
+          ${(v.cast || []).length ? `<div class="d">👥 ${v.cast.map(esc).join('、')}</div>` : ''}
           ${v.memo ? `<div class="m">${esc(v.memo)}</div>` : ''}
         </div>
         <button class="ghost small" data-edit="${v.id}">編集</button>
@@ -245,14 +266,7 @@ dialog form{padding:16px}
     $('sYear').textContent = c.filter(v => v.date.startsWith(y)).length;
     $('sMonth').textContent = c.filter(v => v.date.startsWith(ym)).length;
     $('sDays').textContent = c.length ? Math.floor((new Date(today()) - new Date(c[0].date)) / 864e5) : '-';
-    const by = {};
-    c.forEach(v => by[v.show] = (by[v.show] || 0) + 1);
-    const rows = Object.entries(by).sort((a, b) => b[1] - a[1]).slice(0, 8);
-    const max = rows.length ? rows[0][1] : 1;
-    $('byShow').innerHTML = rows.map(([k, v]) => `
-      <div class="bar"><span class="name">${esc(k)}</span>
-      <span class="track"><span class="fill" style="display:block;width:${v / max * 100}%"></span></span>
-      <span class="c">${v}</span></div>`).join('');
+    renderAgg(c);
 
     // datalist of known shows
     const shows = new Set([...state.visits.map(v => v.show), ...known.map(e => e.show)]);
@@ -260,6 +274,41 @@ dialog form{padding:16px}
 
     renderSuggestions();
   }
+
+  // ---------- 公演別 / メンバー別 集計 ----------
+  let aggTab = 'show', aggAll = false, filter = null;
+  function aggregate(c, kind) {
+    const m = new Map();
+    c.forEach(v => {
+      const keys = kind === 'show' ? [v.show] : [...new Set(v.cast || [])];
+      keys.forEach(k => {
+        const r = m.get(k) || { key: k, n: 0, last: '' };
+        r.n++; if (v.date > r.last) r.last = v.date;
+        m.set(k, r);
+      });
+    });
+    return [...m.values()].sort((a, b) => b.n - a.n || b.last.localeCompare(a.last));
+  }
+  function renderAgg(c) {
+    const rows = aggregate(c, aggTab);
+    const shown = aggAll ? rows : rows.slice(0, 10);
+    const max = rows.length ? rows[0].n : 1;
+    const noCast = aggTab === 'member' ? c.filter(v => !(v.cast || []).length).length : 0;
+    $('agg').innerHTML = shown.length ? shown.map(r => `
+      <div class="bar" data-filter="${esc(r.key)}" style="cursor:pointer">
+        <span class="name">${esc(r.key)}<span class="sub">最終 ${fmtDate(r.last)}${aggTab === 'member' && c.length ? ` ・ ${Math.round(r.n / c.length * 100)}%` : ''}</span></span>
+        <span class="track"><span class="fill" style="display:block;width:${r.n / max * 100}%"></span></span>
+        <span class="c">${r.n}</span></div>`).join('')
+      : `<div class="empty">${aggTab === 'member' ? '出演メンバーが入力された記録がありません' : 'まだ記録がありません'}</div>`;
+    if (noCast) $('agg').innerHTML += `<p class="agg-note">※ 出演メンバー未入力の記録が${noCast}件あります（編集から追加できます）</p>`;
+    $('moreBtn').hidden = rows.length <= 10;
+    $('moreBtn').textContent = aggAll ? '上位10件のみ表示' : `すべて表示（${rows.length}件）`;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === aggTab));
+  }
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => { aggTab = t.dataset.tab; aggAll = false; render(); });
+  $('moreBtn').onclick = () => { aggAll = !aggAll; render(); };
+  $('clearFilter').onclick = () => { filter = null; render(); };
+  const matchFilter = v => !filter || (filter.kind === 'show' ? v.show === filter.key : (v.cast || []).includes(filter.key));
 
   // ---------- suggestions from ../events.json (same repo) ----------
   let known = [];
@@ -339,6 +388,11 @@ dialog form{padding:16px}
   document.addEventListener('click', e => {
     const ed = e.target.closest('[data-edit]');
     if (ed) openDialog(state.visits.find(v => v.id === ed.dataset.edit));
+    const fl = e.target.closest('[data-filter]');
+    if (fl) {
+      filter = { kind: aggTab, key: fl.dataset.filter };
+      render(); $('histTitle').scrollIntoView({ behavior: 'smooth' });
+    }
     const sg = e.target.closest('[data-sugg]');
     if (sg) openDialog(null, renderSuggestions.items[+sg.dataset.sugg]);
   });
