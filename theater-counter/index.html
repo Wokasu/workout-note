@@ -651,7 +651,7 @@ dialog form{padding:16px}
         const memo = [m && m[2], t.tickets > 1 ? `${t.tickets}枚` : '', t.eticket ? `eチケット ${t.eticket}` : ''].filter(Boolean).join(' / ');
         out.push({
           date: t.date, time: t.time || '', show, tag: memo, cast: k ? k.cast : [],
-          frame: t.frame || '', type: lobby ? 'lobby' : 'theater', count: !lobby,
+          frame: t.frame || '', type: lobby ? 'lobby' : 'theater', count: true,   // ロビー観覧も当選・入金でカウント
           attend: t.checkedIn === false ? 'no' : '', role: t.transferred ? 'companion' : '',
           account: acc, json: true
         });
@@ -981,7 +981,7 @@ dialog form{padding:16px}
     $('delBtn').hidden = !v;
     $('dlg').showModal();
   }
-  $('fType').addEventListener('change', e => { if (!editing) $('fCount').checked = e.target.value === 'theater'; });
+  $('fType').addEventListener('change', e => { if (!editing) $('fCount').checked = e.target.value !== 'other'; });   // 劇場・ロビー観覧はカウント対象
   $('addBtn').onclick = () => openDialog();
   $('cancelBtn').onclick = () => $('dlg').close();
   $('delBtn').onclick = () => {
@@ -1060,14 +1060,19 @@ dialog form{padding:16px}
         });
         if (!state.accounts.some(a => a.id === state.defaultAccount) && accMap[inc.defaultAccount]) state.defaultAccount = accMap[inc.defaultAccount];
         const has = new Set(state.visits.map(visitKey));
-        let n = 0;
+        let n = 0, upd = 0;
         inc.visits.forEach(v => {
-          if (has.has(visitKey(v))) return;
+          if (has.has(visitKey(v))) {
+            // 登録済みのロビー観覧がカウント対象外のままなら、ファイル側に合わせて対象にする
+            const cur = state.visits.find(x => visitKey(x) === visitKey(v));
+            if (cur && cur.type === 'lobby' && !cur.count && v.count) { cur.count = true; upd++; }
+            return;
+          }
           state.visits.push({ ...v, id: uid(), account: accMap[v.account] || '' });
           has.add(visitKey(v)); n++;
         });
         if (!state.deadline && inc.deadline) state.deadline = inc.deadline;
-        save(); render(); toast(`${n}件追加しました`);
+        save(); render(); toast(`${n}件追加しました${upd ? `（${upd}件をカウント対象に更新）` : ''}`);
       } else if (confirm(`今の記録をすべて消して、ファイルの${inc.visits.length}件に置き換えますか？`)) {
         state = inc; save(); render(); toast('置き換えました');
       }
