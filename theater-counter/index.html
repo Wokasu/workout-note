@@ -243,7 +243,7 @@ dialog form{padding:16px}
     <label for="fSeat">座席など</label>
     <input id="fSeat" placeholder="例：3列目 / 立ち見 / 抽選12番">
     <label for="fCast">出演メンバー（任意）</label>
-    <input id="fCast" placeholder="カンマ区切り">
+    <textarea id="fCast" placeholder="公式ブログの出演メンバー一覧をそのまま貼り付けできます（改行・読点・カンマ区切り）" style="min-height:70px"></textarea>
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" placeholder="感想、生誕祭、お見送りの思い出など"></textarea>
     <label for="fAttend">入場状況</label>
@@ -320,10 +320,25 @@ dialog form{padding:16px}
   const $ = id => document.getElementById(id);
 
   // ---------- storage ----------
+  // 同じ日時の記録で出演メンバーが未入力なら、source 側のメンバーで埋める（上書きはしない）
+  function fillMissingCast(target, source) {
+    const key = v => v.date + '|' + (v.time || '');
+    const src = new Map(source.filter(v => (v.cast || []).length).map(v => [key(v), v.cast]));
+    let n = 0;
+    target.forEach(v => { if (!(v.cast || []).length && src.has(key(v))) { v.cast = [...src.get(key(v))]; n++; } });
+    return n;
+  }
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(KEY));
-      if (d && Array.isArray(d.visits)) return normalize(d);
+      if (d && Array.isArray(d.visits)) {
+        // 埋め込みデータに出演メンバーが増えていれば、未入力の記録だけ補完する
+        try {
+          const seed = JSON.parse(document.getElementById('seed-data').textContent);
+          if (seed && fillMissingCast(d.visits, seed.visits || [])) localStorage.setItem(KEY, JSON.stringify(d));
+        } catch (e) {}
+        return normalize(d);
+      }
     } catch (e) {}
     // この端末に記録がまだなければ、ページに埋め込んだ初期データ（あれば）から始める
     try {
@@ -998,7 +1013,7 @@ dialog form{padding:16px}
     const b = e.target.closest('[data-day]'); if (!b) return;
     const k = renderDayShows.items[+b.dataset.day];
     $('fShow').value = k.show; $('fTime').value = k.time;
-    if (!$('fCast').value) $('fCast').value = k.cast.join(', ');
+    if (!$('fCast').value) $('fCast').value = k.cast.join('、');
     if (!$('fMemo').value && k.tag) $('fMemo').value = k.tag;
     renderDayShows();
   });
@@ -1020,7 +1035,7 @@ dialog form{padding:16px}
     $('fRole').value = s.role || '';
     $('fPartner').value = s.partner || '';
     updateRoleUI(); renderDayShows();
-    $('fCast').value = (s.cast || []).join(', ');
+    $('fCast').value = (s.cast || []).join('、');
     $('fMemo').value = s.memo || (preset && preset.tag ? preset.tag : '');
     $('fCount').checked = s.count ?? true;
     $('fAttend').value = s.attend || '';
@@ -1046,7 +1061,7 @@ dialog form{padding:16px}
       date: $('fDate').value, time: $('fTime').value, show: $('fShow').value.trim(),
       type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value, frame: $('fFrame').value.trim(),
       account: $('fAccount').value, role: $('fRole').value, partner: $('fPartner').value.trim(),
-      cast: $('fCast').value.split(/[,、，]/).map(s => s.trim()).filter(Boolean),
+      cast: [...new Set($('fCast').value.split(/[\n,、，・／\/]+/).map(s => s.replace(/^[\s・●■\-]+|[\s]+$/g, '')).filter(s => s && !/[【】:：]|出演|メンバー|公演|※/.test(s)))],
       memo: $('fMemo').value.trim(), count: $('fCount').checked, attend: $('fAttend').value
     };
     if (!data.date || !data.show) return;
@@ -1133,13 +1148,14 @@ dialog form{padding:16px}
             // 登録済みのロビー観覧がカウント対象外のままなら、ファイル側に合わせて対象にする
             const cur = state.visits.find(x => visitKey(x) === visitKey(v));
             if (cur && cur.type === 'lobby' && !cur.count && v.count) { cur.count = true; upd++; }
+            if (cur && !(cur.cast || []).length && (v.cast || []).length) { cur.cast = [...v.cast]; upd++; }
             return;
           }
           state.visits.push({ ...v, id: uid(), account: accMap[v.account] || '' });
           has.add(visitKey(v)); n++;
         });
         if (!state.deadline && inc.deadline) state.deadline = inc.deadline;
-        save(); render(); toast(`${n}件追加しました${upd ? `（${upd}件をカウント対象に更新）` : ''}`);
+        save(); render(); toast(`${n}件追加しました${upd ? `（${upd}件を更新）` : ''}`);
       } else if (choice === 'replace' && await askYes(`今の記録${state.visits.length}件をすべて消して、バックアップの${inc.visits.length}件に置き換えます。よろしいですか？`, '置き換える')) {
         state = inc; save(); render(); toast('置き換えました');
       }
