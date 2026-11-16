@@ -107,6 +107,7 @@ dialog form{padding:16px}
 
   <section class="card">
     <button class="primary" id="addBtn">＋ 入場を記録する</button>
+    <button class="ghost" id="importTextBtn" style="width:100%;margin-top:8px">📋 チケット情報を貼り付けてまとめて取り込む</button>
   </section>
 
   <section class="card" id="suggCard" hidden>
@@ -146,6 +147,12 @@ dialog form{padding:16px}
     <h2>設定・バックアップ</h2>
     <label for="goal">目標回数</label>
     <input id="goal" type="number" min="1" inputmode="numeric">
+    <label>当選ID（ZAIKOアカウント）</label>
+    <ul id="accList"></ul>
+    <div class="row" style="margin-top:6px">
+      <input id="accName" placeholder="例：メイン / サブ / 家族">
+      <button class="ghost small" id="accAdd" style="flex:0 0 auto">追加</button>
+    </div>
     <div class="tools" style="margin-top:12px">
       <button class="ghost small" id="exportBtn">バックアップを保存</button>
       <button class="ghost small" id="importBtn">バックアップから復元</button>
@@ -175,6 +182,8 @@ dialog form{padding:16px}
     </select>
     <label for="fBingo">ビンゴ抽選の入場順</label>
     <select id="fBingo"></select>
+    <label for="fAccount">当選ID</label>
+    <select id="fAccount"></select>
     <label for="fSeat">座席など</label>
     <input id="fSeat" placeholder="例：3列目 / 立ち見 / 抽選12番">
     <label for="fCast">出演メンバー（任意）</label>
@@ -186,6 +195,26 @@ dialog form{padding:16px}
       <button type="button" class="ghost" id="delBtn" hidden style="color:var(--danger)">削除</button>
       <button type="button" class="ghost" id="cancelBtn">キャンセル</button>
       <button type="submit" class="primary" style="width:auto">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="impDlg">
+  <form method="dialog" id="impForm">
+    <h2>まとめて取り込み</h2>
+    <p style="font-size:12px;color:var(--sub);margin:0 0 6px">
+      ZAIKOの購入済みチケット画面・購入完了メールの文面、チケットURLなどを貼り付けてください。
+      スクショの場合は、写真アプリで画像の文字を長押し→「すべてを選択」→コピーで文字にできます（iPhoneの「テキスト認識表示」／Androidの「Googleレンズ」）。
+    </p>
+    <textarea id="impText" style="min-height:140px" placeholder="例：&#10;AKB48劇場「手をつなぎながら」公演&#10;2026年11月23日(月) 13:00開演&#10;https://akb48.zaiko.io/e/2026te-1123-1300"></textarea>
+    <div class="row" style="margin-top:8px">
+      <div><label for="impAccount">当選ID（まとめて設定）</label><select id="impAccount"></select></div>
+      <div style="flex:0 0 auto;align-self:flex-end"><button type="button" class="ghost" id="impParse">読み取る</button></div>
+    </div>
+    <ul id="impPreview" style="margin-top:10px"></ul>
+    <div class="row" style="margin-top:16px">
+      <button type="button" class="ghost" id="impCancel">閉じる</button>
+      <button type="submit" class="primary" id="impSave" style="width:auto" disabled>取り込む</button>
     </div>
   </form>
 </dialog>
@@ -204,9 +233,12 @@ dialog form{padding:16px}
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(KEY));
-      if (d && Array.isArray(d.visits)) return { goal: d.goal || 100, visits: d.visits };
+      if (d && Array.isArray(d.visits)) return normalize(d);
     } catch (e) {}
-    return { goal: 100, visits: [] };
+    return { goal: 100, visits: [], accounts: [] };
+  }
+  function normalize(d) {
+    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [] };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -269,7 +301,8 @@ dialog form{padding:16px}
         <div class="meta">
           <div class="t">${esc(v.show)}</div>
           <div class="d">${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}
-            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}</div>
+            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}
+            ${accName(v.account) ? `<span style="opacity:.75">・ID: ${esc(accName(v.account))}</span>` : ''}</div>
           ${(v.cast || []).length ? `<div class="d">👥 ${v.cast.map(esc).join('、')}</div>` : ''}
           ${v.memo ? `<div class="m">${esc(v.memo)}</div>` : ''}
         </div>
@@ -288,6 +321,7 @@ dialog form{padding:16px}
     $('showList').innerHTML = [...shows].map(s => `<option value="${esc(s)}">`).join('');
 
     renderSuggestions();
+    renderAccounts();
   }
 
   // ---------- 公演別 / メンバー別 集計 ----------
@@ -354,6 +388,181 @@ dialog form{padding:16px}
       : filter.kind === 'bingo' ? v.bingo === filter.key
       : (v.cast || []).includes(filter.key));
 
+  // ---------- 当選ID（複数アカウント） ----------
+  // account: { id, name, hint }  hint = 貼り付け取り込み時の自動判別キーワード（メールアドレス等）
+  const accName = id => (state.accounts.find(a => a.id === id) || {}).name || '';
+  const lastAccount = () => {
+    const v = [...state.visits].sort((a, b) => b.created - a.created).find(v => v.account);
+    return v && state.accounts.some(a => a.id === v.account) ? v.account : '';
+  };
+  function fillAccountSelect(sel, value) {
+    sel.innerHTML = '<option value="">未設定</option>'
+      + state.accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+    sel.value = value || '';
+  }
+  function renderAccounts() {
+    const cnt = {};
+    state.visits.forEach(v => { if (v.account) cnt[v.account] = (cnt[v.account] || 0) + 1; });
+    $('accList').innerHTML = state.accounts.length ? state.accounts.map(a => `
+      <li class="item" style="align-items:center">
+        <div class="meta"><div class="t">${esc(a.name)} <span style="font-weight:400;color:var(--sub);font-size:12px">${cnt[a.id] || 0}件</span></div>
+          ${a.hint ? `<div class="d">自動判別: ${esc(a.hint)}</div>` : ''}</div>
+        <button class="ghost small" data-acc-edit="${a.id}">編集</button>
+        <button class="ghost small" data-acc-del="${a.id}" style="color:var(--danger)">削除</button>
+      </li>`).join('') : '<li class="empty" style="text-align:left;padding:4px 0">未登録（当選したアカウントを登録すると記録に紐づけられます）</li>';
+  }
+  $('accAdd').onclick = () => {
+    const name = $('accName').value.trim();
+    if (!name) return;
+    state.accounts.push({ id: 'a' + uid(), name, hint: '' });
+    $('accName').value = ''; save(); render(); toast(`当選ID「${name}」を追加しました`);
+  };
+  document.addEventListener('click', e => {
+    const ed = e.target.closest('[data-acc-edit]');
+    if (ed) {
+      const a = state.accounts.find(a => a.id === ed.dataset.accEdit);
+      const name = prompt('表示名', a.name); if (name === null) return;
+      const hint = prompt('自動判別キーワード（任意）\n貼り付けた文面にこの文字（メールアドレスやZAIKOの登録名など）が含まれていれば、このIDを自動で設定します', a.hint || '');
+      if (name.trim()) a.name = name.trim();
+      if (hint !== null) a.hint = hint.trim();
+      save(); render();
+    }
+    const del = e.target.closest('[data-acc-del]');
+    if (del) {
+      const a = state.accounts.find(a => a.id === del.dataset.accDel);
+      const n = state.visits.filter(v => v.account === a.id).length;
+      if (!confirm(`当選ID「${a.name}」を削除しますか？${n ? `\n紐づいている${n}件の記録は「未設定」になります` : ''}`)) return;
+      state.accounts = state.accounts.filter(x => x !== a);
+      state.visits.forEach(v => { if (v.account === a.id) v.account = ''; });
+      save(); render();
+    }
+  });
+
+  // ---------- 貼り付けテキストからの一括取り込み ----------
+  function zaikoSlug(url) {
+    const m = /zaiko\.io\/(?:[a-z]{2}\/)?e\/([\w-]+)/i.exec(url);
+    return m ? m[1].toLowerCase() : '';
+  }
+  function slugDateTime(slug) {
+    const y = /20\d{2}/.exec(slug), m = /-(\d{2})(\d{2})-(\d{2})(\d{2})$/.exec(slug);
+    if (!y || !m) return null;
+    return { date: `${y[0]}-${m[1]}-${m[2]}`, time: `${m[3]}:${m[4]}` };
+  }
+  function guessYear(mo, d) {
+    const now = new Date(), y = now.getFullYear();
+    return new Date(y, mo - 1, d) - now > 60 * 864e5 ? y - 1 : y;
+  }
+  function parseTickets(raw) {
+    const text = raw.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+      .replace(/[：]/g, ':').replace(/[／]/g, '/').replace(/[（]/g, '(').replace(/[）]/g, ')');
+    const all = (re, f) => { const out = []; let m; re.lastIndex = 0; while ((m = re.exec(text))) { const r = f(m); if (r) out.push({ pos: m.index, end: m.index + m[0].length, ...r }); } return out; };
+
+    const titles = all(/「([^」\n]{1,40})」\s*公演/g, m => ({ show: `「${m[1].trim()}」公演` }));
+    const dates = [
+      ...all(/(20\d{2})\s*[年\/.\-]\s*(\d{1,2})\s*[月\/.\-]\s*(\d{1,2})\s*日?/g, m => ({ date: `${m[1]}-${pad(m[2])}-${pad(m[3])}` })),
+      ...all(/(?<![\d\/.\-年])(\d{1,2})\s*[月\/]\s*(\d{1,2})\s*日?\s*\(\s*[日月火水木金土]/g, m => ({ date: `${guessYear(+m[1], +m[2])}-${pad(m[1])}-${pad(m[2])}` })),
+    ];
+    const times = all(/(?<!\d)([012]?\d):([0-5]\d)(?!\d)/g, m => {
+      if (+m[1] > 23) return null;
+      // 直前のラベル（「開演 13:00」）か直後のラベル（「13:00開演」）で開演時刻を優先
+      const LABEL = /(開演|開場|START|OPEN|受付|入場)/gi;
+      const before = [...text.slice(Math.max(0, m.index - 8), m.index).matchAll(LABEL)].pop();
+      const after = /^\s*(開演|開場|START|OPEN|受付|入場)/i.exec(text.slice(m.index + m[0].length, m.index + m[0].length + 4));
+      const label = ((after && after[1]) || (before && before[1]) || '').toUpperCase();
+      return { time: `${pad(m[1])}:${m[2]}`, prio: /開演|START/.test(label) ? 0 : label ? 2 : 1 };
+    });
+    const urls = all(/https?:\/\/[^\s]*zaiko\.io\/[^\s]*/gi, m => {
+      const slug = zaikoSlug(m[0]), dt = slug && slugDateTime(slug);
+      return dt ? { slug, ...dt } : null;
+    });
+
+    const near = (arr, pos, cmp) => arr.slice().sort((a, b) => (cmp ? cmp(a, b) : 0) || Math.abs(a.pos - pos) - Math.abs(b.pos - pos))[0];
+    const recs = [];
+    // URL（日時が確実）を優先
+    urls.forEach(u => {
+      const k = known.find(e => e.slug === u.slug);
+      const t = near(titles.filter(t => Math.abs(t.pos - u.pos) < 150), u.pos);
+      recs.push({ pos: u.pos, date: u.date, time: u.time, slug: u.slug, show: k ? k.show : t ? t.show : '' });
+    });
+    // 公演名を起点に、近くの日付・時刻を拾う（なければ日付を起点に）
+    const anchors = titles.length ? titles : dates.map(d => ({ pos: d.pos, show: '' }));
+    anchors.forEach(a => {
+      const d = near(dates, a.pos);
+      if (!d) return;
+      const t = near(times.filter(t => Math.abs(t.pos - a.pos) < 200), a.pos, (x, y) => x.prio - y.prio);
+      recs.push({ pos: a.pos, date: d.date, time: t ? t.time : '', show: a.show });
+    });
+
+    // 区間（前後の起点の中間まで）で当選IDを自動判別
+    recs.sort((a, b) => a.pos - b.pos);
+    recs.forEach((r, i) => {
+      const s = i ? (recs[i - 1].pos + r.pos) >> 1 : 0, e = i < recs.length - 1 ? (r.pos + recs[i + 1].pos) >> 1 : text.length;
+      const seg = text.slice(s, e).toLowerCase();
+      const acc = state.accounts.find(a => a.hint && seg.includes(a.hint.toLowerCase()));
+      r.account = acc ? acc.id : '';
+    });
+
+    // events.json で補完 & 重複除去
+    const out = new Map();
+    recs.forEach(r => {
+      const k = known.find(e => (r.slug && e.slug === r.slug) || (e.date === r.date && (!r.time || e.time === r.time) && (!r.show || e.show === r.show)));
+      if (k) { r.show = r.show || k.show; r.time = r.time || k.time; r.cast = k.cast; r.tag = k.tag; }
+      r.show = r.show || '劇場公演';
+      const key = r.date + '|' + r.time;
+      const prev = out.get(key);
+      if (!prev || (prev.show === '劇場公演' && r.show !== '劇場公演')) out.set(key, { ...r, account: r.account || (prev && prev.account) || '' });
+      else if (!prev.account && r.account) prev.account = r.account;
+    });
+    return [...out.values()].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  }
+
+  let parsed = [];
+  const visitKey = v => v.date + '|' + (v.time || '');
+  function renderPreview() {
+    const has = new Set(state.visits.map(visitKey));
+    $('impPreview').innerHTML = parsed.length ? parsed.map((r, i) => {
+      const dup = has.has(visitKey(r));
+      return `<li class="item" style="align-items:center">
+        <input type="checkbox" data-imp="${i}" ${dup ? '' : 'checked'} style="width:auto">
+        <div class="meta"><div class="t">${esc(r.show)}</div>
+          <div class="d">${fmtDate(r.date)} ${esc(r.time)}${dup ? ' <span class="tag">登録済み</span>' : ''}${r.tag ? ' ・' + esc(r.tag) : ''}</div></div>
+        <select data-imp-acc="${i}" style="width:auto;font-size:13px;padding:6px"></select>
+      </li>`;
+    }).join('') : '<li class="empty">公演が見つかりませんでした。日付（例：2026年11月23日）や公演名「〇〇」公演、ZAIKOのURLが含まれているか確認してください。</li>';
+    parsed.forEach((r, i) => fillAccountSelect(document.querySelector(`[data-imp-acc="${i}"]`), r.account));
+    $('impSave').disabled = !parsed.length;
+  }
+  $('importTextBtn').onclick = () => {
+    $('impText').value = ''; parsed = []; $('impPreview').innerHTML = ''; $('impSave').disabled = true;
+    fillAccountSelect($('impAccount'), '');
+    $('impDlg').showModal();
+  };
+  $('impCancel').onclick = () => $('impDlg').close();
+  $('impParse').onclick = () => {
+    parsed = parseTickets($('impText').value);
+    const def = $('impAccount').value;
+    if (def) parsed.forEach(r => { if (!r.account) r.account = def; });
+    renderPreview();
+  };
+  $('impAccount').addEventListener('change', e => {
+    document.querySelectorAll('[data-imp-acc]').forEach(s => s.value = e.target.value);
+  });
+  $('impForm').addEventListener('submit', e => {
+    e.preventDefault();
+    let n = 0;
+    parsed.forEach((r, i) => {
+      if (!document.querySelector(`[data-imp="${i}"]`).checked) return;
+      state.visits.push({
+        id: uid(), created: Date.now() + i, date: r.date, time: r.time, show: r.show,
+        type: 'theater', seat: '', bingo: '', cast: r.cast || [], memo: r.tag || '', count: true,
+        account: document.querySelector(`[data-imp-acc="${i}"]`).value
+      });
+      n++;
+    });
+    save(); $('impDlg').close(); render();
+    toast(n ? `${n}件取り込みました` : '取り込む公演が選ばれていません');
+  });
+
   // ---------- suggestions from ../events.json (same repo) ----------
   let known = [];
   async function loadKnown() {
@@ -366,7 +575,8 @@ dialog form{padding:16px}
         .map(e => ({
           date: `${e.year}-${pad(e.month)}-${pad(e.day)}`,
           time: e.hour != null ? `${pad(e.hour)}:${pad(e.minute || 0)}` : '',
-          show: e.title, cast: e.cast || e.members || [], tag: e.tag || ''
+          show: e.title, cast: e.cast || e.members || [], tag: e.tag || '',
+          slug: zaikoSlug(e.applyUrl || '')
         }));
       render();
     } catch (e) { /* standalone use: no suggestions */ }
@@ -399,6 +609,7 @@ dialog form{padding:16px}
     $('fType').value = s.type || 'theater';
     $('fSeat').value = s.seat || '';
     $('fBingo').value = s.bingo || '';
+    fillAccountSelect($('fAccount'), v ? (s.account || '') : lastAccount());
     $('fCast').value = (s.cast || []).join(', ');
     $('fMemo').value = s.memo || (preset && preset.tag ? preset.tag : '');
     $('fCount').checked = s.count ?? true;
@@ -419,6 +630,7 @@ dialog form{padding:16px}
     const data = {
       date: $('fDate').value, time: $('fTime').value, show: $('fShow').value.trim(),
       type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value,
+      account: $('fAccount').value,
       cast: $('fCast').value.split(/[,、，]/).map(s => s.trim()).filter(Boolean),
       memo: $('fMemo').value.trim(), count: $('fCount').checked
     };
@@ -469,7 +681,7 @@ dialog form{padding:16px}
       const d = JSON.parse(await f.text());
       if (!Array.isArray(d.visits)) throw 0;
       if (!confirm(`${d.visits.length}件の記録で現在のデータを置き換えますか？`)) return;
-      state = { goal: d.goal || 100, visits: d.visits };
+      state = normalize(d);
       save(); render(); toast('復元しました');
     } catch (err) { toast('ファイルを読み込めませんでした'); }
     e.target.value = '';
