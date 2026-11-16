@@ -325,6 +325,15 @@ dialog form{padding:16px}
       const d = JSON.parse(localStorage.getItem(KEY));
       if (d && Array.isArray(d.visits)) return normalize(d);
     } catch (e) {}
+    // この端末に記録がまだなければ、ページに埋め込んだ初期データ（あれば）から始める
+    try {
+      const seed = JSON.parse(document.getElementById('seed-data').textContent);
+      if (seed && Array.isArray(seed.visits)) {
+        const s = normalize(seed);
+        try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+        return s;
+      }
+    } catch (e) {}
     return { goal: 100, visits: [], accounts: [] };
   }
   function normalize(d) {
