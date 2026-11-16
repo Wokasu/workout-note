@@ -191,7 +191,7 @@ dialog form{padding:16px}
     <label>当選ID（ZAIKOアカウント）</label>
     <ul id="accList"></ul>
     <div class="row" style="margin-top:6px">
-      <input id="accName" placeholder="例：メイン / サブ / 家族">
+      <input id="accName" placeholder="IDの番号、または メイン / サブ など">
       <button class="ghost small" id="accAdd" style="flex:0 0 auto">追加</button>
     </div>
     <div class="tools" style="margin-top:12px">
@@ -301,7 +301,7 @@ dialog form{padding:16px}
     return { goal: 100, visits: [], accounts: [] };
   }
   function normalize(d) {
-    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [], deadline: d.deadline || '' };
+    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [], deadline: d.deadline || '', defaultAccount: d.defaultAccount || '' };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -467,6 +467,8 @@ dialog form{padding:16px}
     const v = [...state.visits].sort((a, b) => b.created - a.created).find(v => v.account);
     return v && state.accounts.some(a => a.id === v.account) ? v.account : '';
   };
+  // 新規記録・取り込みで最初に選ばれるID：既定のID → なければ前回使ったID
+  const defaultAccount = () => state.accounts.some(a => a.id === state.defaultAccount) ? state.defaultAccount : lastAccount();
   function fillAccountSelect(sel, value) {
     sel.innerHTML = '<option value="">未設定</option>'
       + state.accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
@@ -477,16 +479,19 @@ dialog form{padding:16px}
     state.visits.forEach(v => { if (v.account) cnt[v.account] = (cnt[v.account] || 0) + 1; });
     $('accList').innerHTML = state.accounts.length ? state.accounts.map(a => `
       <li class="item" style="align-items:center">
-        <div class="meta"><div class="t">${esc(a.name)} <span style="font-weight:400;color:var(--sub);font-size:12px">${cnt[a.id] || 0}件</span></div>
+        <div class="meta"><div class="t">${esc(a.name)} ${a.id === state.defaultAccount ? '<span class="tag">既定</span>' : ''}<span style="font-weight:400;color:var(--sub);font-size:12px">${cnt[a.id] || 0}件</span></div>
           ${a.hint ? `<div class="d">自動判別: ${esc(a.hint)}</div>` : ''}</div>
         <button class="ghost small" data-acc-edit="${a.id}">編集</button>
+        ${a.id === state.defaultAccount ? '' : `<button class="ghost small" data-acc-def="${a.id}">既定に</button>`}
         <button class="ghost small" data-acc-del="${a.id}" style="color:var(--danger)">削除</button>
       </li>`).join('') : '<li class="empty" style="text-align:left;padding:4px 0">未登録（当選したアカウントを登録すると記録に紐づけられます）</li>';
   }
   $('accAdd').onclick = () => {
     const name = $('accName').value.trim();
     if (!name) return;
-    state.accounts.push({ id: 'a' + uid(), name, hint: '' });
+    const a = { id: 'a' + uid(), name, hint: /^\d{6,}$/.test(name) ? name : '' };   // 数字のIDはそのまま自動判別キーワードに
+    state.accounts.push(a);
+    if (!state.accounts.some(x => x.id === state.defaultAccount)) state.defaultAccount = a.id; // 最初のIDを既定に
     $('accName').value = ''; save(); render(); toast(`当選ID「${name}」を追加しました`);
   };
   document.addEventListener('click', e => {
@@ -499,12 +504,15 @@ dialog form{padding:16px}
       if (hint !== null) a.hint = hint.trim();
       save(); render();
     }
+    const def = e.target.closest('[data-acc-def]');
+    if (def) { state.defaultAccount = def.dataset.accDef; save(); render(); toast(`既定の当選IDを「${accName(state.defaultAccount)}」にしました`); }
     const del = e.target.closest('[data-acc-del]');
     if (del) {
       const a = state.accounts.find(a => a.id === del.dataset.accDel);
       const n = state.visits.filter(v => v.account === a.id).length;
       if (!confirm(`当選ID「${a.name}」を削除しますか？${n ? `\n紐づいている${n}件の記録は「未設定」になります` : ''}`)) return;
       state.accounts = state.accounts.filter(x => x !== a);
+      if (state.defaultAccount === a.id) state.defaultAccount = '';
       state.visits.forEach(v => { if (v.account === a.id) v.account = ''; });
       save(); render();
     }
@@ -606,7 +614,7 @@ dialog form{padding:16px}
   }
   $('importTextBtn').onclick = () => {
     $('impText').value = ''; parsed = []; $('impPreview').innerHTML = ''; $('impSave').disabled = true;
-    fillAccountSelect($('impAccount'), '');
+    fillAccountSelect($('impAccount'), defaultAccount());
     $('impRole').value = ''; $('impPartner').value = ''; updateRoleUI();
     $('impDlg').showModal();
   };
@@ -909,7 +917,7 @@ dialog form{padding:16px}
     $('fType').value = s.type || 'theater';
     $('fSeat').value = s.seat || '';
     $('fBingo').value = s.bingo || '';
-    fillAccountSelect($('fAccount'), v ? (s.account || '') : lastAccount());
+    fillAccountSelect($('fAccount'), v ? (s.account || '') : defaultAccount());
     $('fRole').value = s.role || '';
     $('fPartner').value = s.partner || '';
     updateRoleUI(); renderDayShows();
