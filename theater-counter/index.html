@@ -375,6 +375,20 @@ dialog form{padding:16px}
     });
     return n;
   }
+  // 埋め込みデータの「追加分」：まだ取り込んでいない記録を1回だけ足す（削除した記録は戻さない）
+  function applyAdditions(d, additions) {
+    if (!Array.isArray(additions) || !additions.length) return 0;
+    d.appliedAdds = Array.isArray(d.appliedAdds) ? d.appliedAdds : [];
+    let n = 0;
+    additions.forEach(a => {
+      if (!a || !a.id || d.appliedAdds.includes(a.id)) return;
+      d.appliedAdds.push(a.id);
+      if (d.visits.some(v => v.date === a.date && (v.time || '') === (a.time || ''))) return;
+      d.visits.push({ created: Date.now() + n, ...a });
+      n++;
+    });
+    return n || 1;   // 適用済みの印が増えたら保存する
+  }
   function load() {
     try {
       const d = JSON.parse(localStorage.getItem(KEY));
@@ -382,7 +396,9 @@ dialog form{padding:16px}
         // 埋め込みデータに出演メンバーが増えていれば、未入力の記録だけ補完する
         try {
           const seed = JSON.parse(document.getElementById('seed-data').textContent);
-          if (seed && fillMissingCast(d.visits, seed.visits || [])) localStorage.setItem(KEY, JSON.stringify(d));
+          let changed = seed && fillMissingCast(d.visits, seed.visits || []);
+          if (seed && applyAdditions(d, seed.additions)) changed = true;
+          if (changed) localStorage.setItem(KEY, JSON.stringify(d));
         } catch (e) {}
         return normalize(d);
       }
@@ -392,6 +408,7 @@ dialog form{padding:16px}
       const seed = JSON.parse(document.getElementById('seed-data').textContent);
       if (seed && Array.isArray(seed.visits)) {
         const s = normalize(seed);
+        applyAdditions(s, seed.additions);
         try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
         return s;
       }
@@ -399,7 +416,7 @@ dialog form{padding:16px}
     return { goal: 100, visits: [], accounts: [] };
   }
   function normalize(d) {
-    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [], deadline: d.deadline || '', defaultAccount: d.defaultAccount || '' };
+    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [], deadline: d.deadline || '', defaultAccount: d.defaultAccount || '', appliedAdds: Array.isArray(d.appliedAdds) ? d.appliedAdds : [] };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
