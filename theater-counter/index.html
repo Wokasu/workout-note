@@ -80,6 +80,32 @@ li.item:first-child{border-top:0}
 .chips:empty{display:none}
 .chips button.on{background:var(--pink);color:#fff;border-color:var(--pink)}
 .pagetabs{position:sticky;top:0;z-index:5;margin-bottom:14px;border:1px solid var(--line)}
+.pagetabs .tab{padding:8px 4px;font-size:13px}
+/* calendar */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.calhead h2{margin:0;color:var(--ink);font-size:17px}
+.calhead button{min-width:40px;font-size:18px;line-height:1}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.calgrid .wd{font-size:11px;color:var(--sub);text-align:center;padding:2px 0}
+.calgrid .wd.sun,.calgrid .cell.sun .n{color:var(--danger)}
+.calgrid .wd.sat,.calgrid .cell.sat .n{color:#3b7dd8}
+.calgrid .cell{min-height:52px;border-radius:9px;background:var(--bg);border:1px solid transparent;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font:inherit;color:var(--ink)}
+.calgrid .cell.out{opacity:.35}
+.calgrid .cell.today{border-color:var(--pink)}
+.calgrid .cell.sel{background:var(--pink-soft);border-color:var(--pink)}
+.calgrid .cell .n{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.calgrid .cell .dots{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;max-width:100%}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sub);vertical-align:middle}
+.dot.oshi{background:var(--pink)}
+.dot.got{background:var(--ok);box-shadow:0 0 0 2px var(--card)}
+.calgrid .cell .cnt{font-size:10px;color:var(--sub)}
+.calleg{align-items:center;flex-wrap:wrap;margin:10px 0 0}
+.calleg i.dot{margin-right:4px;border:0;width:8px;height:8px}
+.calshow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.calshow:first-of-type{border-top:0}
+.calshow .tm{min-width:46px;font-weight:800;color:var(--pink);font-variant-numeric:tabular-nums;padding-top:1px}
+.calshow .meta .d{margin-top:3px}
+.calshow.mine .tm{color:var(--ok)}
 /* pace dashboard */
 .pace-hero{text-align:center}
 .pace-hero .lbl{font-size:13px;color:var(--sub)}
@@ -149,6 +175,7 @@ dialog form{padding:16px}
   <h1>🎀 劇場公演カウンター</h1>
   <nav class="tabs pagetabs" role="tablist">
     <button class="tab on" data-page="record" role="tab">記録</button>
+    <button class="tab" data-page="cal" role="tab">カレンダー</button>
     <button class="tab" data-page="pace" role="tab">ペース</button>
     <button class="tab" data-page="bday" role="tab">誕生日</button>
   </nav>
@@ -161,6 +188,22 @@ dialog form{padding:16px}
       </div>
     </section>
     <div id="paceBody"></div>
+  </div>
+
+  <div id="pageCal" hidden>
+    <section class="card">
+      <div class="calhead">
+        <button type="button" class="ghost small" id="calPrev" aria-label="前の月">‹</button>
+        <h2 id="calTitle"></h2>
+        <button type="button" class="ghost small" id="calNext" aria-label="次の月">›</button>
+      </div>
+      <div class="calgrid" id="calGrid" role="grid"></div>
+      <div class="legend calleg">
+        <span><i class="dot oshi"></i>推し出演</span><span><i class="dot"></i>公演</span><span><i class="dot got"></i>当選・記録済み</span>
+        <button type="button" class="ghost small" id="calToday" style="margin-left:auto">今日</button>
+      </div>
+    </section>
+    <section class="card" id="calDay"></section>
   </div>
 
   <div id="pageBday" hidden>
@@ -514,6 +557,7 @@ dialog form{padding:16px}
     renderAccounts();
     if (page === 'pace') renderPace();
     if (page === 'bday') renderBday();
+    if (page === 'cal') renderCal();
   }
 
   // ---------- 公演別 / メンバー別 集計 ----------
@@ -838,6 +882,7 @@ dialog form{padding:16px}
     $('pageRecord').hidden = page !== 'record';
     $('pagePace').hidden = page !== 'pace';
     $('pageBday').hidden = page !== 'bday';
+    $('pageCal').hidden = page !== 'cal';
     render(); window.scrollTo(0, 0);
   });
   $('deadline').addEventListener('change', e => { state.deadline = e.target.value; save(); render(); });
@@ -1155,6 +1200,63 @@ dialog form{padding:16px}
     }).join('') || '<section class="card"><div class="empty">観たことのあるメンバーがまだいません（記録に出演メンバーを入れると表示されます）</div></section>';
     $('bdayNote').textContent = members.length ? `${members.length}人・公式サイトのメンバー一覧より${membersAsOf ? `（${membersAsOf.replace(/-/g, '/')}時点）` : ''}` : '';
   }
+
+  // ---------- カレンダー（全公演の月表示） ----------
+  let calMonth = null, calSel = null;
+  // その日の予定：公演データ（全公演）と、自分の記録（公演データにない過去の公演も）
+  function dayItems(date) {
+    const items = known.filter(e => e.date === date).map(e => ({ ...e, visit: state.visits.find(v => v.date === e.date && (!v.time || !e.time || v.time === e.time)) }));
+    state.visits.filter(v => v.date === date && !items.some(i => i.visit === v))
+      .forEach(v => items.push({ date: v.date, time: v.time || '', show: v.show, cast: v.cast || [], tag: '', oshi: [], visit: v }));
+    return items.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  }
+  function renderCal() {
+    if (!calMonth) { const t = toD(today()); calMonth = new Date(t.getFullYear(), t.getMonth(), 1); }
+    if (!calSel) calSel = today();
+    const y = calMonth.getFullYear(), m = calMonth.getMonth();
+    $('calTitle').textContent = `${y}年${m + 1}月`;
+    const first = new Date(y, m, 1), start = new Date(y, m, 1 - first.getDay());
+    let html = wd.map((w, i) => `<div class="wd${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${w}</div>`).join('');
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (i >= 35 && d.getMonth() !== m) break;
+      const ds = ymd(d), items = dayItems(ds);
+      const dots = items.slice(0, 4).map(it => `<i class="dot${it.visit ? ' got' : (it.oshi || []).length ? ' oshi' : ''}"></i>`).join('');
+      html += `<button type="button" class="cell${d.getMonth() !== m ? ' out' : ''}${ds === today() ? ' today' : ''}${ds === calSel ? ' sel' : ''}${d.getDay() === 0 ? ' sun' : d.getDay() === 6 ? ' sat' : ''}" data-cal="${ds}" aria-label="${d.getMonth() + 1}月${d.getDate()}日 ${items.length}公演">
+        <span class="n">${d.getDate()}</span><span class="dots">${dots}</span>${items.length > 4 ? `<span class="cnt">+${items.length - 4}</span>` : ''}</button>`;
+    }
+    $('calGrid').innerHTML = html;
+    renderCalDay();
+  }
+  function renderCalDay() {
+    const items = dayItems(calSel);
+    const d = toD(calSel);
+    $('calDay').innerHTML = `<h2>${d.getMonth() + 1}月${d.getDate()}日(${wd[d.getDay()]})${calSel === today() ? ' ・ 今日' : ''}</h2>` + (items.length ? items.map((it, i) => `
+      <div class="calshow${it.visit ? ' mine' : ''}">
+        <div class="tm">${esc(it.time || '--:--')}</div>
+        <div class="meta"><div class="t">${esc(it.show)}${(it.oshi || []).length ? ' <span class="tag">推し出演</span>' : ''}${it.visit ? ` <span class="tag" style="background:var(--ok);color:#fff">${it.visit.count ? '当選済み' : '記録済み'}</span>` : ''}</div>
+          ${it.tag ? `<div class="d">${esc(it.tag)}</div>` : ''}
+          ${(it.cast || []).length ? `<div class="d">👥 ${it.cast.map(n => (it.oshi || []).includes(n) ? `<b>${esc(n)}</b>` : esc(n)).join('、')}</div>` : '<div class="d">出演メンバー未発表</div>'}</div>
+        <button class="ghost small" data-calrec="${i}">${it.visit ? '編集' : '記録'}</button>
+      </div>`).join('') : `<div class="empty">${known.length ? 'この日の公演はありません（休館日・未発表を含む）' : '公演データを読み込めませんでした'}</div>`);
+    renderCalDay.items = items;
+  }
+  $('calGrid').addEventListener('click', e => {
+    const c = e.target.closest('[data-cal]'); if (!c) return;
+    calSel = c.dataset.cal;
+    const d = toD(calSel);
+    if (d.getMonth() !== calMonth.getMonth()) calMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    renderCal();
+  });
+  $('calPrev').onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); renderCal(); };
+  $('calNext').onclick = () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); renderCal(); };
+  $('calToday').onclick = () => { calMonth = null; calSel = null; renderCal(); };
+  $('calDay').addEventListener('click', e => {
+    const b = e.target.closest('[data-calrec]'); if (!b) return;
+    const it = renderCalDay.items[+b.dataset.calrec];
+    if (it.visit) openDialog(it.visit);
+    else openDialog(null, it);
+  });
 
   // ---------- suggestions from ../events.json (same repo) ----------
   let known = [];
