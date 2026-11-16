@@ -126,6 +126,10 @@ li.item:first-child{border-top:0}
 .nextrow:first-of-type{border-top:0}
 .nextrow .cd{min-width:64px;text-align:center;font-weight:800;color:var(--pink);font-size:15px}
 .nextrow .cd small{display:block;font-size:11px;color:var(--sub);font-weight:400}
+.seitan{display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--pink);color:#fff}
+.seitan.done{background:transparent;color:var(--sub);border:1px solid var(--line);font-weight:400}
+.seitan .got{background:#fff;color:var(--pink);border-radius:999px;padding:0 6px;font-size:11px}
+.bd.has-seitan .day{box-shadow:inset 0 0 0 2px var(--pink)}
 .empty{color:var(--sub);font-size:13px;text-align:center;padding:8px}
 .tools{display:flex;flex-wrap:wrap;gap:8px}
 dialog{border:0;border-radius:16px;padding:0;max-width:520px;width:calc(100% - 24px);background:var(--card);color:var(--ink)}
@@ -160,6 +164,7 @@ dialog form{padding:16px}
   </div>
 
   <div id="pageBday" hidden>
+    <section class="card" id="bdaySeitan" hidden></section>
     <section class="card" id="bdayNext"></section>
     <div class="monthbar" id="bdayMonths" role="navigation" aria-label="月へ移動"></div>
     <label class="check" style="margin:0 2px 12px"><input type="checkbox" id="bdaySeen"> 観たことのあるメンバーだけ表示</label>
@@ -1002,7 +1007,26 @@ dialog form{padding:16px}
   }
 
   // ---------- メンバーの誕生日（月別） ----------
-  let members = [], membersAsOf = '';
+  let members = [], membersAsOf = '', seitansai = [];
+  // 生誕祭の一覧：seitansai.json と、公演データ（events.json）のタグ「◯◯ 生誕祭」を合わせる
+  function allSeitansai() {
+    const list = seitansai.map(x => ({ ...x }));
+    known.forEach(e => {
+      const m = /(\S+?)\s*生誕祭/.exec(e.tag || '');
+      if (!m) return;
+      const member = m[1].replace(/\s+/g, '');
+      if (!list.some(x => x.member === member && x.date === e.date)) list.push({ date: e.date, time: e.time, member, show: e.show });
+    });
+    return list;
+  }
+  // その日時の公演に当選・記録済みか
+  const hasTicket = x => state.visits.some(v => v.date === x.date && (!x.time || !v.time || v.time === x.time));
+  const mdw = s => { const d = toD(s); return `${d.getMonth() + 1}/${d.getDate()}(${wd[d.getDay()]})`; };
+  function seitanBadge(x) {
+    if (!x) return '';
+    const done = x.date < today();
+    return `<span class="seitan${done ? ' done' : ''}">${done ? '生誕祭 済' : '🎉 生誕祭'} ${mdw(x.date)}${x.time ? ' ' + esc(x.time) : ''}${!done && hasTicket(x) ? ' <span class="got">当選済み</span>' : ''}</span>`;
+  }
   async function loadMembers() {
     try {
       const emb = document.getElementById('members-data');
@@ -1011,6 +1035,13 @@ dialog form{padding:16px}
       else { const r = await fetch('../members.json', { cache: 'no-store' }); if (!r.ok) return; d = await r.json(); }
       members = (d.members || []).filter(m => /^\d{4}-\d{2}-\d{2}$/.test(m.birthday || ''));
       membersAsOf = d.asOf || '';
+      try {
+        const se = document.getElementById('seitansai-data');
+        let sd;
+        if (se) sd = JSON.parse(se.textContent);
+        else { const r2 = await fetch('../seitansai.json', { cache: 'no-store' }); if (r2.ok) sd = await r2.json(); }
+        seitansai = (sd && sd.seitansai) || [];
+      } catch (e) { seitansai = []; }
       if (page === 'bday') renderBday();
     } catch (e) { /* 誕生日データなし */ }
   }
@@ -1043,6 +1074,29 @@ dialog form{padding:16px}
       if (next < now) next = new Date(yNow + 1, bm - 1, bdd);
       return { ...m, by, bm, bdd, next, days: Math.round((next - now) / DAY), turns: next.getFullYear() - by, seen: seen[m.name] || 0 };
     });
+    // 表示している誕生日（今月で過ぎた人は今年、それ以外は次の誕生日）の前後120日にある生誕祭を紐づける
+    const ss = allSeitansai();
+    rows.forEach(r => {
+      const occ = r.bm === now.getMonth() + 1 && r.bdd < now.getDate() ? new Date(yNow, r.bm - 1, r.bdd) : r.next;
+      const c = ss.filter(x => x.member === r.name && Math.abs(toD(x.date) - occ) <= 120 * DAY)
+        .sort((a, b) => Math.abs(toD(a.date) - occ) - Math.abs(toD(b.date) - occ));
+      // 日程が決まっている今後の生誕祭は、誕生日から離れていても優先して表示
+      const up = ss.filter(x => x.member === r.name && x.date >= today()).sort((a, b) => a.date.localeCompare(b.date))[0];
+      r.seitan = up || c[0] || null;
+    });
+    // これからの生誕祭（日程が決まっているもの）
+
+    const ahead = ss.filter(x => x.date >= today()).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+    $('bdaySeitan').hidden = !ahead.length;
+    $('bdaySeitan').innerHTML = `<h2>これからの生誕祭</h2>` + ahead.map(x => {
+      const m = members.find(mm => mm.name === x.member);
+      const days = Math.round((toD(x.date) - now) / DAY);
+      return `<div class="nextrow">
+        <div class="cd">${days === 0 ? '今日！' : `あと${days}日`}<small>${mdw(x.date)}${x.time ? ' ' + esc(x.time) : ''}</small></div>
+        <div class="meta"><div class="t">${esc(m ? m.display : x.member)} 生誕祭${hasTicket(x) ? ' <span class="tag">当選済み</span>' : ''}</div>
+          <div class="d">${esc(x.show || '')}</div></div>
+      </div>`;
+    }).join('');
     const list = bdaySeenOnly ? rows.filter(r => r.seen) : rows;
 
     // 次の誕生日（直近3人＋同じ日の人）
@@ -1053,7 +1107,7 @@ dialog form{padding:16px}
       <div class="nextrow">
         <div class="cd">${r.days === 0 ? '今日！' : `あと${r.days}日`}<small>${r.bm}/${r.bdd}(${wd[r.next.getDay()]})</small></div>
         <div class="meta"><div class="t">${esc(r.display || r.name)} <span style="font-weight:400;color:var(--sub);font-size:13px">${r.turns}歳に</span></div>
-          <div class="d">${esc(r.gen)}${r.seen ? ` ・ 観覧${r.seen}回` : ''}</div></div>
+          <div class="d">${esc(r.gen)}${r.seen ? ` ・ 観覧${r.seen}回` : ''}</div>${seitanBadge(r.seitan)}</div>
       </div>`).join('') : `<div class="empty">${members.length ? '該当するメンバーがいません' : 'メンバーの誕生日データを読み込めませんでした'}</div>`);
 
     // 月ボタン
@@ -1070,10 +1124,10 @@ dialog form{padding:16px}
         <div class="mhead"><h2>${mo}月<small>${l.length}人</small></h2>${mo === curM ? '<span class="tag">今月</span>' : ''}</div>
         ${l.map(r => {
           const isToday = r.days === 0, past = mo === curM && r.bdd < now.getDate();
-          return `<div class="bd${isToday ? ' today' : ''}${past ? ' past' : ''}">
+          return `<div class="bd${isToday ? ' today' : ''}${past ? ' past' : ''}${r.seitan && r.seitan.date >= today() ? ' has-seitan' : ''}">
             <div class="day"><b>${r.bdd}</b><span>${wd[(past ? new Date(yNow, r.bm - 1, r.bdd) : r.next).getDay()]}</span></div>
             <div class="who"><div class="t">${esc(r.display || r.name)}${isToday ? ' 🎂' : ''}</div>
-              <div class="d">${esc(r.gen)} ・ ${r.by}年生 ・ ${past ? `${r.turns - 1}歳になった` : `${r.turns}歳に`}${!past && r.days <= 31 && !isToday ? ` ・ あと${r.days}日` : ''}</div></div>
+              <div class="d">${esc(r.gen)} ・ ${r.by}年生 ・ ${past ? `${r.turns - 1}歳になった` : `${r.turns}歳に`}${!past && r.days <= 31 && !isToday ? ` ・ あと${r.days}日` : ''}</div>${seitanBadge(r.seitan)}</div>
             <div class="seen">${r.seen ? `<b>${r.seen}回</b>観覧` : ''}${lastSeen[r.name] ? `<br>最終 ${shortDate(lastSeen[r.name])}` : ''}</div>
           </div>`;
         }).join('')}

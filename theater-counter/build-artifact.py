@@ -30,6 +30,10 @@ members_path = here.parent / "members.json"
 if members_path.exists():
     mdata = json.dumps(json.loads(members_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
     embed += f'<script type="application/json" id="members-data">{mdata}</script>\n'
+seitan_path = here.parent / "seitansai.json"
+if seitan_path.exists():
+    sdata = json.dumps(json.loads(seitan_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
+    embed += f'<script type="application/json" id="seitansai-data">{sdata}</script>\n'
 if len(sys.argv) > 2:
     seed = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
     seed_json = json.dumps(seed, ensure_ascii=False).replace("</", "<\\/")
