@@ -321,11 +321,19 @@ dialog form{padding:16px}
 
   // ---------- storage ----------
   // 同じ日時の記録で出演メンバーが未入力なら、source 側のメンバーで埋める（上書きはしない）
+  // 開演時刻が未入力の記録は日付だけで突き合わせ、時刻も補う
   function fillMissingCast(target, source) {
-    const key = v => v.date + '|' + (v.time || '');
-    const src = new Map(source.filter(v => (v.cast || []).length).map(v => [key(v), v.cast]));
+    const withCast = source.filter(v => (v.cast || []).length);
     let n = 0;
-    target.forEach(v => { if (!(v.cast || []).length && src.has(key(v))) { v.cast = [...src.get(key(v))]; n++; } });
+    target.forEach(v => {
+      if ((v.cast || []).length) return;
+      const m = withCast.find(s => s.date === v.date && (s.time || '') === (v.time || ''))
+        || (!v.time && withCast.filter(s => s.date === v.date).length === 1 && withCast.find(s => s.date === v.date));
+      if (!m) return;
+      v.cast = [...m.cast];
+      if (!v.time && m.time) v.time = m.time;
+      n++;
+    });
     return n;
   }
   function load() {
