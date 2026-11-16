@@ -101,6 +101,31 @@ li.item:first-child{border-top:0}
 .legend i.dash{border-top:2px dashed var(--sub)}
 .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .1s;z-index:2}
 .tip.show{opacity:1}
+/* birthdays */
+.monthbar{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px;scrollbar-width:none}
+.monthbar::-webkit-scrollbar{display:none}
+.monthbar button{flex:0 0 auto;min-width:44px;padding:7px 10px;font-size:13px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink)}
+.monthbar button.now{border-color:var(--pink);color:var(--pink);font-weight:700}
+.monthbar button:disabled{opacity:.35}
+.mhead{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 6px}
+.mhead h2{margin:0;color:var(--ink);font-size:17px}
+.mhead h2 small{font-size:12px;color:var(--sub);font-weight:400;margin-left:6px}
+.bd{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.bd:first-of-type{border-top:0}
+.bd .day{width:46px;flex:0 0 46px;text-align:center;border-radius:12px;background:var(--bg);padding:6px 0;line-height:1.1}
+.bd .day b{display:block;font-size:20px;color:var(--pink);font-variant-numeric:tabular-nums}
+.bd .day span{font-size:11px;color:var(--sub)}
+.bd.today .day{background:var(--pink)} .bd.today .day b,.bd.today .day span{color:#fff}
+.bd .who{flex:1;min-width:0}
+.bd .who .t{font-weight:700;font-size:15px}
+.bd .who .d{font-size:12px;color:var(--sub);margin-top:2px}
+.bd .seen{flex:0 0 auto;text-align:right;font-size:12px;color:var(--sub)}
+.bd .seen b{display:block;font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.bd.past .who .t{color:var(--sub)}
+.nextrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.nextrow:first-of-type{border-top:0}
+.nextrow .cd{min-width:64px;text-align:center;font-weight:800;color:var(--pink);font-size:15px}
+.nextrow .cd small{display:block;font-size:11px;color:var(--sub);font-weight:400}
 .empty{color:var(--sub);font-size:13px;text-align:center;padding:8px}
 .tools{display:flex;flex-wrap:wrap;gap:8px}
 dialog{border:0;border-radius:16px;padding:0;max-width:520px;width:calc(100% - 24px);background:var(--card);color:var(--ink)}
@@ -121,6 +146,7 @@ dialog form{padding:16px}
   <nav class="tabs pagetabs" role="tablist">
     <button class="tab on" data-page="record" role="tab">記録</button>
     <button class="tab" data-page="pace" role="tab">ペース</button>
+    <button class="tab" data-page="bday" role="tab">誕生日</button>
   </nav>
 
   <div id="pagePace" hidden>
@@ -131,6 +157,14 @@ dialog form{padding:16px}
       </div>
     </section>
     <div id="paceBody"></div>
+  </div>
+
+  <div id="pageBday" hidden>
+    <section class="card" id="bdayNext"></section>
+    <div class="monthbar" id="bdayMonths" role="navigation" aria-label="月へ移動"></div>
+    <label class="check" style="margin:0 2px 12px"><input type="checkbox" id="bdaySeen"> 観たことのあるメンバーだけ表示</label>
+    <div id="bdayList"></div>
+    <p class="agg-note" id="bdayNote" style="text-align:center"></p>
   </div>
 
   <div id="pageRecord">
@@ -454,6 +488,7 @@ dialog form{padding:16px}
     renderSuggestions();
     renderAccounts();
     if (page === 'pace') renderPace();
+    if (page === 'bday') renderBday();
   }
 
   // ---------- 公演別 / メンバー別 集計 ----------
@@ -777,6 +812,7 @@ dialog form{padding:16px}
     document.querySelectorAll('.tab[data-page]').forEach(x => x.classList.toggle('on', x === t));
     $('pageRecord').hidden = page !== 'record';
     $('pagePace').hidden = page !== 'pace';
+    $('pageBday').hidden = page !== 'bday';
     render(); window.scrollTo(0, 0);
   });
   $('deadline').addEventListener('change', e => { state.deadline = e.target.value; save(); render(); });
@@ -963,6 +999,87 @@ dialog form{padding:16px}
     box.innerHTML = s;
     const svg = box.querySelector('svg');
     attachHover(box, svg, pts, (p, on) => svg.querySelectorAll('.mbar').forEach(b => b.style.opacity = on && +b.dataset.i !== p.i ? .45 : 1));
+  }
+
+  // ---------- メンバーの誕生日（月別） ----------
+  let members = [], membersAsOf = '';
+  async function loadMembers() {
+    try {
+      const emb = document.getElementById('members-data');
+      let d;
+      if (emb) d = JSON.parse(emb.textContent);
+      else { const r = await fetch('../members.json', { cache: 'no-store' }); if (!r.ok) return; d = await r.json(); }
+      members = (d.members || []).filter(m => /^\d{4}-\d{2}-\d{2}$/.test(m.birthday || ''));
+      membersAsOf = d.asOf || '';
+      if (page === 'bday') renderBday();
+    } catch (e) { /* 誕生日データなし */ }
+  }
+  let bdaySeenOnly = false;
+  try { bdaySeenOnly = localStorage.getItem(KEY + ':bdaySeen') === '1'; } catch (e) {}
+  $('bdaySeen').addEventListener('change', e => {
+    bdaySeenOnly = e.target.checked;
+    try { localStorage.setItem(KEY + ':bdaySeen', bdaySeenOnly ? '1' : '0'); } catch (err) {}
+    renderBday();
+  });
+  $('bdayMonths').addEventListener('click', e => {
+    const b = e.target.closest('[data-month]'); if (!b) return;
+    const el = document.getElementById('bm-' + b.dataset.month);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // 今年なら M/D、それ以外は YYYY/M/D
+  const shortDate = s => { const [y, m, d] = s.split('-').map(Number); return (String(y) === today().slice(0, 4) ? '' : y + '/') + m + '/' + d; };
+  function renderBday() {
+    $('bdaySeen').checked = bdaySeenOnly;
+    const now = toD(today()), yNow = now.getFullYear();
+    // 観覧回数（カウント対象の記録で、出演メンバーに含まれる回数）
+    const seen = {};
+    counted().forEach(v => (v.cast || []).forEach(n => { seen[n] = (seen[n] || 0) + 1; }));
+    const lastSeen = {};
+    counted().forEach(v => { if (v.date <= today()) (v.cast || []).forEach(n => { if (!lastSeen[n] || v.date > lastSeen[n]) lastSeen[n] = v.date; }); });
+    const rows = members.map(m => {
+      const [by, bm, bdd] = m.birthday.split('-').map(Number);
+      let next = new Date(yNow, bm - 1, bdd);
+      if (next < now) next = new Date(yNow + 1, bm - 1, bdd);
+      return { ...m, by, bm, bdd, next, days: Math.round((next - now) / DAY), turns: next.getFullYear() - by, seen: seen[m.name] || 0 };
+    });
+    const list = bdaySeenOnly ? rows.filter(r => r.seen) : rows;
+
+    // 次の誕生日（直近3人＋同じ日の人）
+    const upcoming = [...list].sort((a, b) => a.days - b.days);
+    const cut = upcoming.length ? upcoming[Math.min(2, upcoming.length - 1)].days : 0;
+    const nexts = upcoming.filter(r => r.days <= cut);
+    $('bdayNext').innerHTML = `<h2>次の誕生日</h2>` + (nexts.length ? nexts.map(r => `
+      <div class="nextrow">
+        <div class="cd">${r.days === 0 ? '今日！' : `あと${r.days}日`}<small>${r.bm}/${r.bdd}(${wd[r.next.getDay()]})</small></div>
+        <div class="meta"><div class="t">${esc(r.display || r.name)} <span style="font-weight:400;color:var(--sub);font-size:13px">${r.turns}歳に</span></div>
+          <div class="d">${esc(r.gen)}${r.seen ? ` ・ 観覧${r.seen}回` : ''}</div></div>
+      </div>`).join('') : `<div class="empty">${members.length ? '該当するメンバーがいません' : 'メンバーの誕生日データを読み込めませんでした'}</div>`);
+
+    // 月ボタン
+    const byMonth = Array.from({ length: 12 }, (_, i) => list.filter(r => r.bm === i + 1).sort((a, b) => a.bdd - b.bdd || a.by - b.by));
+    const curM = now.getMonth() + 1;
+    // 今月から1年分の順（月ボタンも一覧も同じ並び）
+    const order = Array.from({ length: 12 }, (_, i) => ((curM - 1 + i) % 12) + 1);
+    $('bdayMonths').innerHTML = order.map(mo => { const l = byMonth[mo - 1]; return `<button type="button" data-month="${mo}" class="${mo === curM ? 'now' : ''}" ${l.length ? '' : 'disabled'} aria-label="${mo}月 ${l.length}人">${mo}月</button>`; }).join('');
+
+    $('bdayList').innerHTML = order.map(mo => {
+      const l = byMonth[mo - 1];
+      if (!l.length) return '';
+      return `<section class="card" id="bm-${mo}" style="scroll-margin-top:64px">
+        <div class="mhead"><h2>${mo}月<small>${l.length}人</small></h2>${mo === curM ? '<span class="tag">今月</span>' : ''}</div>
+        ${l.map(r => {
+          const isToday = r.days === 0, past = mo === curM && r.bdd < now.getDate();
+          return `<div class="bd${isToday ? ' today' : ''}${past ? ' past' : ''}">
+            <div class="day"><b>${r.bdd}</b><span>${wd[(past ? new Date(yNow, r.bm - 1, r.bdd) : r.next).getDay()]}</span></div>
+            <div class="who"><div class="t">${esc(r.display || r.name)}${isToday ? ' 🎂' : ''}</div>
+              <div class="d">${esc(r.gen)} ・ ${r.by}年生 ・ ${past ? `${r.turns - 1}歳になった` : `${r.turns}歳に`}${!past && r.days <= 31 && !isToday ? ` ・ あと${r.days}日` : ''}</div></div>
+            <div class="seen">${r.seen ? `<b>${r.seen}回</b>観覧` : ''}${lastSeen[r.name] ? `<br>最終 ${shortDate(lastSeen[r.name])}` : ''}</div>
+          </div>`;
+        }).join('')}
+      </section>`;
+    }).join('') || '<section class="card"><div class="empty">観たことのあるメンバーがまだいません（記録に出演メンバーを入れると表示されます）</div></section>';
+    $('bdayNote').textContent = members.length ? `${members.length}人・公式サイトのメンバー一覧より${membersAsOf ? `（${membersAsOf.replace(/-/g, '/')}時点）` : ''}` : '';
   }
 
   // ---------- suggestions from ../events.json (same repo) ----------
@@ -1190,6 +1307,7 @@ dialog form{padding:16px}
 
   render();
   loadKnown();
+  loadMembers();
 })();
 </script>
 </body>

@@ -26,6 +26,10 @@ src = re.sub(r"</body>\s*</html>\s*$", "", src)
 
 data = json.dumps(events, ensure_ascii=False).replace("</", "<\\/")
 embed = f'<script type="application/json" id="events-data">{data}</script>\n'
+members_path = here.parent / "members.json"
+if members_path.exists():
+    mdata = json.dumps(json.loads(members_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
+    embed += f'<script type="application/json" id="members-data">{mdata}</script>\n'
 if len(sys.argv) > 2:
     seed = json.loads(pathlib.Path(sys.argv[2]).read_text(encoding="utf-8"))
     seed_json = json.dumps(seed, ensure_ascii=False).replace("</", "<\\/")
