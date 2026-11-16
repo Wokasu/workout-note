@@ -235,6 +235,9 @@ dialog form{padding:16px}
     <datalist id="partnerList"></datalist>
     <label for="fAccount" id="fAccountLabel">当選ID</label>
     <select id="fAccount"></select>
+    <label for="fFrame">枠</label>
+    <input id="fFrame" list="frameList" placeholder="例：柱の会 会員枠 / 一般枠">
+    <datalist id="frameList"></datalist>
     <label for="fSeat">座席など</label>
     <input id="fSeat" placeholder="例：3列目 / 立ち見 / 抽選12番">
     <label for="fCast">出演メンバー（任意）</label>
@@ -260,7 +263,7 @@ dialog form{padding:16px}
   <form method="dialog" id="impForm">
     <h2>まとめて取り込み</h2>
     <p style="font-size:12px;color:var(--sub);margin:0 0 6px">
-      ZAIKOの購入済みチケット画面・購入完了メールの文面、チケットURLなどを貼り付けてください。
+      ZAIKOの購入済みチケット画面・購入完了メールの文面、チケットURL、またはアカウントごとのチケット一覧（JSON）を貼り付けてください。
       スクショの場合は、写真アプリで画像の文字を長押し→「すべてを選択」→コピーで文字にできます（iPhoneの「テキスト認識表示」／Androidの「Googleレンズ」）。
     </p>
     <textarea id="impText" style="min-height:140px" placeholder="例：&#10;AKB48劇場「手をつなぎながら」公演&#10;2026年11月23日(月) 13:00開演&#10;https://akb48.zaiko.io/e/2026te-1123-1300"></textarea>
@@ -367,7 +370,7 @@ dialog form{padding:16px}
         <div class="meta">
           <div class="t">${esc(v.show)}</div>
           <div class="d">${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}
-            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${attendTag[attendState(v)] ? `<span class="tag" style="background:var(--bg);border:1px solid var(--line)">${attendTag[attendState(v)]}</span>` : ''}${v.role === 'companion' ? '<span class="tag">同伴</span>' : ''}${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}
+            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${attendTag[attendState(v)] ? `<span class="tag" style="background:var(--bg);border:1px solid var(--line)">${attendTag[attendState(v)]}</span>` : ''}${v.role === 'companion' ? '<span class="tag">同伴</span>' : ''}${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.frame ? esc(v.frame) + ' ' : ''}${v.seat ? esc(v.seat) : ''}
             ${accName(v.account) ? `<span style="opacity:.75">・ID: ${esc(accName(v.account))}</span>` : ''}</div>
           ${v.partner ? `<div class="d">${v.role === 'companion' ? `🎫 ${esc(v.partner)}さんの当選に同伴` : `👫 同伴者: ${esc(v.partner)}`}</div>` : ''}
           ${(v.cast || []).length ? `<div class="d">👥 ${v.cast.map(esc).join('、')}</div>` : ''}
@@ -384,6 +387,7 @@ dialog form{padding:16px}
     const st = { attended: 0, absent: 0, planned: 0 };
     c.forEach(v => st[attendState(v)]++);
     $('attendLine').textContent = c.length ? `うち入場 ${st.attended}回${st.absent ? ` ・ 欠席 ${st.absent}回` : ''}${st.planned ? ` ・ 今後 ${st.planned}回` : ''}${c.some(v => v.role === 'companion') ? ` ／ 同伴 ${c.filter(v => v.role === 'companion').length}回` : ''}` : '';
+    $('frameList').innerHTML = [...new Set(['柱の会 会員枠', '映像倉庫会員枠', '一般枠', ...state.visits.map(v => v.frame).filter(Boolean)])].map(f => `<option value="${esc(f)}">`).join('');
     $('partnerList').innerHTML = [...new Set(state.visits.map(v => v.partner).filter(Boolean))].map(p => `<option value="${esc(p)}">`).join('');
     renderAgg(c);
 
@@ -605,11 +609,17 @@ dialog form{padding:16px}
       return `<li class="item" style="align-items:center">
         <input type="checkbox" data-imp="${i}" ${dup ? '' : 'checked'} style="width:auto">
         <div class="meta"><div class="t">${esc(r.show)}</div>
-          <div class="d">${fmtDate(r.date)} ${esc(r.time)}${dup ? ' <span class="tag">登録済み</span>' : ''}${r.tag ? ' ・' + esc(r.tag) : ''}</div></div>
+          <div class="d">${fmtDate(r.date)} ${esc(r.time)}${dup ? ' <span class="tag">登録済み</span>' : ''}${r.tag ? ' ・' + esc(r.tag) : ''}</div>
+          ${r.json ? `<div class="d">${r.frame ? esc(r.frame) : ''}${r.role === 'companion' ? ' <span class="tag">同伴</span>' : ''}${r.attend === 'no' ? ' <span class="tag">欠席</span>' : ''}${r.count ? '' : ' <span class="tag">カウント対象外</span>'}</div>` : ''}</div>
         <select data-imp-acc="${i}" style="width:auto;font-size:13px;padding:6px"></select>
       </li>`;
     }).join('') : '<li class="empty">公演が見つかりませんでした。日付（例：2026年11月23日）や公演名「〇〇」公演、ZAIKOのURLが含まれているか確認してください。</li>';
-    parsed.forEach((r, i) => fillAccountSelect(document.querySelector(`[data-imp-acc="${i}"]`), r.account));
+    parsed.forEach((r, i) => {
+      const sel = document.querySelector(`[data-imp-acc="${i}"]`);
+      fillAccountSelect(sel, '');
+      if (String(r.account).startsWith('new:')) sel.insertAdjacentHTML('beforeend', `<option value="${esc(r.account)}">${esc(r.account.slice(4))}（新規）</option>`);
+      sel.value = r.account || '';
+    });
     $('impSave').disabled = !parsed.length;
   }
   $('importTextBtn').onclick = () => {
@@ -619,8 +629,38 @@ dialog form{padding:16px}
     $('impDlg').showModal();
   };
   $('impCancel').onclick = () => $('impDlg').close();
+  // ZAIKOの購入済みチケット一覧（アカウントごとのJSON）
+  // { "default": [ {date,time,title,frame,tickets,transferred,checkedIn,group,eticket}, ... ], "<ID番号>": [...] }
+  function parseTicketJSON(raw) {
+    let d;
+    try { d = JSON.parse(raw.trim()); } catch (e) { return null; }
+    if (Array.isArray(d)) d = { default: d };
+    if (!d || typeof d !== 'object') return null;
+    const out = [];
+    Object.entries(d).forEach(([key, list]) => {
+      if (!Array.isArray(list)) return;
+      const acc = key === 'default' ? defaultAccount()
+        : (state.accounts.find(a => a.name === key || a.hint === key) || {}).id || 'new:' + key;
+      list.forEach(t => {
+        if (!t || !/^\d{4}-\d{2}-\d{2}$/.test(t.date || '')) return;
+        const title = String(t.title || '').trim();
+        const m = /^(「[^」]+」\s*公演)\s*(.*)$/.exec(title);          // 「…」公演 渡邉葵心 生誕祭 → 公演名 + タグ
+        const show = m ? m[1].replace(/\s+/g, '') : title || '劇場公演';
+        const lobby = /ロビー/.test(t.frame || '');
+        const k = known.find(e => e.date === t.date && (!t.time || e.time === t.time));
+        const memo = [m && m[2], t.tickets > 1 ? `${t.tickets}枚` : '', t.eticket ? `eチケット ${t.eticket}` : ''].filter(Boolean).join(' / ');
+        out.push({
+          date: t.date, time: t.time || '', show, tag: memo, cast: k ? k.cast : [],
+          frame: t.frame || '', type: lobby ? 'lobby' : 'theater', count: !lobby,
+          attend: t.checkedIn === false ? 'no' : '', role: t.transferred ? 'companion' : '',
+          account: acc, json: true
+        });
+      });
+    });
+    return out.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  }
   $('impParse').onclick = () => {
-    parsed = parseTickets($('impText').value);
+    parsed = parseTicketJSON($('impText').value) || parseTickets($('impText').value);
     const def = $('impAccount').value;
     if (def) parsed.forEach(r => { if (!r.account) r.account = def; });
     renderPreview();
@@ -631,13 +671,25 @@ dialog form{padding:16px}
   $('impForm').addEventListener('submit', e => {
     e.preventDefault();
     let n = 0;
+    const resolveAcc = v => {
+      if (!v.startsWith('new:')) return v;
+      const num = v.slice(4);
+      let a = state.accounts.find(a => a.name === num);
+      if (!a) {
+        a = { id: 'a' + uid(), name: num, hint: num };
+        state.accounts.push(a);
+        if (!state.accounts.some(x => x.id === state.defaultAccount)) state.defaultAccount = a.id;
+      }
+      return a.id;
+    };
     parsed.forEach((r, i) => {
       if (!document.querySelector(`[data-imp="${i}"]`).checked) return;
       state.visits.push({
         id: uid(), created: Date.now() + i, date: r.date, time: r.time, show: r.show,
-        type: 'theater', seat: '', bingo: '', cast: r.cast || [], memo: r.tag || '', count: true, attend: '',
-        account: document.querySelector(`[data-imp-acc="${i}"]`).value,
-        role: $('impRole').value, partner: $('impPartner').value.trim()
+        type: r.type || 'theater', seat: '', bingo: '', cast: r.cast || [], memo: r.tag || '',
+        count: r.count ?? true, attend: r.attend || '', frame: r.frame || '',
+        account: resolveAcc(document.querySelector(`[data-imp-acc="${i}"]`).value),
+        role: r.json ? r.role : $('impRole').value, partner: $('impPartner').value.trim()
       });
       n++;
     });
@@ -916,6 +968,7 @@ dialog form{padding:16px}
     $('fShow').value = s.show || '';
     $('fType').value = s.type || 'theater';
     $('fSeat').value = s.seat || '';
+    $('fFrame').value = s.frame || '';
     $('fBingo').value = s.bingo || '';
     fillAccountSelect($('fAccount'), v ? (s.account || '') : defaultAccount());
     $('fRole').value = s.role || '';
@@ -941,7 +994,7 @@ dialog form{padding:16px}
     const before = counted().length;
     const data = {
       date: $('fDate').value, time: $('fTime').value, show: $('fShow').value.trim(),
-      type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value,
+      type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value, frame: $('fFrame').value.trim(),
       account: $('fAccount').value, role: $('fRole').value, partner: $('fPartner').value.trim(),
       cast: $('fCast').value.split(/[,、，]/).map(s => s.trim()).filter(Boolean),
       memo: $('fMemo').value.trim(), count: $('fCount').checked, attend: $('fAttend').value
