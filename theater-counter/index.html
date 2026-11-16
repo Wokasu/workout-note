@@ -10,11 +10,11 @@
 <style>
 :root{
   --bg:#fff6f9; --card:#ffffff; --ink:#2a2230; --sub:#7d6f86; --line:#f0dfe7;
-  --pink:#e8457f; --pink-soft:#ffd6e5; --ok:#2e9d6a; --danger:#c8364b;
+  --pink:#e8457f; --pink-soft:#ffd6e5; --ok:#2e8a5e; --warn:#a86a00; --danger:#c8364b;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#17121a; --card:#221b27; --ink:#f3eaf2; --sub:#a796ad; --line:#3a2f40;
-         --pink:#ff6b9d; --pink-soft:#4a2536; }
+         --pink:#ff6b9d; --pink-soft:#4a2536; --ok:#4cc38a; --warn:#e0a63a; --danger:#ff6b7d; }
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -74,6 +74,28 @@ li.item:first-child{border-top:0}
 .tab{flex:1;padding:8px;font-size:14px;background:transparent;color:var(--sub);border-radius:9px}
 .tab.on{background:var(--card);color:var(--pink);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .agg-note{font-size:12px;color:var(--sub);margin:8px 0 0}
+.pagetabs{position:sticky;top:0;z-index:5;margin-bottom:14px;border:1px solid var(--line)}
+/* pace dashboard */
+.pace-hero{text-align:center}
+.pace-hero .lbl{font-size:13px;color:var(--sub)}
+.pace-hero .val{font-size:44px;font-weight:800;color:var(--ink);line-height:1.1;margin:4px 0}
+.pace-hero .val small{font-size:16px;font-weight:600;color:var(--sub);margin-left:2px}
+.pace-hero .sub{font-size:13px;color:var(--sub)}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:700;padding:5px 12px;border-radius:999px;margin-top:10px;border:1.5px solid currentColor}
+.status.good{color:var(--ok)} .status.warn{color:var(--warn)} .status.bad{color:var(--danger)} .status.done{color:var(--pink)}
+.stats.six{grid-template-columns:repeat(2,1fr)}
+.stats.six div{text-align:left;padding:10px 12px}
+.stats.six b{font-size:20px;color:var(--ink)}
+.stats.six em{font-style:normal;font-size:12px;color:var(--sub);display:block;margin-top:2px}
+.chart{position:relative}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart .axis text{font-size:11px;fill:var(--sub)}
+.chart .grid{stroke:var(--line);stroke-width:1}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--sub);margin:-4px 0 8px}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid var(--pink);vertical-align:middle;margin-right:5px}
+.legend i.dash{border-top:2px dashed var(--sub)}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font-size:12px;padding:6px 9px;border-radius:8px;white-space:nowrap;transform:translate(-50%,-100%);opacity:0;transition:opacity .1s;z-index:2}
+.tip.show{opacity:1}
 .empty{color:var(--sub);font-size:13px;text-align:center;padding:8px}
 .tools{display:flex;flex-wrap:wrap;gap:8px}
 dialog{border:0;border-radius:16px;padding:0;max-width:520px;width:calc(100% - 24px);background:var(--card);color:var(--ink)}
@@ -91,7 +113,22 @@ dialog form{padding:16px}
 <body>
 <main>
   <h1>🎀 劇場公演カウンター</h1>
+  <nav class="tabs pagetabs" role="tablist">
+    <button class="tab on" data-page="record" role="tab">記録</button>
+    <button class="tab" data-page="pace" role="tab">ペース</button>
+  </nav>
 
+  <div id="pagePace" hidden>
+    <section class="card">
+      <div class="row" style="align-items:flex-end">
+        <div><label for="deadline" style="margin-top:0">目標達成期日</label><input id="deadline" type="date"></div>
+        <div style="flex:0 0 auto;font-size:13px;color:var(--sub);padding-bottom:12px" id="goalNote"></div>
+      </div>
+    </section>
+    <div id="paceBody"></div>
+  </div>
+
+  <div id="pageRecord">
   <section class="card hero">
     <div class="ring">
       <svg width="220" height="220" viewBox="0 0 220 220">
@@ -162,6 +199,7 @@ dialog form{padding:16px}
       記録はこの端末のブラウザ内に保存されます。機種変更やブラウザのデータ削除に備えて、時々バックアップを保存してください。
     </p>
   </section>
+  </div>
 </main>
 
 <dialog id="dlg">
@@ -238,7 +276,7 @@ dialog form{padding:16px}
     return { goal: 100, visits: [], accounts: [] };
   }
   function normalize(d) {
-    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [] };
+    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [], deadline: d.deadline || '' };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
@@ -256,9 +294,9 @@ dialog form{padding:16px}
   const typeLabel = { theater: '劇場', lobby: 'ロビー', other: 'その他' };
   // ビンゴ抽選の入場順: '1'〜'25' または 'up'（ロビ観繰り上がり）。'' は未記録
   const BINGO_MAX = 25, BINGO_UP = 'up';
-  const bingoLabel = b => b === BINGO_UP ? 'ロビ観繰り上がり' : b ? `入場順 ${b}番` : '';
+  const bingoLabel = b => b === BINGO_UP ? 'ロビ観繰り上がり' : b ? `入場順 ${b}巡目` : '';
   $('fBingo').innerHTML = '<option value="">未記録</option>'
-    + Array.from({ length: BINGO_MAX }, (_, i) => `<option value="${i + 1}">${i + 1}番</option>`).join('')
+    + Array.from({ length: BINGO_MAX }, (_, i) => `<option value="${i + 1}">${i + 1}巡目</option>`).join('')
     + `<option value="${BINGO_UP}">ロビ観繰り上がり</option>`;
   $('fBingo').addEventListener('change', e => {
     // 繰り上がり入場は劇場観覧としてカウント
@@ -322,6 +360,7 @@ dialog form{padding:16px}
 
     renderSuggestions();
     renderAccounts();
+    if (page === 'pace') renderPace();
   }
 
   // ---------- 公演別 / メンバー別 集計 ----------
@@ -351,11 +390,11 @@ dialog form{padding:16px}
     $('agg').innerHTML = vs.length ? `
       <div class="stats" style="margin-bottom:12px">
         <div><b>${avg}</b><span>平均入場順</span></div>
-        <div><b>${nums.length ? Math.min(...nums) + '番' : '-'}</b><span>最高</span></div>
-        <div><b>${top5}</b><span>1〜5番</span></div>
+        <div><b>${nums.length ? Math.min(...nums) + '巡目' : '-'}</b><span>最高</span></div>
+        <div><b>${top5}</b><span>1〜5巡目</span></div>
       </div>` + keys.map(k => `
       <div class="bar" data-filter="${k}" style="cursor:pointer">
-        <span class="name">${k === BINGO_UP ? 'ロビ観繰り上がり' : k + '番'}</span>
+        <span class="name">${k === BINGO_UP ? 'ロビ観繰り上がり' : k + '巡目'}</span>
         <span class="track"><span class="fill" style="display:block;width:${cnt[k] / max * 100}%"></span></span>
         <span class="c">${cnt[k]}</span></div>`).join('')
       + `<p class="agg-note">記録 ${vs.length}件（うち繰り上がり ${up}件）／入場順が未記録の公演は含みません</p>`
@@ -363,7 +402,7 @@ dialog form{padding:16px}
     $('moreBtn').hidden = true;
   }
   function renderAgg(c) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === aggTab));
+    document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.toggle('on', t.dataset.tab === aggTab));
     if (aggTab === 'bingo') return renderBingo();
     const rows = aggregate(c, aggTab);
     const shown = aggAll ? rows : rows.slice(0, 10);
@@ -378,9 +417,9 @@ dialog form{padding:16px}
     if (noCast) $('agg').innerHTML += `<p class="agg-note">※ 出演メンバー未入力の記録が${noCast}件あります（編集から追加できます）</p>`;
     $('moreBtn').hidden = rows.length <= 10;
     $('moreBtn').textContent = aggAll ? '上位10件のみ表示' : `すべて表示（${rows.length}件）`;
-    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === aggTab));
+    document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.toggle('on', t.dataset.tab === aggTab));
   }
-  document.querySelectorAll('.tab').forEach(t => t.onclick = () => { aggTab = t.dataset.tab; aggAll = false; render(); });
+  document.querySelectorAll('.tab[data-tab]').forEach(t => t.onclick = () => { aggTab = t.dataset.tab; aggAll = false; render(); });
   $('moreBtn').onclick = () => { aggAll = !aggAll; render(); };
   $('clearFilter').onclick = () => { filter = null; render(); };
   const matchFilter = v => !filter
@@ -562,6 +601,201 @@ dialog form{padding:16px}
     save(); $('impDlg').close(); render();
     toast(n ? `${n}件取り込みました` : '取り込む公演が選ばれていません');
   });
+
+  // ---------- ペース（目標達成期日までのダッシュボード） ----------
+  let page = 'record';
+  const DAY = 864e5, MONTH_DAYS = 30.44;
+  const toD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const fmt1 = x => (Math.round(x * 10) / 10).toFixed(1);
+  const fmtYM = d => `${d.getFullYear()}/${d.getMonth() + 1}`;
+
+  document.querySelectorAll('.tab[data-page]').forEach(t => t.onclick = () => {
+    page = t.dataset.page;
+    document.querySelectorAll('.tab[data-page]').forEach(x => x.classList.toggle('on', x === t));
+    $('pageRecord').hidden = page !== 'record';
+    $('pagePace').hidden = page !== 'pace';
+    render(); window.scrollTo(0, 0);
+  });
+  $('deadline').addEventListener('change', e => { state.deadline = e.target.value; save(); render(); });
+  let resizeT;
+  window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => page === 'pace' && renderPace(), 150); });
+
+  function paceModel() {
+    const c = counted(), n = c.length, goal = state.goal;
+    const now = toD(today());
+    const first = c.length ? toD(c[0].date) : now;
+    const dl = state.deadline ? toD(state.deadline) : null;
+    const daysLeft = dl ? Math.round((dl - now) / DAY) : null;
+    const remain = Math.max(goal - n, 0);
+    // 現在のペース：直近90日（記録開始が90日以内なら開始日から、最低30日）
+    const win = Math.max(30, Math.min(90, Math.round((now - first) / DAY) + 1));
+    const recent = c.filter(v => (now - toD(v.date)) / DAY < win).length;
+    const curPerDay = recent / win;
+    const allDays = Math.max(1, Math.round((now - first) / DAY) + 1);
+    const needPerDay = daysLeft > 0 ? remain / daysLeft : null;
+    const eta = curPerDay > 0 && remain > 0 ? new Date(+now + Math.ceil(remain / curPerDay) * DAY) : null;
+    const upcoming = dl ? known.filter(e => e.date > today() && e.date <= state.deadline).length : 0;
+    let status;
+    if (n >= goal) status = { cls: 'done', icon: '🎉', text: '目標達成！' };
+    else if (!dl) status = null;
+    else if (daysLeft <= 0) status = { cls: 'bad', icon: '!', text: '期日を過ぎています' };
+    else if (curPerDay >= needPerDay) status = { cls: 'good', icon: '✓', text: '順調（今のペースで間に合います）' };
+    else if (curPerDay >= needPerDay * 0.75) status = { cls: 'warn', icon: '△', text: 'もう少しペースアップ' };
+    else status = { cls: 'bad', icon: '!', text: 'ペースアップが必要' };
+    return { c, n, goal, now, first, dl, daysLeft, remain, win, curPerDay, allPerDay: n / allDays, needPerDay, eta, upcoming, status };
+  }
+
+  function renderPace() {
+    $('deadline').value = state.deadline || '';
+    const m = paceModel();
+    $('goalNote').textContent = `目標 ${m.goal}回 / 現在 ${m.n}回`;
+    if (!m.dl) {
+      $('paceBody').innerHTML = `<section class="card"><div class="empty">目標達成期日を設定すると、必要なペースや見通しを表示します。</div></section>`
+        + chartCards(m);
+      drawCharts(m); return;
+    }
+    const need = m.needPerDay;
+    const heroVal = m.n >= m.goal ? '達成' : need == null ? '-' : fmt1(need * 7);
+    $('paceBody').innerHTML = `
+      <section class="card pace-hero">
+        <div class="lbl">期日までに必要なペース</div>
+        <div class="val">${m.n >= m.goal || need == null ? heroVal : `週 ${heroVal}<small>回</small>`}</div>
+        <div class="sub">${fmtDate(state.deadline)} まで あと ${Math.max(m.daysLeft, 0)}日 ・ 残り ${m.remain}回</div>
+        ${m.status ? `<div class="status ${m.status.cls}"><span aria-hidden="true">${m.status.icon}</span>${m.status.text}</div>` : ''}
+      </section>
+      <section class="card">
+        <div class="stats six">
+          <div><span>必要ペース（月）</span><b>${need != null && m.remain ? fmt1(need * MONTH_DAYS) + '回' : '-'}</b><em>${need != null && m.remain ? `約${Math.max(1, Math.round(1 / need))}日に1回` : ''}</em></div>
+          <div><span>現在のペース（月）</span><b>${fmt1(m.curPerDay * MONTH_DAYS)}回</b><em>直近${m.win}日の実績</em></div>
+          <div><span>今のペースでの達成見込み</span><b>${m.n >= m.goal ? '達成済み' : m.eta ? fmtYM(m.eta) : '-'}</b><em>${m.eta ? fmtDate(ymd(m.eta)) : m.n >= m.goal ? '' : '直近の記録がありません'}</em></div>
+          <div><span>通算ペース（月）</span><b>${fmt1(m.allPerDay * MONTH_DAYS)}回</b><em>${m.c.length ? fmtDate(ymd(m.first)) + '〜' : ''}</em></div>
+          <div><span>今月の実績 / 目安</span><b>${m.c.filter(v => v.date.startsWith(today().slice(0, 7))).length} / ${need != null && m.remain ? fmt1(need * MONTH_DAYS) : '-'}</b><em>目安は必要ペース（月）</em></div>
+          <div><span>公開済みの今後の公演</span><b>${m.upcoming}公演</b><em>期日までにスケジュールに出ている数</em></div>
+        </div>
+      </section>` + chartCards(m);
+    drawCharts(m);
+  }
+  const chartCards = m => `
+      <section class="card">
+        <h2>累計の推移</h2>
+        <div class="legend"><span><i></i>実績</span>${m.dl && m.remain ? '<span><i class="dash"></i>必要ペース</span>' : ''}</div>
+        <div class="chart" id="cumChart"></div>
+      </section>
+      <section class="card">
+        <h2>月別の入場回数</h2>
+        ${m.needPerDay ? '<div class="legend"><span><i class="dash"></i>月の目安（必要ペース）</span></div>' : ''}
+        <div class="chart" id="monChart"></div>
+      </section>`;
+
+  const svgEl = (w, h) => `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img">`;
+  function attachHover(box, svg, points, fmt) {
+    // points: [{x, y, html}]  x/y in svg coords; nearest by x
+    const tip = document.createElement('div'); tip.className = 'tip'; box.appendChild(tip);
+    const cross = svg.querySelector('.cross'), dot = svg.querySelector('.hdot');
+    const move = ev => {
+      const r = svg.getBoundingClientRect(), px = ev.clientX - r.left;
+      let best = points[0];
+      points.forEach(p => { if (Math.abs(p.x - px) < Math.abs(best.x - px)) best = p; });
+      if (!best) return;
+      tip.innerHTML = best.html;
+      const half = tip.offsetWidth / 2;
+      tip.style.left = Math.min(Math.max(best.x, half), box.clientWidth - half) + 'px';
+      tip.style.top = (best.ty ?? best.y) - 10 + 'px';
+      tip.classList.add('show');
+      if (cross) { cross.setAttribute('x1', best.x); cross.setAttribute('x2', best.x); cross.style.opacity = 1; }
+      if (dot) { dot.setAttribute('cx', best.x); dot.setAttribute('cy', best.y); dot.style.opacity = 1; }
+      if (fmt) fmt(best, true);
+    };
+    const leave = () => { tip.classList.remove('show'); if (cross) cross.style.opacity = 0; if (dot) dot.style.opacity = 0; if (fmt) fmt(null, false); };
+    svg.addEventListener('pointermove', move); svg.addEventListener('pointerdown', move);
+    svg.addEventListener('pointerleave', leave);
+  }
+
+  function drawCharts(m) {
+    drawCumulative(m); drawMonthly(m);
+  }
+
+  function drawCumulative(m) {
+    const box = $('cumChart'); if (!box) return;
+    const W = box.clientWidth || 340, H = 220, L = 34, R = 14, T = 12, B = 26;
+    const start = m.c.length ? m.first : new Date(+m.now - 30 * DAY);
+    const end = m.dl && m.dl > m.now ? m.dl : new Date(+m.now + 7 * DAY);
+    const yMax = Math.max(m.goal, m.n);
+    const x = d => L + (d - start) / Math.max(DAY, end - start) * (W - L - R);
+    const y = v => T + (1 - v / yMax) * (H - T - B);
+    // 実績：段差のある累計線
+    let path = `M${x(start)},${y(0)}`, pts = [];
+    m.c.forEach((v, i) => {
+      const d = toD(v.date);
+      path += ` H${x(d)} V${y(i + 1)}`;
+      pts.push({ x: x(d), y: y(i + 1), html: `${fmtDate(v.date)}<br><b>${i + 1}回目</b> ${esc(v.show)}` });
+    });
+    path += ` H${x(m.now)}`;
+    const yt = [0, Math.round(yMax / 2), yMax];
+    const xt = [start, m.now, end].filter((d, i, a) => i === 0 || (d - a[i - 1]) / (end - start) > 0.18);
+    let s = svgEl(W, H) + `<g class="axis">`
+      + yt.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('')
+      + xt.map(d => `<text x="${Math.min(Math.max(x(d), L + 16), W - R - 16)}" y="${H - 6}" text-anchor="middle">${+d === +m.now ? '今日' : fmtYM(d)}</text>`).join('')
+      + `</g>`;
+    // 目標ライン
+    s += `<text x="${W - R - 12}" y="${y(m.goal) - 6}" text-anchor="end" style="font-size:11px;fill:var(--sub)">目標 ${m.goal}回</text>`;
+    // 必要ペース（今日→期日に目標到達）
+    if (m.dl && m.dl > m.now && m.remain) {
+      s += `<line x1="${x(m.now)}" y1="${y(m.n)}" x2="${x(m.dl)}" y2="${y(m.goal)}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="5 4"/>`;
+      s += `<circle cx="${x(m.dl)}" cy="${y(m.goal)}" r="4" fill="var(--card)" stroke="var(--sub)" stroke-width="2"/>`;
+    }
+    s += `<path d="${path}" fill="none" stroke="var(--pink)" stroke-width="2.5" stroke-linejoin="round"/>`;
+    s += `<circle cx="${x(m.now)}" cy="${y(m.n)}" r="5" fill="var(--pink)" stroke="var(--card)" stroke-width="2"/>`;
+    s += `<text x="${x(m.now) - 8}" y="${y(m.n) - 9}" text-anchor="end" style="font-size:12px;font-weight:700;fill:var(--ink)">${m.n}回</text>`;
+    s += `<line class="cross" y1="${T}" y2="${H - B}" stroke="var(--sub)" stroke-width="1" style="opacity:0"/>`;
+    s += `<circle class="hdot" r="5" fill="var(--pink)" stroke="var(--card)" stroke-width="2" style="opacity:0"/>`;
+    s += `<rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg>`;
+    box.innerHTML = s;
+    if (pts.length) attachHover(box, box.querySelector('svg'), pts);
+  }
+
+  function drawMonthly(m) {
+    const box = $('monChart'); if (!box) return;
+    const W = box.clientWidth || 340, H = 180, L = 26, R = 8, T = 14, B = 26;
+    // 直近12か月（記録が浅い場合は記録開始月から）
+    const months = [];
+    const cur = new Date(m.now.getFullYear(), m.now.getMonth(), 1);
+    const firstM = new Date(m.first.getFullYear(), m.first.getMonth(), 1);
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(cur.getFullYear(), cur.getMonth() - i, 1);
+      if (d >= firstM || i < 6) months.push(d);
+    }
+    const key = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+    const cnt = {}; m.c.forEach(v => { const k = v.date.slice(0, 7); cnt[k] = (cnt[k] || 0) + 1; });
+    const target = m.needPerDay && m.remain ? m.needPerDay * MONTH_DAYS : 0;
+    const vMax = Math.max(1, target, ...months.map(d => cnt[key(d)] || 0));
+    const yMax = Math.ceil(vMax * 1.15);
+    const bw = (W - L - R) / months.length, barW = Math.min(28, bw - 4);
+    const y = v => T + (1 - v / yMax) * (H - T - B);
+    let s = svgEl(W, H) + `<g class="axis">`
+      + [0, yMax].map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`).join('');
+    const pts = [];
+    months.forEach((d, i) => {
+      const v = cnt[key(d)] || 0, cx = L + bw * i + bw / 2;
+      const showLbl = months.length <= 6 || i % 2 === (months.length - 1) % 2;
+      if (showLbl) s += `<text x="${cx}" y="${H - 8}" text-anchor="middle">${d.getMonth() === 0 || i === 0 ? `${String(d.getFullYear()).slice(2)}/${d.getMonth() + 1}` : d.getMonth() + 1 + '月'}</text>`;
+      pts.push({ x: cx, y: y(v), ty: Math.min(y(v), target ? y(target) : y(v)), i, html: `${d.getFullYear()}年${d.getMonth() + 1}月<br><b>${v}回</b>${target ? ` ／ 目安 ${fmt1(target)}回` : ''}` });
+    });
+    s += `</g>`;
+    months.forEach((d, i) => {
+      const v = cnt[key(d)] || 0; if (!v) return;
+      const cx = L + bw * i + bw / 2, top = y(v), h = y(0) - top, r = Math.min(4, h);
+      // 上端だけ角丸、ベースラインに接地
+      s += `<path class="mbar" data-i="${i}" d="M${cx - barW / 2},${y(0)} V${top + r} Q${cx - barW / 2},${top} ${cx - barW / 2 + r},${top} H${cx + barW / 2 - r} Q${cx + barW / 2},${top} ${cx + barW / 2},${top + r} V${y(0)} Z" fill="var(--pink)"/>`;
+      if (i === months.length - 1 || v === vMax) s += `<text x="${cx}" y="${top - 4}" text-anchor="middle" style="font-size:11px;font-weight:700;fill:var(--ink)">${v}</text>`;
+    });
+    if (target) s += `<line x1="${L}" x2="${W - R}" y1="${y(target)}" y2="${y(target)}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="5 4"/>`;
+    s += `<rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg>`;
+    box.innerHTML = s;
+    const svg = box.querySelector('svg');
+    attachHover(box, svg, pts, (p, on) => svg.querySelectorAll('.mbar').forEach(b => b.style.opacity = on && +b.dataset.i !== p.i ? .45 : 1));
+  }
 
   // ---------- suggestions from ../events.json (same repo) ----------
   let known = [];
