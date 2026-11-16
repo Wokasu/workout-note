@@ -42,6 +42,11 @@
     "name": "AKB48 申込締切",
     "color": "#FF9500"
   },
+  "otherShowsCalendar": {
+    "id": "others",
+    "name": "AKB48 その他の公演",
+    "color": "#8E8E93"
+  },
   "calendars": [
     {
       "id": "momoka",

@@ -393,6 +393,21 @@ console.log(`links.json: ${links.length} 件（URLあり ${links.filter((l) => l
   const rows = [...keptRows, ...current].sort((a, b) => rowKey(a).localeCompare(rowKey(b)));
   await writeFile(schedulePath, JSON.stringify({ version: 1, asOf: todayIso, shows: rows }, null, 1) + '\n');
   console.log(`theater-schedule.json: ${rows.length} 件（今回 ${current.length} 件、過去の記録 ${keptRows.length} 件）`);
+
+  // 推しメンが出ない公演だけのカレンダー（config.json の otherShowsCalendar）。推しのカレンダーと重ならないので、全部表示すると全公演になる
+  if (config.otherShowsCalendar) {
+    const oshiKeys = new Set(events.filter((s) => s.kind !== 'event').map((s) => `${s.year}-${pad(s.month)}-${pad(s.day)}|${s.hour == null ? '' : `${pad(s.hour)}:${pad(s.minute)}`}`));
+    const others = rows
+      .filter((r) => !oshiKeys.has(rowKey(r)))
+      .map((r) => {
+        const [y, mo, d] = r.date.split('-').map(Number);
+        const [h, mi] = r.time ? r.time.split(':').map(Number) : [null, null];
+        return { year: y, month: mo, day: d, hour: h, minute: mi, title: r.show, members: [], cast: r.cast, tag: r.tag || null, sourceUrl: r.source };
+      });
+    const ics = buildIcs(config.otherShowsCalendar, others, { durationMinutes: config.durationMinutes, location: config.location, now: today });
+    await writeFile(join(outDir, `${config.otherShowsCalendar.id}.ics`), ics);
+    console.log(`${config.otherShowsCalendar.id}.ics: ${others.length} 件`);
+  }
 }
 if (fetchedPages === 0) {
   console.error('公式サイトから1ページも取得できませんでした（前回の予定をそのまま残しています）');

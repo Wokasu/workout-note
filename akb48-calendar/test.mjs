@@ -495,3 +495,11 @@ test('出演メンバー変更のお知らせ: 休演と代役を読む', () => 
   ]);
   assert.deepEqual(extractCastChanges(['10/25(土) 「RESET」公演 18:30開演', '【出演メンバー】', 'A・B'], { today }), []);
 });
+
+test('その他の公演カレンダー: 推しメンがいない公演は（）と推しメン行を付けない', () => {
+  const ics = buildIcs({ id: 'others', name: 'AKB48 その他の公演', color: '#8E8E93' },
+    [{ year: 2026, month: 11, day: 17, hour: 18, minute: 30, title: '「RESET」公演', members: [], cast: ['千葉恵里', '岩立沙穂'], tag: '千葉恵里 生誕祭' }], { now: today });
+  assert.match(ics, /SUMMARY:「RESET」公演【千葉恵里 生誕祭】\r?\n/);
+  assert.doesNotMatch(ics, /推しメン:/);
+  assert.match(ics, /出演メンバー: 千葉恵里・岩立沙穂/);
+});

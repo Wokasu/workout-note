@@ -522,7 +522,7 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
   for (const s of shows) {
     const uid = `${showKey(s).replace(/[^\w-]/g, '')}-${Buffer.from(s.title).toString('hex').slice(0, 24)}@akb48-calendar`;
     const desc = [
-      s.memberUnknown ? '出演メンバー: 未発表' : `推しメン: ${s.members.join('、')}`,
+      s.memberUnknown ? '出演メンバー: 未発表' : s.members.length ? `推しメン: ${s.members.join('、')}` : '',
       // 劇場公演は、推しメン以外も含めた出演メンバー全員を公式の並び順で書く
       s.cast?.length ? `出演メンバー: ${s.cast.join('・')}` : '',
       s.applyUrl ? `申込: ${s.applyUrl}` : '',
@@ -548,7 +548,8 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
       lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`);
     }
     lines.push(
-      `SUMMARY:${escapeText(`${s.title}${s.tag ? `【${s.tag}】` : ''}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
+      // 推しメンが出ない公演（その他の公演カレンダー）は（）を付けない
+      `SUMMARY:${escapeText(`${s.title}${s.tag ? `【${s.tag}】` : ''}${s.memberUnknown ? '（出演メンバー未発表）' : s.members.length ? `（${s.members.join('・')}）` : ''}`)}`,
       `DESCRIPTION:${escapeText(desc)}`,
     );
     const place = s.kind === 'event' ? s.location : location;
