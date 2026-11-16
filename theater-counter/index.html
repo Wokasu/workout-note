@@ -1045,9 +1045,32 @@ dialog form{padding:16px}
     try {
       const d = JSON.parse(await f.text());
       if (!Array.isArray(d.visits)) throw 0;
-      if (!confirm(`${d.visits.length}件の記録で現在のデータを置き換えますか？`)) return;
-      state = normalize(d);
-      save(); render(); toast('復元しました');
+      const inc = normalize(d);
+      if (!state.visits.length) {
+        if (!confirm(`${inc.visits.length}件の記録を読み込みますか？`)) return;
+        state = inc; save(); render(); toast('復元しました'); return;
+      }
+      if (confirm(`今の記録（${state.visits.length}件）に、ファイルの記録（${inc.visits.length}件）を追加しますか？\n同じ日時の公演は追加しません。\n\n「キャンセル」を押すと、置き換えるかどうかを確認します。`)) {
+        // 当選IDは表示名で突き合わせ、なければ追加
+        const accMap = {};
+        inc.accounts.forEach(a => {
+          let mine = state.accounts.find(x => x.name === a.name);
+          if (!mine) { mine = { ...a, id: 'a' + uid() }; state.accounts.push(mine); }
+          accMap[a.id] = mine.id;
+        });
+        if (!state.accounts.some(a => a.id === state.defaultAccount) && accMap[inc.defaultAccount]) state.defaultAccount = accMap[inc.defaultAccount];
+        const has = new Set(state.visits.map(visitKey));
+        let n = 0;
+        inc.visits.forEach(v => {
+          if (has.has(visitKey(v))) return;
+          state.visits.push({ ...v, id: uid(), account: accMap[v.account] || '' });
+          has.add(visitKey(v)); n++;
+        });
+        if (!state.deadline && inc.deadline) state.deadline = inc.deadline;
+        save(); render(); toast(`${n}件追加しました`);
+      } else if (confirm(`今の記録をすべて消して、ファイルの${inc.visits.length}件に置き換えますか？`)) {
+        state = inc; save(); render(); toast('置き換えました');
+      }
     } catch (err) { toast('ファイルを読み込めませんでした'); }
     e.target.value = '';
   };
