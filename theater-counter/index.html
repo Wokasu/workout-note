@@ -136,19 +136,20 @@ dialog form{padding:16px}
         <circle id="arc" cx="110" cy="110" r="96" fill="none" stroke="var(--pink)" stroke-width="16"
                 stroke-linecap="round" stroke-dasharray="603.19" stroke-dashoffset="603.19" style="transition:stroke-dashoffset .6s"/>
       </svg>
-      <div class="num"><div class="big" id="count">0</div><div class="of" id="of">/ 100 回</div></div>
+      <div class="num"><div class="big" id="count">0</div><div class="of" id="of">/ 100 回</div><div class="of" style="font-size:11px;margin-top:2px">当選・入金済み</div></div>
     </div>
     <div class="remain" id="remain"></div>
     <div class="next" id="next"></div>
+    <div class="next" id="attendLine"></div>
   </section>
 
   <section class="card">
-    <button class="primary" id="addBtn">＋ 入場を記録する</button>
+    <button class="primary" id="addBtn">＋ 当選・入場を記録する</button>
     <button class="ghost" id="importTextBtn" style="width:100%;margin-top:8px">📋 チケット情報を貼り付けてまとめて取り込む</button>
   </section>
 
   <section class="card" id="suggCard" hidden>
-    <h2>最近の劇場公演から追加</h2>
+    <h2>最近・今後の劇場公演から追加</h2>
     <ul class="sugg" id="sugg"></ul>
   </section>
 
@@ -157,7 +158,7 @@ dialog form{padding:16px}
     <div class="stats">
       <div><b id="sYear">0</b><span>今年</span></div>
       <div><b id="sMonth">0</b><span>今月</span></div>
-      <div><b id="sDays">-</b><span>初入場から(日)</span></div>
+      <div><b id="sDays">-</b><span>記録開始から(日)</span></div>
     </div>
   </section>
 
@@ -204,7 +205,7 @@ dialog form{padding:16px}
 
 <dialog id="dlg">
   <form method="dialog" id="form">
-    <h2 id="dlgTitle">入場を記録</h2>
+    <h2 id="dlgTitle">当選・入場を記録</h2>
     <div class="row">
       <div><label for="fDate">日付</label><input id="fDate" type="date" required></div>
       <div><label for="fTime">開演</label><input id="fTime" type="time"></div>
@@ -228,7 +229,13 @@ dialog form{padding:16px}
     <input id="fCast" placeholder="カンマ区切り">
     <label for="fMemo">メモ</label>
     <textarea id="fMemo" placeholder="感想、生誕祭、お見送りの思い出など"></textarea>
-    <label class="check"><input type="checkbox" id="fCount" checked> 100回カウントの対象にする</label>
+    <label for="fAttend">入場状況</label>
+    <select id="fAttend">
+      <option value="">入場した（今後の公演は「予定」）</option>
+      <option value="no">入場しなかった（欠席）</option>
+    </select>
+    <label class="check"><input type="checkbox" id="fCount" checked> 当選・入金済み（100回カウントの対象）</label>
+    <p style="font-size:12px;color:var(--sub);margin:4px 0 0">当選して入金すれば、欠席してもカウントされます。</p>
     <div class="row" style="margin-top:16px">
       <button type="button" class="ghost" id="delBtn" hidden style="color:var(--danger)">削除</button>
       <button type="button" class="ghost" id="cancelBtn">キャンセル</button>
@@ -304,6 +311,9 @@ dialog form{padding:16px}
   });
   const sorted = () => [...state.visits].sort((a, b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||'')) || a.created - b.created);
   const counted = () => sorted().filter(v => v.count);
+  // 入場状況: 'absent'（欠席）/ 'planned'（今後の公演）/ 'attended'
+  const attendState = v => v.attend === 'no' ? 'absent' : v.date > today() ? 'planned' : 'attended';
+  const attendTag = { absent: '欠席', planned: '予定' };
 
   function toast(msg) {
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -339,19 +349,22 @@ dialog form{padding:16px}
         <div class="meta">
           <div class="t">${esc(v.show)}</div>
           <div class="d">${fmtDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}
-            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}
+            <span class="tag">${typeLabel[v.type] || '劇場'}</span>${attendTag[attendState(v)] ? `<span class="tag" style="background:var(--bg);border:1px solid var(--line)">${attendTag[attendState(v)]}</span>` : ''}${v.bingo ? `<span class="tag">${bingoLabel(v.bingo)}</span>` : ''}${v.seat ? esc(v.seat) : ''}
             ${accName(v.account) ? `<span style="opacity:.75">・ID: ${esc(accName(v.account))}</span>` : ''}</div>
           ${(v.cast || []).length ? `<div class="d">👥 ${v.cast.map(esc).join('、')}</div>` : ''}
           ${v.memo ? `<div class="m">${esc(v.memo)}</div>` : ''}
         </div>
         <button class="ghost small" data-edit="${v.id}">編集</button>
-      </li>`).join('') : '<li class="empty">まだ記録がありません。最初の入場を記録しましょう！</li>';
+      </li>`).join('') : '<li class="empty">まだ記録がありません。最初の当選を記録しましょう！</li>';
 
     // stats
     const y = String(new Date().getFullYear()), ym = today().slice(0, 7);
     $('sYear').textContent = c.filter(v => v.date.startsWith(y)).length;
     $('sMonth').textContent = c.filter(v => v.date.startsWith(ym)).length;
     $('sDays').textContent = c.length ? Math.floor((new Date(today()) - new Date(c[0].date)) / 864e5) : '-';
+    const st = { attended: 0, absent: 0, planned: 0 };
+    c.forEach(v => st[attendState(v)]++);
+    $('attendLine').textContent = c.length ? `うち入場 ${st.attended}回${st.absent ? ` ・ 欠席 ${st.absent}回` : ''}${st.planned ? ` ・ 今後 ${st.planned}回` : ''}` : '';
     renderAgg(c);
 
     // datalist of known shows
@@ -593,7 +606,7 @@ dialog form{padding:16px}
       if (!document.querySelector(`[data-imp="${i}"]`).checked) return;
       state.visits.push({
         id: uid(), created: Date.now() + i, date: r.date, time: r.time, show: r.show,
-        type: 'theater', seat: '', bingo: '', cast: r.cast || [], memo: r.tag || '', count: true,
+        type: 'theater', seat: '', bingo: '', cast: r.cast || [], memo: r.tag || '', count: true, attend: '',
         account: document.querySelector(`[data-imp-acc="${i}"]`).value
       });
       n++;
@@ -630,7 +643,7 @@ dialog form{padding:16px}
     const remain = Math.max(goal - n, 0);
     // 現在のペース：直近90日（記録開始が90日以内なら開始日から、最低30日）
     const win = Math.max(30, Math.min(90, Math.round((now - first) / DAY) + 1));
-    const recent = c.filter(v => (now - toD(v.date)) / DAY < win).length;
+    const recent = c.filter(v => { const dd = (now - toD(v.date)) / DAY; return dd >= 0 && dd < win; }).length;
     const curPerDay = recent / win;
     const allDays = Math.max(1, Math.round((now - first) / DAY) + 1);
     const needPerDay = daysLeft > 0 ? remain / daysLeft : null;
@@ -643,7 +656,7 @@ dialog form{padding:16px}
     else if (curPerDay >= needPerDay) status = { cls: 'good', icon: '✓', text: '順調（今のペースで間に合います）' };
     else if (curPerDay >= needPerDay * 0.75) status = { cls: 'warn', icon: '△', text: 'もう少しペースアップ' };
     else status = { cls: 'bad', icon: '!', text: 'ペースアップが必要' };
-    return { c, n, goal, now, first, dl, daysLeft, remain, win, curPerDay, allPerDay: n / allDays, needPerDay, eta, upcoming, status };
+    return { c, n, goal, now, first, dl, daysLeft, remain, win, curPerDay, allPerDay: c.filter(v => v.date <= today()).length / allDays, needPerDay, eta, upcoming, status };
   }
 
   function renderPace() {
@@ -679,11 +692,11 @@ dialog form{padding:16px}
   const chartCards = m => `
       <section class="card">
         <h2>累計の推移</h2>
-        <div class="legend"><span><i></i>実績</span>${m.dl && m.remain ? '<span><i class="dash"></i>必要ペース</span>' : ''}</div>
+        <div class="legend" style="flex-wrap:wrap"><span><i></i>実績</span>${m.c.some(v => v.date > today()) ? '<span><i style="border-top-style:dotted"></i>入金済みの今後の公演</span>' : ''}${m.dl && m.remain ? '<span><i class="dash"></i>必要ペース</span>' : ''}</div>
         <div class="chart" id="cumChart"></div>
       </section>
       <section class="card">
-        <h2>月別の入場回数</h2>
+        <h2>月別の当選回数（入金済み）</h2>
         ${m.needPerDay ? '<div class="legend"><span><i class="dash"></i>月の目安（必要ペース）</span></div>' : ''}
         <div class="chart" id="monChart"></div>
       </section>`;
@@ -720,18 +733,22 @@ dialog form{padding:16px}
     const box = $('cumChart'); if (!box) return;
     const W = box.clientWidth || 340, H = 220, L = 34, R = 14, T = 12, B = 26;
     const start = m.c.length ? m.first : new Date(+m.now - 30 * DAY);
-    const end = m.dl && m.dl > m.now ? m.dl : new Date(+m.now + 7 * DAY);
+    const past = m.c.filter(v => v.date <= today()), fut = m.c.filter(v => v.date > today());
+    const lastFut = fut.length ? toD(fut[fut.length - 1].date) : m.now;   // 入金済みで確定している最終日
+    const end = new Date(Math.max(m.dl && m.dl > m.now ? +m.dl : +m.now + 7 * DAY, +lastFut + 7 * DAY));
     const yMax = Math.max(m.goal, m.n);
     const x = d => L + (d - start) / Math.max(DAY, end - start) * (W - L - R);
     const y = v => T + (1 - v / yMax) * (H - T - B);
-    // 実績：段差のある累計線
+    // 実績：段差のある累計線（今日まで）＋ 入金済みの今後の公演（点線）
     let path = `M${x(start)},${y(0)}`, pts = [];
     m.c.forEach((v, i) => {
       const d = toD(v.date);
-      path += ` H${x(d)} V${y(i + 1)}`;
-      pts.push({ x: x(d), y: y(i + 1), html: `${fmtDate(v.date)}<br><b>${i + 1}回目</b> ${esc(v.show)}` });
+      if (v.date <= today()) path += ` H${x(d)} V${y(i + 1)}`;
+      pts.push({ x: x(d), y: y(i + 1), html: `${fmtDate(v.date)}<br><b>${i + 1}回目</b> ${esc(v.show)}${attendTag[attendState(v)] ? `（${attendTag[attendState(v)]}）` : ''}` });
     });
     path += ` H${x(m.now)}`;
+    let futPath = `M${x(m.now)},${y(past.length)}`;
+    fut.forEach((v, i) => { futPath += ` H${x(toD(v.date))} V${y(past.length + i + 1)}`; });
     const yt = [0, Math.round(yMax / 2), yMax];
     const xt = [start, m.now, end].filter((d, i, a) => i === 0 || (d - a[i - 1]) / (end - start) > 0.18);
     let s = svgEl(W, H) + `<g class="axis">`
@@ -740,14 +757,16 @@ dialog form{padding:16px}
       + `</g>`;
     // 目標ライン
     s += `<text x="${W - R - 12}" y="${y(m.goal) - 6}" text-anchor="end" style="font-size:11px;fill:var(--sub)">目標 ${m.goal}回</text>`;
-    // 必要ペース（今日→期日に目標到達）
-    if (m.dl && m.dl > m.now && m.remain) {
-      s += `<line x1="${x(m.now)}" y1="${y(m.n)}" x2="${x(m.dl)}" y2="${y(m.goal)}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="5 4"/>`;
+    // 必要ペース（確定分の終点 → 期日に目標到達）
+    if (m.dl && m.dl > lastFut && m.remain) {
+      s += `<line x1="${x(lastFut)}" y1="${y(m.n)}" x2="${x(m.dl)}" y2="${y(m.goal)}" stroke="var(--sub)" stroke-width="2" stroke-dasharray="5 4"/>`;
       s += `<circle cx="${x(m.dl)}" cy="${y(m.goal)}" r="4" fill="var(--card)" stroke="var(--sub)" stroke-width="2"/>`;
     }
+    if (fut.length) s += `<path d="${futPath}" fill="none" stroke="var(--pink)" stroke-width="2" stroke-dasharray="2 3" stroke-linejoin="round"/>`;
     s += `<path d="${path}" fill="none" stroke="var(--pink)" stroke-width="2.5" stroke-linejoin="round"/>`;
-    s += `<circle cx="${x(m.now)}" cy="${y(m.n)}" r="5" fill="var(--pink)" stroke="var(--card)" stroke-width="2"/>`;
-    s += `<text x="${x(m.now) - 8}" y="${y(m.n) - 9}" text-anchor="end" style="font-size:12px;font-weight:700;fill:var(--ink)">${m.n}回</text>`;
+    s += `<circle cx="${x(m.now)}" cy="${y(past.length)}" r="5" fill="var(--pink)" stroke="var(--card)" stroke-width="2"/>`;
+    s += `<text x="${x(m.now) - 8}" y="${y(past.length) - 9}" text-anchor="end" style="font-size:12px;font-weight:700;fill:var(--ink)">${past.length}回</text>`;
+    if (fut.length) s += `<text x="${x(lastFut) + 6}" y="${y(m.n) + 16}" style="font-size:11px;fill:var(--sub)">予定含む ${m.n}回</text>`;
     s += `<line class="cross" y1="${T}" y2="${H - B}" stroke="var(--sub)" stroke-width="1" style="opacity:0"/>`;
     s += `<circle class="hdot" r="5" fill="var(--pink)" stroke="var(--card)" stroke-width="2" style="opacity:0"/>`;
     s += `<rect x="${L}" y="0" width="${W - L - R}" height="${H}" fill="transparent"/></svg>`;
@@ -816,17 +835,17 @@ dialog form{padding:16px}
     } catch (e) { /* standalone use: no suggestions */ }
   }
   function renderSuggestions() {
-    const now = new Date(), from = new Date(now - 30 * 864e5);
+    const now = new Date(), from = new Date(now - 30 * 864e5), to = new Date(+now + 30 * 864e5);
     const has = new Set(state.visits.map(v => v.date + '|' + (v.time || '') + '|' + v.show));
     const items = known
-      .filter(e => { const d = new Date(e.date + 'T' + (e.time || '00:00')); return d <= now && d >= from; })
+      .filter(e => { const d = new Date(e.date + 'T' + (e.time || '00:00')); return d <= to && d >= from; })
       .filter(e => !has.has(e.date + '|' + e.time + '|' + e.show))
-      .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
-      .slice(0, 6);
+      .sort((a, b) => Math.abs(new Date(a.date + 'T' + (a.time || '00:00')) - now) - Math.abs(new Date(b.date + 'T' + (b.time || '00:00')) - now))
+      .slice(0, 8);
     $('suggCard').hidden = !items.length;
     $('sugg').innerHTML = items.map((e, i) => `
       <li><div><div class="t">${esc(e.show)}</div>
-      <div class="d">${fmtDate(e.date)} ${esc(e.time)}${e.tag ? ' ・' + esc(e.tag) : ''}</div></div>
+      <div class="d">${e.date > today() ? '<span class="tag">今後</span>' : ''}${fmtDate(e.date)} ${esc(e.time)}${e.tag ? ' ・' + esc(e.tag) : ''}</div></div>
       <button class="ghost small" data-sugg="${i}">記録</button></li>`).join('');
     renderSuggestions.items = items;
   }
@@ -836,7 +855,7 @@ dialog form{padding:16px}
   function openDialog(v, preset) {
     editing = v ? v.id : null;
     const s = v || preset || {};
-    $('dlgTitle').textContent = v ? '記録を編集' : '入場を記録';
+    $('dlgTitle').textContent = v ? '記録を編集' : '当選・入場を記録';
     $('fDate').value = s.date || today();
     $('fTime').value = s.time || '';
     $('fShow').value = s.show || '';
@@ -847,6 +866,7 @@ dialog form{padding:16px}
     $('fCast').value = (s.cast || []).join(', ');
     $('fMemo').value = s.memo || (preset && preset.tag ? preset.tag : '');
     $('fCount').checked = s.count ?? true;
+    $('fAttend').value = s.attend || '';
     $('delBtn').hidden = !v;
     $('dlg').showModal();
   }
@@ -866,7 +886,7 @@ dialog form{padding:16px}
       type: $('fType').value, seat: $('fSeat').value.trim(), bingo: $('fBingo').value,
       account: $('fAccount').value,
       cast: $('fCast').value.split(/[,、，]/).map(s => s.trim()).filter(Boolean),
-      memo: $('fMemo').value.trim(), count: $('fCount').checked
+      memo: $('fMemo').value.trim(), count: $('fCount').checked, attend: $('fAttend').value
     };
     if (!data.date || !data.show) return;
     if (editing) Object.assign(state.visits.find(v => v.id === editing), data);
@@ -892,7 +912,7 @@ dialog form{padding:16px}
     $('celeNum').textContent = `${n}回目！`;
     $('celeMsg').textContent = n >= state.goal
       ? '目標達成おめでとうございます！特典の申請を忘れずに🎉'
-      : n === 1 ? '劇場デビューおめでとうございます！' : `節目の${n}回目、おめでとうございます！`;
+      : n === 1 ? '初当選おめでとうございます！' : `節目の${n}回目、おめでとうございます！`;
     $('cele').classList.add('show');
   }
 
