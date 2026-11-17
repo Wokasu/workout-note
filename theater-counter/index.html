@@ -322,6 +322,11 @@ dialog form{padding:16px}
     <datalist id="partnerList"></datalist>
     <label for="fAccount" id="fAccountLabel">当選ID</label>
     <select id="fAccount"></select>
+    <div class="row" id="fAccNewRow" hidden style="margin-top:6px;align-items:center">
+      <input id="fAccNew" inputmode="numeric" placeholder="新しいIDの番号（例：1234567890）">
+      <button type="button" class="primary small" id="fAccNewAdd" style="flex:0 0 auto;width:auto">登録</button>
+      <button type="button" class="ghost small" id="fAccNewCancel" style="flex:0 0 auto">やめる</button>
+    </div>
     <label for="fFrame">枠</label>
     <input id="fFrame" list="frameList" placeholder="例：柱の会 会員枠 / 一般枠">
     <datalist id="frameList"></datalist>
@@ -362,6 +367,11 @@ dialog form{padding:16px}
     <div class="row" style="margin-top:0">
       <div><label for="impAccount">当選ID（まとめて設定）</label><select id="impAccount"></select></div>
       <div style="flex:0 0 auto;align-self:flex-end"><button type="button" class="ghost" id="impParse">読み取る</button></div>
+    </div>
+    <div class="row" id="impAccNewRow" hidden style="margin-top:6px;align-items:center">
+      <input id="impAccNew" inputmode="numeric" placeholder="新しいIDの番号">
+      <button type="button" class="primary small" id="impAccNewAdd" style="flex:0 0 auto;width:auto">登録</button>
+      <button type="button" class="ghost small" id="impAccNewCancel" style="flex:0 0 auto">やめる</button>
     </div>
     <p style="font-size:12px;color:var(--sub);margin:6px 0 0">同伴で入った公演は、当選した相手からメール文面やスクショを送ってもらい、「同伴」を選んで取り込めます。</p>
     <ul id="impPreview" style="margin-top:10px"></ul>
@@ -633,10 +643,46 @@ dialog form{padding:16px}
   };
   // 新規記録・取り込みで最初に選ばれるID：既定のID → なければ前回使ったID
   const defaultAccount = () => state.accounts.some(a => a.id === state.defaultAccount) ? state.defaultAccount : lastAccount();
-  function fillAccountSelect(sel, value) {
+  const NEW_ACC = '__new__';
+  function fillAccountSelect(sel, value, allowNew = sel.dataset.allowNew === '1') {
     sel.innerHTML = '<option value="">未設定</option>'
-      + state.accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+      + state.accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('')
+      + (allowNew ? `<option value="${NEW_ACC}">＋ 新しいIDを登録…</option>` : '');
     sel.value = value || '';
+    sel.dataset.prev = sel.value;
+  }
+  // 当選IDを追加（設定欄・記録画面・取り込み画面で共通）。同じ名前があればそれを返す
+  function addAccount(raw) {
+    const name = String(raw || '').replace(/\s+/g, ' ').trim();
+    if (!name) { toast('IDを入力してください'); return null; }
+    const dup = state.accounts.find(a => a.name === name);
+    if (dup) { toast(`当選ID「${name}」はもう登録されています`); return dup; }
+    const a = { id: 'a' + uid(), name, hint: /^\d{6,}$/.test(name) ? name : '' };   // 数字のIDはそのまま自動判別キーワードに
+    state.accounts.push(a);
+    if (!state.accounts.some(x => x.id === state.defaultAccount)) state.defaultAccount = a.id; // 最初のIDを既定に
+    save(); renderAccounts();
+    toast(`当選ID「${name}」を追加しました`);
+    return a;
+  }
+  // 選択肢「＋ 新しいIDを登録…」を選ぶと、その下に入力欄を出す
+  function wireNewAccount(selId, rowId, inputId, btnId, cancelId, onAdded) {
+    const sel = $(selId), row = $(rowId), input = $(inputId);
+    sel.dataset.allowNew = '1';
+    sel.addEventListener('change', () => {
+      if (sel.value !== NEW_ACC) { sel.dataset.prev = sel.value; return; }
+      sel.value = sel.dataset.prev || '';
+      row.hidden = false; input.value = ''; input.focus();
+    });
+    const done = () => {
+      const a = addAccount(input.value);
+      if (!a) return;
+      row.hidden = true;
+      fillAccountSelect(sel, a.id);
+      if (onAdded) onAdded(a);
+    };
+    $(btnId).onclick = done;
+    $(cancelId).onclick = () => { row.hidden = true; };
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); done(); } });
   }
   function renderAccounts() {
     const cnt = {};
@@ -650,14 +696,15 @@ dialog form{padding:16px}
         <button class="ghost small" data-acc-del="${a.id}" style="color:var(--danger)">削除</button>
       </li>`).join('') : '<li class="empty" style="text-align:left;padding:4px 0">未登録（当選したアカウントを登録すると記録に紐づけられます）</li>';
   }
-  $('accAdd').onclick = () => {
-    const name = $('accName').value.trim();
-    if (!name) return;
-    const a = { id: 'a' + uid(), name, hint: /^\d{6,}$/.test(name) ? name : '' };   // 数字のIDはそのまま自動判別キーワードに
-    state.accounts.push(a);
-    if (!state.accounts.some(x => x.id === state.defaultAccount)) state.defaultAccount = a.id; // 最初のIDを既定に
-    $('accName').value = ''; save(); render(); toast(`当選ID「${name}」を追加しました`);
-  };
+  $('accAdd').onclick = () => { if (addAccount($('accName').value)) { $('accName').value = ''; render(); } };
+  $('accName').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('accAdd').click(); } });
+  wireNewAccount('fAccount', 'fAccNewRow', 'fAccNew', 'fAccNewAdd', 'fAccNewCancel');
+  wireNewAccount('impAccount', 'impAccNewRow', 'impAccNew', 'impAccNewAdd', 'impAccNewCancel',
+    a => document.querySelectorAll('[data-imp-acc]').forEach(x => {
+      // 各行の選択肢に新しいIDを足して選ぶ（「まとめて設定」で既存のIDを選んだときと同じ。「（新規）」の選択肢は残す）
+      if (![...x.options].some(o => o.value === a.id)) x.insertAdjacentHTML('beforeend', `<option value="${a.id}">${esc(a.name)}</option>`);
+      x.value = a.id;
+    }));
   document.addEventListener('click', e => {
     const ed = e.target.closest('[data-acc-edit]');
     if (ed) {
@@ -792,6 +839,7 @@ dialog form{padding:16px}
   $('importTextBtn').onclick = () => {
     $('impText').value = ''; parsed = []; $('impPreview').innerHTML = ''; $('impSave').disabled = true;
     fillAccountSelect($('impAccount'), defaultAccount());
+    $('impAccNewRow').hidden = true;
     $('impRole').value = ''; $('impPartner').value = ''; updateRoleUI();
     $('impDlg').showModal();
   };
@@ -1447,6 +1495,7 @@ dialog form{padding:16px}
     $('fFrame').value = s.frame || '';
     $('fBingo').value = s.bingo || '';
     fillAccountSelect($('fAccount'), v ? (s.account || '') : defaultAccount());
+    $('fAccNewRow').hidden = true;
     $('fRole').value = s.role || '';
     $('fPartner').value = s.partner || '';
     updateRoleUI(); renderDayShows();
