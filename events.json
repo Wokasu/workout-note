@@ -1184,7 +1184,7 @@
         "森川優",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/489596266/",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12984860310.html",
       "applyUrl": "https://akb48.zaiko.io/e/2026ew-1126-1830",
       "deadlines": [
         {
@@ -1204,7 +1204,15 @@
           "minute": 0
         }
       ],
-      "lobby": null,
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 11,
+        "day": 23,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
