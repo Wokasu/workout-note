@@ -471,8 +471,34 @@ dialog form{padding:16px}
     } catch (e) {}
     return { goal: 100, visits: [], accounts: [] };
   }
+  // 読み込んだデータ（バックアップ・取り込み・埋め込み）は信用しない：
+  // HTML の属性やタグにそのまま入る値（ID・入場順・日付など）は、決まった形以外を捨てる
+  const safeId = v => { const s = String(v ?? '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); return s; };
+  const safeDate = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? String(v) : '';
+  const safeTime = v => /^\d{2}:\d{2}$/.test(String(v)) ? String(v) : '';
+  const safeStr = v => typeof v === 'string' ? v.slice(0, 2000) : v == null ? '' : String(v).slice(0, 2000);
   function normalize(d) {
-    return { goal: d.goal || 100, visits: d.visits, accounts: Array.isArray(d.accounts) ? d.accounts : [], deadline: d.deadline || '', defaultAccount: d.defaultAccount || '', appliedAdds: Array.isArray(d.appliedAdds) ? d.appliedAdds : [] };
+    const accounts = (Array.isArray(d.accounts) ? d.accounts : [])
+      .filter(a => a && typeof a === 'object')
+      .map(a => ({ id: safeId(a.id) || 'a' + uid(), name: safeStr(a.name), hint: safeStr(a.hint) }));
+    const visits = (Array.isArray(d.visits) ? d.visits : [])
+      .filter(v => v && typeof v === 'object' && safeDate(v.date))
+      .map(v => ({
+        ...v,
+        id: safeId(v.id) || uid(), created: Number(v.created) || Date.now(),
+        date: safeDate(v.date), time: safeTime(v.time),
+        show: safeStr(v.show), seat: safeStr(v.seat), memo: safeStr(v.memo), frame: safeStr(v.frame), partner: safeStr(v.partner),
+        type: ['theater', 'lobby', 'other'].includes(v.type) ? v.type : 'theater',
+        bingo: /^(\d{1,2}|up)$/.test(String(v.bingo ?? '')) ? String(v.bingo) : '',
+        account: safeId(v.account), role: v.role === 'companion' ? 'companion' : '', attend: v.attend === 'no' ? 'no' : '',
+        cast: Array.isArray(v.cast) ? v.cast.map(safeStr).filter(Boolean).slice(0, 64) : [],
+        count: v.count !== false,
+      }));
+    return {
+      goal: Math.max(1, Math.min(10000, parseInt(d.goal, 10) || 100)), visits, accounts,
+      deadline: safeDate(d.deadline), defaultAccount: safeId(d.defaultAccount),
+      appliedAdds: Array.isArray(d.appliedAdds) ? d.appliedAdds.map(safeId) : [],
+    };
   }
   function save() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); }
