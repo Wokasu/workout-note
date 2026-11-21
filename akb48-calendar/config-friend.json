@@ -1,0 +1,69 @@
+{
+  "sources": [
+    "https://www.akb48.co.jp/",
+    "https://www.akb48.co.jp/theater",
+    "https://www.akb48.co.jp/news"
+  ],
+  "startDate": "2026-10-27",
+  "followLinkPattern": "/news/detailpage/",
+  "followLinkTextPattern": "公演|出演メンバー",
+  "followLinkExcludePattern": "配信",
+  "maxFollowLinks": 40,
+  "durationMinutes": 120,
+  "location": "AKB48劇場（ドン・キホーテ秋葉原店8F）",
+  "scheduleApi": "https://www.akb48.co.jp/public/api/schedule/calendar/",
+  "scheduleMonthsAhead": 3,
+  "launcherExclude": [
+    "柱の会限定イベント"
+  ],
+  "knownMembers": [],
+  "targetFrame": {
+    "number": 2,
+    "name": "柱の会会員枠"
+  },
+  "generalDeadline": {
+    "daysBefore": 5,
+    "hour": 16
+  },
+  "lobbyDeadline": {
+    "daysBefore": 3,
+    "hour": 16
+  },
+  "deadlineCalendar": {
+    "id": "deadlines",
+    "name": "AKB48 申込締切",
+    "color": "#FF9500"
+  },
+  "calendars": [
+    {
+      "id": "oshi",
+      "name": "AKB48 森川優・渡邉葵心・佐藤綺星",
+      "color": "#FF2D55",
+      "members": [
+        {
+          "name": "森川優",
+          "mid": 1104,
+          "aliases": [],
+          "snsEmoji": ""
+        },
+        {
+          "name": "渡邉葵心",
+          "mid": 1105,
+          "aliases": [
+            "渡邊葵心",
+            "渡辺葵心",
+            "渡邊きこ",
+            "渡辺きこ"
+          ],
+          "snsEmoji": "🧤🤍"
+        },
+        {
+          "name": "佐藤綺星",
+          "mid": 1076,
+          "aliases": [],
+          "snsEmoji": ""
+        }
+      ]
+    }
+  ]
+}
