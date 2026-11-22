@@ -1029,8 +1029,33 @@
       ],
       "sourceUrl": "https://www.akb48.co.jp/",
       "applyUrl": "https://akb48.zaiko.io/ja/e/2026-1130-1830",
-      "deadlines": [],
-      "lobby": null,
+      "deadlines": [
+        {
+          "label": "(1)〜(3)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 23,
+          "hour": 16,
+          "minute": 0
+        },
+        {
+          "label": "(4)〜(6)枠",
+          "year": 2026,
+          "month": 11,
+          "day": 25,
+          "hour": 16,
+          "minute": 0
+        }
+      ],
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 11,
+        "day": 27,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
