@@ -5,7 +5,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
+import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCastChanges, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -81,6 +81,7 @@ if (dumpDir && args.probe) {
 
 const schedule = [];
 const casts = [];
+const castChanges = []; // 出演メンバー変更のお知らせ（theater-schedule.json に反映）
 let fetchedPages = 0;
 const queue = [...config.sources];
 const seen = new Set();
@@ -119,6 +120,7 @@ while (queue.length) {
     // 出演メンバーはお知らせ記事からだけ読む（トップページには日付のないメンバー表もあって紛らわしいため）
     const c = extractCasts(lines, { today, sourceUrl: url });
     casts.push(...c);
+    castChanges.push(...extractCastChanges(lines, { today }));
     console.log(`${url}: 出演情報 ${c.length} 件 (${lines.find((l) => /公演|お知らせ/.test(l) && !/^AKB48公式/.test(l)) ?? ''})`);
   }
 }
@@ -145,6 +147,7 @@ for (const feed of blogFeeds) {
     const lines = [item.title, ...htmlToLines(item.html)];
     const c = extractCasts(lines, { today, sourceUrl: item.link });
     casts.push(...c);
+    castChanges.push(...extractCastChanges(lines, { today }));
     blogLinks.push(item.link);
     const who = mentionedMembers(lines.join('\n'), allMembers);
     if (!c.length && who.length && !blogIgnore.test(item.title)) blogCandidates.push({ ...item, members: who });
@@ -360,6 +363,52 @@ console.log(`links.json: ${links.length} 件（URLあり ${links.filter((l) => l
   const linksAll = toLinks([...all.values()]);
   await writeFile(join(outDir, 'links-all.json'), JSON.stringify(linksAll, null, 2) + '\n');
   console.log(`links-all.json: ${linksAll.length} 件（URLあり ${linksAll.filter((l) => l.url).length} 件）`);
+
+  // 劇場公演カウンター用: 推しメン以外も含む全公演と出演メンバー（theater-schedule.json）。
+  // 今日以降の公演は毎回読み直した内容で置き換え、過去の公演は前回までの記録を残して積み上げる
+  const schedulePath = join(outDir, 'theater-schedule.json');
+  const todayIso = today.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' });
+  const toRow = (s) => ({
+    date: `${s.year}-${pad(s.month)}-${pad(s.day)}`,
+    time: s.hour == null ? '' : `${pad(s.hour)}:${pad(s.minute)}`,
+    show: s.title,
+    cast: s.cast ?? [],
+    tag: s.tag ?? '',
+    source: s.sourceUrl ?? '',
+  });
+  const current = [...all.values()].filter((s) => s.kind !== 'event').map(toRow);
+  // 出演メンバー変更のお知らせ（休演・代役）を反映する
+  for (const ch of castChanges) {
+    const row = current.find((r) => r.date === `${ch.year}-${pad(ch.month)}-${pad(ch.day)}` && r.time === `${pad(ch.hour)}:${pad(ch.minute)}`);
+    if (!row) continue;
+    row.cast = [...row.cast.filter((n) => !ch.off.includes(n)), ...ch.on.filter((n) => !row.cast.includes(n))];
+    if (!row.tag.includes('メンバー変更あり')) row.tag = [row.tag, 'メンバー変更あり'].filter(Boolean).join(' / ');
+  }
+  let previousRows = [];
+  try {
+    previousRows = JSON.parse(await readFile(schedulePath, 'utf8')).shows ?? [];
+  } catch {}
+  const rowKey = (r) => `${r.date}|${r.time}`;
+  const currentKeys = new Set(current.map(rowKey));
+  const keptRows = previousRows.filter((r) => r.date < todayIso && !currentKeys.has(rowKey(r)));
+  const rows = [...keptRows, ...current].sort((a, b) => rowKey(a).localeCompare(rowKey(b)));
+  await writeFile(schedulePath, JSON.stringify({ version: 1, asOf: todayIso, shows: rows }, null, 1) + '\n');
+  console.log(`theater-schedule.json: ${rows.length} 件（今回 ${current.length} 件、過去の記録 ${keptRows.length} 件）`);
+
+  // 推しメンが出ない公演だけのカレンダー（config.json の otherShowsCalendar）。推しのカレンダーと重ならないので、全部表示すると全公演になる
+  if (config.otherShowsCalendar) {
+    const oshiKeys = new Set(events.filter((s) => s.kind !== 'event').map((s) => `${s.year}-${pad(s.month)}-${pad(s.day)}|${s.hour == null ? '' : `${pad(s.hour)}:${pad(s.minute)}`}`));
+    const others = rows
+      .filter((r) => !oshiKeys.has(rowKey(r)))
+      .map((r) => {
+        const [y, mo, d] = r.date.split('-').map(Number);
+        const [h, mi] = r.time ? r.time.split(':').map(Number) : [null, null];
+        return { year: y, month: mo, day: d, hour: h, minute: mi, title: r.show, members: [], cast: r.cast, tag: r.tag || null, sourceUrl: r.source };
+      });
+    const ics = buildIcs(config.otherShowsCalendar, others, { durationMinutes: config.durationMinutes, location: config.location, now: today });
+    await writeFile(join(outDir, `${config.otherShowsCalendar.id}.ics`), ics);
+    console.log(`${config.otherShowsCalendar.id}.ics: ${others.length} 件`);
+  }
 }
 if (fetchedPages === 0) {
   console.error('公式サイトから1ページも取得できませんでした（前回の予定をそのまま残しています）');

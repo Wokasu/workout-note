@@ -88,6 +88,9 @@ iPhone はこの `.ics` を「照会するカレンダー」として購読す�
    - 奥本カイリ・渡邉葵心: `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/kairi-kiko.ics`
 3. カレンダーアプリ →「カレンダー」→ 各カレンダーの ⓘ で色を **紫** / **水色** に設定
    （iPhone は購読カレンダーの色指定を無視することが多いので、ここで一度だけ設定します）
+4. 推しメンが出ない公演も見たいときは、同じ手順で次の URL も登録します（色は **グレー** がおすすめ）
+   - その他の公演: `https://raw.githubusercontent.com/Wokasu/workout-note/akb48-calendar-feed/others.ics`
+   - 推しのカレンダーと重ならないので、全部表示すると劇場の全公演になります。出演メンバー・生誕祭などは予定のメモに入ります
 
 更新頻度は「設定」→「カレンダー」→「アカウント」→「照会するカレンダー」から変えられます。
 

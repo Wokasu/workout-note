@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCastChanges, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -480,4 +480,26 @@ test('申込していない公演: 座席の応募が受付中で、申込済み
   const list = unappliedShows(shows, applied, now, { frameNames: { '(1)〜(3)枠': '柱の会会員枠', '(4)〜(6)枠': '一般枠' } });
   assert.equal(unappliedMessage(list), '11/2(月) 18:30 「ここからだ」公演【長友彩海 生誕祭】（奥本カイリ） 一般枠 10/28 16:00締切');
   assert.equal(unappliedShows(shows, [...applied, '2026-11-02 18:30'], now).length, 0);
+});
+
+test('出演メンバー変更のお知らせ: 休演と代役を読む', () => {
+  const lines = [
+    '【本日の劇場公演】出演メンバー変更のお知らせ',
+    '本日（2026年7月28日）の「ここからだ」18:30公演に出演予定でした新井彩永ですが、体調不良のため休演させていただきます。',
+    '7/28(火) 「ここからだ」公演　18:30開演',
+    '【休演】 新井彩永',
+    '【出演】 徳永羚海',
+  ];
+  assert.deepEqual(extractCastChanges(lines, { today }), [
+    { year: 2026, month: 7, day: 28, hour: 18, minute: 30, title: '「ここからだ」公演', off: ['新井彩永'], on: ['徳永羚海'] },
+  ]);
+  assert.deepEqual(extractCastChanges(['10/25(土) 「RESET」公演 18:30開演', '【出演メンバー】', 'A・B'], { today }), []);
+});
+
+test('その他の公演カレンダー: 推しメンがいない公演は（）と推しメン行を付けない', () => {
+  const ics = buildIcs({ id: 'others', name: 'AKB48 その他の公演', color: '#8E8E93' },
+    [{ year: 2026, month: 11, day: 17, hour: 18, minute: 30, title: '「RESET」公演', members: [], cast: ['千葉恵里', '岩立沙穂'], tag: '千葉恵里 生誕祭' }], { now: today });
+  assert.match(ics, /SUMMARY:「RESET」公演【千葉恵里 生誕祭】\r?\n/);
+  assert.doesNotMatch(ics, /推しメン:/);
+  assert.match(ics, /出演メンバー: 千葉恵里・岩立沙穂/);
 });

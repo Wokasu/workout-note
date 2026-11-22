@@ -522,7 +522,7 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
   for (const s of shows) {
     const uid = `${showKey(s).replace(/[^\w-]/g, '')}-${Buffer.from(s.title).toString('hex').slice(0, 24)}@akb48-calendar`;
     const desc = [
-      s.memberUnknown ? '出演メンバー: 未発表' : `推しメン: ${s.members.join('、')}`,
+      s.memberUnknown ? '出演メンバー: 未発表' : s.members.length ? `推しメン: ${s.members.join('、')}` : '',
       // 劇場公演は、推しメン以外も含めた出演メンバー全員を公式の並び順で書く
       s.cast?.length ? `出演メンバー: ${s.cast.join('・')}` : '',
       s.applyUrl ? `申込: ${s.applyUrl}` : '',
@@ -548,7 +548,8 @@ export function buildIcs(calendar, shows, { durationMinutes = 120, location = ''
       lines.push(`DTSTART:${utcStamp(start)}`, `DTEND:${utcStamp(end)}`);
     }
     lines.push(
-      `SUMMARY:${escapeText(`${s.title}${s.tag ? `【${s.tag}】` : ''}（${s.memberUnknown ? '出演メンバー未発表' : s.members.join('・')}）`)}`,
+      // 推しメンが出ない公演（その他の公演カレンダー）は（）を付けない
+      `SUMMARY:${escapeText(`${s.title}${s.tag ? `【${s.tag}】` : ''}${s.memberUnknown ? '（出演メンバー未発表）' : s.members.length ? `（${s.members.join('・')}）` : ''}`)}`,
       `DESCRIPTION:${escapeText(desc)}`,
     );
     const place = s.kind === 'event' ? s.location : location;
@@ -797,4 +798,29 @@ export function unappliedMessage(list) {
       return `${md(s.year, s.month, s.day)} ${s.hour}:${pad(s.minute)} ${s.title}${s.tag ? `【${s.tag}】` : ''}（${s.members.join('・')}）${dl}`;
     })
     .join('\n');
+}
+
+// ---- 出演メンバー変更（休演・代役） ----
+// 「【本日の劇場公演】出演メンバー変更のお知らせ」の本文から、公演ごとの休演・出演を読む。
+// 例)
+//   7/28(火) 「ここからだ」公演　18:30開演
+//   【休演】 新井彩永
+//   【出演】 徳永羚海
+export function extractCastChanges(lines, { today = new Date() } = {}) {
+  const text = lines.map(normalizeWidth).join('\n');
+  if (!/【休演】/.test(text)) return [];
+  const jstYear = new Date(today.getTime() + 9 * 3600_000).getUTCFullYear();
+  const year = Number(text.match(/(20\d{2})年/)?.[1] ?? jstYear);
+  const head = /(\d{1,2})\/(\d{1,2})\s*[(（][^)）]*[)）]\s*「([^」]+)」\s*公演\s*(\d{1,2}):(\d{2})/g;
+  const heads = [...text.matchAll(head)];
+  const names = (s) => (s ?? '').split(/[・、,，\s]+/).map((x) => x.trim()).filter(Boolean);
+  return heads.map((m, i) => {
+    const seg = text.slice(m.index + m[0].length, heads[i + 1]?.index ?? m.index + m[0].length + 400);
+    return {
+      year, month: Number(m[1]), day: Number(m[2]), hour: Number(m[4]), minute: Number(m[5]),
+      title: normalizeTitle(`「${m[3]}」公演`),
+      off: names(seg.match(/【休演】([^\n【]*)/)?.[1]),
+      on: names(seg.match(/【出演】([^\n【]*)/)?.[1]),
+    };
+  }).filter((c) => c.off.length || c.on.length);
 }
