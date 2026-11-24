@@ -26,6 +26,7 @@ def get(url, name, refresh=False):
 
 
 entries = {}
+entry_ym = {}
 for ym in MONTHS:
     for page in range(1, 13):
         # 直近2か月のアーカイブは毎回取り直す（新しい記事が増えるため）
@@ -33,6 +34,7 @@ for ym in MONTHS:
         found = re.findall(r'entryItemTitle"><a[^>]*href="(/akihabara48/entry-\d+\.html)">([^<]+)</a>', t)
         for u, ti in found:
             entries[BASE + u] = re.sub(r"[\x00-\x1f]", "", html.unescape(ti))
+            entry_ym.setdefault(BASE + u, ym)   # その記事が載っていた月（年の推定に使う）
         if not found or f"archive{page + 1}-{ym}.html" not in t:
             break
 
@@ -88,8 +90,11 @@ for u, ti in entries.items():
         if m:
             mo, da, rest = int(m.group(1)), int(m.group(2)), m.group(3)
             # 年は書かれていないので、今日にいちばん近くなる年にする（記事内の別の「YYYY年」に引っぱられないように）
-            ty = D.today().year
-            y = min((ty - 1, ty, ty + 1), key=lambda yy: abs((D(yy, mo, min(da, 28)) - D.today()).days))
+            # 年は書かれていないので、記事が載っていた月にいちばん近くなる年にする
+            # （過去分を集めるときも正しく、記事内の別の「YYYY年」にも引っぱられない）
+            ey, em = int(entry_ym[u][:4]), int(entry_ym[u][4:])
+            ref = D(ey, em, 15)
+            y = min((ey - 1, ey, ey + 1), key=lambda yy: abs((D(yy, mo, min(da, 28)) - ref).days))
             sm = re.search(r"「[^」]+」\s*公演|\S+\s*卒業公演", rest)
             times = TIMES.findall(rest)
             if not sm or not times:

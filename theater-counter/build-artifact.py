@@ -32,6 +32,10 @@ members_path = here.parent / "members.json"
 if members_path.exists():
     mdata = json.dumps(json.loads(members_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
     embed += f'<script type="application/json" id="members-data">{mdata}</script>\n'
+hist_path = here.parent / "theater-history.json"   # 過去の公演（共演率の集計だけに使う）
+if hist_path.exists():
+    hdata = json.dumps(json.loads(hist_path.read_text(encoding="utf-8")), ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+    embed += f'<script type="application/json" id="history-data">{hdata}</script>\n'
 sched_path = here.parent / "theater-schedule.json"
 if sched_path.exists():
     scdata = json.dumps(json.loads(sched_path.read_text(encoding="utf-8")), ensure_ascii=False).replace("</", "<\\/")
