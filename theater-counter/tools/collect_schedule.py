@@ -59,6 +59,7 @@ def split_cast(line):
 
 
 shows = {}  # (date, time) -> dict
+seitan_time = {}  # (日付, メンバー) -> 生誕祭の開演時刻の集合（案内記事で分かったもの）
 
 
 def put(date, tm, show, cast, tag, src, prio):
@@ -148,6 +149,7 @@ for u, ti in entries.items():
         for line in head.split("\n"):
             if t in line and "生誕祭" in line:
                 tag = re.sub(r"\s+", "", line.split("生誕祭")[0].split(t)[-1]).replace("開演", "") + " 生誕祭"
+                seitan_time.setdefault((date, tag.replace(" 生誕祭", "")), set()).add(t)   # 案内記事で分かった「誰の生誕祭がどの回か」
         if not tag and "生誕祭" in head and len(times) == 1:
             tag = re.sub(r"\s+", "", head.split("生誕祭")[0].split("\n")[-1]) + " 生誕祭"
         put(date, t, norm_show(sm.group(0)), cast, tag, u, 2)
@@ -171,6 +173,17 @@ for u, ti in entries.items():
             cast = [x for x in shows[k]["cast"] if x not in offs] + [x for x in ons if x not in shows[k]["cast"]]
             shows[k]["cast"] = cast
             shows[k]["_tags"].add("メンバー変更あり")
+
+# 一覧記事では1日2回公演の両方に生誕祭が付くことがある。
+# 案内記事で「その人の生誕祭は別の回」と分かるときだけ、この回からその人の生誕祭を外す
+def keep_tag(d, tm, tag):
+    if not tag.endswith("生誕祭"):
+        return True
+    name = re.sub(r"\s+", "", tag.split("/")[-1]).replace("生誕祭", "")
+    times = seitan_time.get((d, name))
+    return not times or tm in times
+for (d, tm), sh in shows.items():
+    sh["_tags"] = {x for x in sh["_tags"] if keep_tag(d, tm, x)}
 
 out = []
 for k in sorted(shows):
