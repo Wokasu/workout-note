@@ -1098,7 +1098,15 @@
           "minute": 0
         }
       ],
-      "lobby": null,
+      "lobby": {
+        "label": "お見送り参加権付きロビー観覧チケット(1,800円)",
+        "year": 2026,
+        "month": 12,
+        "day": 1,
+        "hour": 16,
+        "minute": 0,
+        "lobby": true
+      },
       "tag": null
     },
     {
@@ -1336,7 +1344,7 @@
         "森川優",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/497975022",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12984909481.html",
       "applyUrl": null,
       "deadlines": [],
       "lobby": null,
@@ -1371,7 +1379,7 @@
         "近藤沙樹",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/497975022",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12984909481.html",
       "applyUrl": null,
       "deadlines": [],
       "lobby": null,
@@ -1398,7 +1406,7 @@
         "森川優",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/497975022",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12984909481.html",
       "applyUrl": null,
       "deadlines": [],
       "lobby": null,
@@ -1424,7 +1432,7 @@
         "田中沙友利",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/497975022",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12984909481.html",
       "applyUrl": null,
       "deadlines": [],
       "lobby": null,
@@ -1450,7 +1458,7 @@
         "牧戸愛茉",
         "渡邉葵心"
       ],
-      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/497975022",
+      "sourceUrl": "https://ameblo.jp/akihabara48/entry-12984909481.html",
       "applyUrl": null,
       "deadlines": [],
       "lobby": null,
