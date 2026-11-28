@@ -471,6 +471,64 @@ export function eventsFromApi(json, members) {
   return out;
 }
 
+// ---- 公式ニュースの握手会・イベント記事 ----
+// 例1)  ◆「福岡握手会」 / 開催日:2027年2月28日(日) / 会場:福岡国際会議場 / 参加メンバー:… / 秋山由奈、伊藤百花、…
+// 例2)  ■2月27日(土) / ・「グループ握手会」 / 会場:全国4都市(…) / ・参加メンバー / 【仙台会場】 / 岩立沙穂、福岡聖菜、伊藤百花、…
+// 推しメンが参加メンバーに書かれている回だけを、終日の予定（kind: 'event'）として返す。
+// 参加メンバーが「後日発表」の回は入れない（メンバーが載った記事が出たら入る）
+const nameKey = (s) => s.replace(/[\s　]/g, '');
+
+export function extractArticleEvents(lines, { today = new Date(), sourceUrl = '', members = [] } = {}) {
+  const start = lines.findIndex((l, i) => /^\d{4}\.\d{2}\.\d{2}$/.test(lines[i + 1] ?? '') && /握手|お話し会|写真会|イベント|お見送り/.test(l));
+  if (start < 0) return [];
+  const articleTitle = lines[start];
+  // 「69thシングル」のような作品名があればタイトルの頭につける（どの握手会か分かるように）
+  const release = normalizeWidth(articleTitle).match(/\d+(?:st|nd|rd|th)シングル|\d+(?:st|nd|rd|th)アルバム/)?.[0];
+  const out = [];
+  let date = null;
+  let name = null;
+  let venue = null;
+  let city = null;
+  for (const raw of lines.slice(start + 2)) {
+    const line = normalizeWidth(raw).trim();
+    if (/^◆イベントに関するお問い合わせ|^SHARE ME|^一覧に戻る/.test(line)) break;
+    let m;
+    if ((m = line.match(/^■\s*(\d{1,2})月(\d{1,2})日/))) {
+      const [month, day] = [Number(m[1]), Number(m[2])];
+      date = { year: resolveYear(month, day, today), month, day };
+      [name, venue, city] = [null, null, null];
+    } else if ((m = line.match(/^◆\s*「(.+?)」/))) {
+      [date, name, venue, city] = [null, m[1].trim(), null, null];
+    } else if ((m = line.match(/^・\s*「(.+?)」/))) {
+      [name, venue, city] = [m[1].trim(), null, null];
+    } else if ((m = line.match(/^開催日\s*[:：]\s*(?:(\d{4})年)?\s*(\d{1,2})月(\d{1,2})日/))) {
+      const [month, day] = [Number(m[2]), Number(m[3])];
+      date = { year: m[1] ? Number(m[1]) : resolveYear(month, day, today), month, day };
+    } else if ((m = line.match(/^会場\s*[:：]\s*(.+)/))) {
+      venue = m[1].trim();
+    } else if ((m = line.match(/^【(.+?)会場】$/))) {
+      city = m[1].trim();
+    } else if (date && name && line.split('、').length >= 3) {
+      const listed = new Set(line.split('、').map(nameKey));
+      const hits = members.filter((mm) => listed.has(nameKey(mm.name)) || (mm.display && listed.has(nameKey(mm.display)))).map((mm) => mm.name);
+      if (!hits.length) continue;
+      out.push({
+        ...date,
+        hour: null, minute: null, endHour: null, endMinute: null,
+        title: `${release ? `${release} ` : ''}${city ? `${name}（${city}会場）` : name}`,
+        members: hits,
+        memberUnknown: false,
+        detailUrl: sourceUrl || null,
+        location: city ?? venue,
+        note: articleTitle,
+        kind: 'event',
+        sourceUrl,
+      });
+    }
+  }
+  return out;
+}
+
 // ---- iCalendar ----
 
 function escapeText(s) {

@@ -5,7 +5,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
+import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractArticleEvents, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -85,6 +85,8 @@ let fetchedPages = 0;
 const queue = [...config.sources];
 const seen = new Set();
 let followed = 0;
+const articleEvents = [];
+const articleUrls = new Set();
 while (queue.length) {
   const url = queue.shift();
   if (seen.has(url)) continue;
@@ -119,6 +121,11 @@ while (queue.length) {
     // 出演メンバーはお知らせ記事からだけ読む（トップページには日付のないメンバー表もあって紛らわしいため）
     const c = extractCasts(lines, { today, sourceUrl: url });
     casts.push(...c);
+    // 握手会・イベントの案内記事: 推しメンが参加メンバーに書かれた回を現場として入れる
+    const ev = extractArticleEvents(lines, { today, sourceUrl: url, members: allMembers });
+    articleEvents.push(...ev);
+    articleUrls.add(url);
+    if (ev.length) console.log(`${url}: 握手会・イベント ${ev.length} 件`);
     console.log(`${url}: 出演情報 ${c.length} 件 (${lines.find((l) => /公演|お知らせ/.test(l) && !/^AKB48公式/.test(l)) ?? ''})`);
   }
 }
@@ -194,7 +201,10 @@ try {
 const [sy, sm, sd] = (config.startDate ?? '2000-01-01').split('-').map(Number);
 const afterStart = (s) => s.year * 10000 + s.month * 100 + s.day >= sy * 10000 + sm * 100 + sd;
 const keptTheater = previous.filter((s) => s.kind !== 'event' && !covered.has(performanceKey(s)));
-const keptEvents = previous.filter((s) => s.kind === 'event' && !fetchedMonths.has(`${s.year}-${s.month}`));
+// 公式スケジュール由来の現場は読めた月の分を置き換え、ニュース記事由来の現場は今回読んだ記事の分を置き換える
+const fromArticle = (s) => s.sourceUrl?.includes('/news/');
+const keptEvents = previous.filter((s) => s.kind === 'event' &&
+  (fromArticle(s) ? !articleUrls.has(s.sourceUrl) : !fetchedMonths.has(`${s.year}-${s.month}`)));
 // 公式に出演メンバーが載っていない予定に、自分で分かっている出演者を補う（config.json の knownMembers）。
 // 公式にメンバーが載ったら、そちらを使う
 const withKnownMembers = (s) => {
@@ -213,7 +223,7 @@ for (const s of found) {
   s.lobby ??= p.lobby ?? null;
   s.tag ??= p.tag ?? null;
 }
-const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents].map(withKnownMembers)).filter(afterStart);
+const events = mergeShows([...keptTheater, ...found, ...keptEvents, ...apiEvents, ...articleEvents].map(withKnownMembers)).filter(afterStart);
 
 await mkdir(outDir, { recursive: true });
 await writeFile(join(outDir, 'events.json'), JSON.stringify({ version: STATE_VERSION, events }, null, 2) + '\n');
