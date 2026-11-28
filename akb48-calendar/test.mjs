@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractArticleEvents, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -480,4 +480,29 @@ test('申込していない公演: 座席の応募が受付中で、申込済み
   const list = unappliedShows(shows, applied, now, { frameNames: { '(1)〜(3)枠': '柱の会会員枠', '(4)〜(6)枠': '一般枠' } });
   assert.equal(unappliedMessage(list), '11/2(月) 18:30 「ここからだ」公演【長友彩海 生誕祭】（奥本カイリ） 一般枠 10/28 16:00締切');
   assert.equal(unappliedShows(shows, [...applied, '2026-11-02 18:30'], now).length, 0);
+});
+
+test('ニュースの握手会記事: 推しメンが参加する回だけを終日の現場として読む（日付の書き方2通り・会場別メンバー）', () => {
+  const lines = [
+    '69thシングル『タイトル未定』発売記念 初回限定盤対象イベント開催のご案内', '2026.11.28', '公式ニュース',
+    '◆「福岡握手会」', '開催日:2027年2月28日(日)', '会場:福岡国際会議場', '参加メンバー:69thシングル 選抜メンバー16名',
+    '秋山由奈、伊藤百花、小栗有以、森川優',
+    '◆「東京握手会」', '開催日:2027年5月4日(火・祝)', '会場:東京ビッグサイト', '参加メンバー:AKB48 全メンバー',
+    '秋山由奈、伊藤百花、奥本カイリ、森川優',
+    '■2月23日(火・祝)', '・「グループ握手会」', '会場:東京都23区内 CDショップ3店舗',
+    '■2月27日(土)', '・「グループ握手会」', '会場:全国4都市', '・参加メンバー',
+    '【仙台会場】', '岩立沙穂、福岡聖菜、伊藤百花、奥本カイリ',
+    '【大阪会場】', '太田有紀、佐藤綺星、森川 優、渡邉葵心',
+    '◆イベントに関するお問い合わせ', '伊藤百花、奥本カイリ、渡邉葵心',
+  ];
+  const members = [{ name: '伊藤百花' }, { name: '奥本カイリ' }];
+  const got = extractArticleEvents(lines, { today: new Date('2026-11-28T00:00:00Z'), sourceUrl: 'https://www.akb48.co.jp/news/detailpage/1', members });
+  assert.deepEqual(got.map((e) => [e.year, e.month, e.day, e.title, e.members.join('・'), e.location, e.hour]), [
+    [2027, 2, 28, '69thシングル 福岡握手会', '伊藤百花', '福岡国際会議場', null],
+    [2027, 5, 4, '69thシングル 東京握手会', '伊藤百花・奥本カイリ', '東京ビッグサイト', null],
+    [2027, 2, 27, '69thシングル グループ握手会（仙台会場）', '伊藤百花・奥本カイリ', '仙台', null],
+  ]);
+  assert.ok(got.every((e) => e.kind === 'event' && e.note.includes('発売記念')));
+  const friend = extractArticleEvents(lines, { today: new Date('2026-11-28T00:00:00Z'), members: [{ name: '森川優' }] });
+  assert.deepEqual(friend.map((e) => e.title), ['69thシングル 福岡握手会', '69thシングル 東京握手会', '69thシングル グループ握手会（大阪会場）']);
 });

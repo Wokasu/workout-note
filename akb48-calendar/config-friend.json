@@ -6,7 +6,7 @@
   ],
   "startDate": "2026-10-27",
   "followLinkPattern": "/news/detailpage/",
-  "followLinkTextPattern": "公演|出演メンバー",
+  "followLinkTextPattern": "公演|出演メンバー|握手会|お話し会|写真会|イベント",
   "followLinkExcludePattern": "配信",
   "maxFollowLinks": 40,
   "durationMinutes": 120,
