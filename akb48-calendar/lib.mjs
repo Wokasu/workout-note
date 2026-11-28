@@ -808,6 +808,16 @@ export function parseRss(xml) {
 }
 
 /** 推しメンの名前（別表記も）が出てくるか。出てくる推しメンの名前を返す */
+/**
+ * 会えるイベント（握手会・お話し会・サイン会・お見送り・ライブ・観覧など、現地に行くもの）の記事かどうか。
+ * テレビ・ラジオ・雑誌・配信など見るだけのもの、オンラインのものは入れない（タイトルで判断）
+ */
+export function isMeetEvent(title, text = '') {
+  const t = normalizeWidth(title);
+  if (/テレビ|TV|ラジオ|番組|ABEMA|雑誌|月号|誌面|掲載|放送|配信|Instagram|YouTube|TikTok|WEB|ウェブ|MV|Music ?video|CM|ドラマ|映画|オンライン|リモート/i.test(t)) return false;
+  return /握手|お話し会|写真会|撮影会|サイン|お見送り|ハイタッチ|ミーグリ|ミート|観覧|ライブ|LIVE|コンサート|フェス|イベント|来場|入場|整理券/i.test(`${t}\n${normalizeWidth(text)}`);
+}
+
 export function mentionedMembers(text, members) {
   const compactText = text.replace(/[\s　]/g, '');
   return members

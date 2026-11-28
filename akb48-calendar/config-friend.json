@@ -6,7 +6,7 @@
   ],
   "startDate": "2026-10-27",
   "followLinkPattern": "/news/detailpage/",
-  "followLinkTextPattern": "公演|出演メンバー|握手会|お話し会|写真会|イベント",
+  "followLinkTextPattern": "公演|出演メンバー|握手|お話し会|写真会|撮影会|サイン|お見送り|ハイタッチ|ミーグリ|観覧|ライブ|LIVE|コンサート|フェス|イベント|出演|参加",
   "followLinkExcludePattern": "配信",
   "maxFollowLinks": 40,
   "durationMinutes": 120,
