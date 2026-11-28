@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractArticleEvents, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
+import { applicationClosed, lobbyOpen, parseApplied, unappliedShows, unappliedMessage, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, buildShows, eventsFromApi, extractArticleEvents, isMeetEvent, extractCasts, extractSchedule, extractTopCasts, htmlToLines, normalizeWidth } from './lib.mjs';
 
 const today = new Date('2026-10-18T09:00:00Z');
 const config = JSON.parse(readFileSync(new URL('./config.json', import.meta.url), 'utf8'));
@@ -505,4 +505,15 @@ test('ニュースの握手会記事: 推しメンが参加する回だけを終
   assert.ok(got.every((e) => e.kind === 'event' && e.note.includes('発売記念')));
   const friend = extractArticleEvents(lines, { today: new Date('2026-11-28T00:00:00Z'), members: [{ name: '森川優' }] });
   assert.deepEqual(friend.map((e) => e.title), ['69thシングル 福岡握手会', '69thシングル 東京握手会', '69thシングル グループ握手会（大阪会場）']);
+});
+
+test('会えるイベントの記事か: 握手会・サイン会・ライブは入れ、テレビ・雑誌・配信・オンラインは入れない', () => {
+  assert.equal(isMeetEvent('69thシングル『タイトル未定』発売記念イベント開催のご案内'), true);
+  assert.equal(isMeetEvent('「○○フェス2027」出演決定'), true);
+  assert.equal(isMeetEvent('写真集発売記念 お渡し会のお知らせ', '会場:書泉ブックタワー 整理券'), true);
+  assert.equal(isMeetEvent('「週刊○○」12月号 掲載のお知らせ'), false);
+  assert.equal(isMeetEvent('日本テレビ「○○」出演のお知らせ', '観覧'), false);
+  assert.equal(isMeetEvent('オンラインお話し会 開催のお知らせ'), false);
+  assert.equal(isMeetEvent('ラジオ番組出演のお知らせ'), false);
+  assert.equal(isMeetEvent('【八木愛月】ABEMA新番組「アナザーゾーン」に出演決定!', 'イベント'), false);
 });

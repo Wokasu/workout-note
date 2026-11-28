@@ -5,7 +5,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractArticleEvents, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
+import { applicationClosed, lobbyOpen, buildAnnouncement, mentionedMembers, parseRss, buildDeadlineIcs, buildIcs, dueDeadlineReminders, onlyFrame, newlyOpened, openedMessage, openedPlain, buildShows, eventsFromApi, extractArticleEvents, isMeetEvent, extractCasts, extractSchedule, extractTopCasts, htmlToLines, mergeShows, performanceKey, showKey } from './lib.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(
@@ -86,6 +86,7 @@ const queue = [...config.sources];
 const seen = new Set();
 let followed = 0;
 const articleEvents = [];
+const newsCandidates = [];
 const articleUrls = new Set();
 while (queue.length) {
   const url = queue.shift();
@@ -126,6 +127,12 @@ while (queue.length) {
     articleEvents.push(...ev);
     articleUrls.add(url);
     if (ev.length) console.log(`${url}: 握手会・イベント ${ev.length} 件`);
+    // 推しメンの名前が出てくる「会えるイベント」の記事は ntfy で知らせる（劇場公演の案内は除く）
+    const title = lines.find((l, i) => /^\d{4}\.\d{2}\.\d{2}$/.test(lines[i + 1] ?? '')) ?? '';
+    const who = mentionedMembers(lines.join('\n'), allMembers);
+    if (!c.length && title && who.length && isMeetEvent(title, lines.join('\n'))) {
+      newsCandidates.push({ title, link: url, members: who, added: ev.length > 0 });
+    }
     console.log(`${url}: 出演情報 ${c.length} 件 (${lines.find((l) => /公演|お知らせ/.test(l) && !/^AKB48公式/.test(l)) ?? ''})`);
   }
 }
@@ -154,7 +161,7 @@ for (const feed of blogFeeds) {
     casts.push(...c);
     blogLinks.push(item.link);
     const who = mentionedMembers(lines.join('\n'), allMembers);
-    if (!c.length && who.length && !blogIgnore.test(item.title)) blogCandidates.push({ ...item, members: who });
+    if (!c.length && who.length && !blogIgnore.test(item.title) && isMeetEvent(item.title, lines.join('\n'))) blogCandidates.push({ ...item, members: who });
   }
   console.log(`${feed}: 記事 ${items.length} 件（推しメンのイベント候補 ${blogCandidates.length} 件）`);
 }
@@ -282,6 +289,33 @@ if (process.env.NTFY_TOPIC) {
   // 締切を過ぎた記録は消す
   for (const [k, v] of Object.entries(sent)) if (new Date(v).getTime() < today.getTime() - 7 * 86400_000) delete sent[k];
   await writeFile(sentPath, JSON.stringify(sent, null, 2) + '\n');
+}
+
+// 公式ニュースの「会えるイベント」の記事: 初めて見た記事だけ ntfy で知らせる。news-seen.json に記録する（初回は記録するだけ）
+if (articleUrls.size) {
+  const seenPath = join(outDir, 'news-seen.json');
+  let seenLinks = null;
+  try {
+    seenLinks = JSON.parse(await readFile(seenPath, 'utf8'));
+  } catch {}
+  const done = [...articleUrls];
+  if (seenLinks && process.env.NTFY_TOPIC) {
+    for (const c of newsCandidates.filter((x) => !seenLinks.includes(x.link))) {
+      const params = new URLSearchParams({ title: c.added ? '📅 推しメンの握手会・イベント（カレンダーに追加）' : '📰 推しメンの会えるイベント', click: c.link });
+      try {
+        const res = await fetch(`https://ntfy.sh/${encodeURIComponent(process.env.NTFY_TOPIC)}?${params}`, { method: 'POST', body: `${c.title}（${c.members.join('・')}）` });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        console.log(`ニュースのイベントを通知: ${c.title}`);
+      } catch (e) {
+        console.warn(`ニュースのイベントの通知に失敗: ${e.message}`);
+        done.splice(done.indexOf(c.link), 1); // 次の実行でもう一度送る
+      }
+    }
+  }
+  console.log(`ニュースの会えるイベント: ${newsCandidates.map((c) => `${c.title}（${c.members.join('・')}）`).join(' / ') || 'なし'}${seenLinks ? '' : '（初回なので記録だけ）'}`);
+  const merged = [...new Set([...done, ...(seenLinks ?? [])])].slice(0, 300);
+  await mkdir(outDir, { recursive: true });
+  await writeFile(seenPath, JSON.stringify(merged, null, 2) + '\n');
 }
 
 // ブログのイベント候補: 初めて見た記事だけ ntfy で知らせる。blog-seen.json に見た記事を記録する（初回は記録するだけで知らせない）
