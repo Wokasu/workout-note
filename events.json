@@ -1479,6 +1479,110 @@
       "deadlines": [],
       "lobby": null,
       "tag": null
+    },
+    {
+      "year": 2027,
+      "month": 2,
+      "day": 27,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "69thシングル グループ握手会（大阪会場）",
+      "members": [
+        "森川優",
+        "渡邉葵心",
+        "佐藤綺星"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://www.akb48.co.jp/news/detailpage/498908081",
+      "location": "大阪",
+      "note": "69thシングル 『タイトル未定』 発売記念イベント開催のご案内",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/498908081"
+    },
+    {
+      "year": 2027,
+      "month": 2,
+      "day": 28,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "69thシングル 福岡握手会",
+      "members": [
+        "森川優",
+        "佐藤綺星"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://www.akb48.co.jp/news/detailpage/498898917",
+      "location": "福岡国際会議場",
+      "note": "69thシングル『タイトル未定』発売記念 初回限定盤対象イベント開催のご案内",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/498898917"
+    },
+    {
+      "year": 2027,
+      "month": 3,
+      "day": 6,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "69thシングル 愛知握手会 ①",
+      "members": [
+        "森川優",
+        "渡邉葵心",
+        "佐藤綺星"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://www.akb48.co.jp/news/detailpage/498898917",
+      "location": "愛知・Aichi Sky Expo",
+      "note": "69thシングル『タイトル未定』発売記念 初回限定盤対象イベント開催のご案内",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/498898917"
+    },
+    {
+      "year": 2027,
+      "month": 4,
+      "day": 24,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "69thシングル 愛知握手会 ②",
+      "members": [
+        "森川優",
+        "渡邉葵心",
+        "佐藤綺星"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://www.akb48.co.jp/news/detailpage/498898917",
+      "location": "愛知・Aichi Sky Expo",
+      "note": "69thシングル『タイトル未定』発売記念 初回限定盤対象イベント開催のご案内",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/498898917"
+    },
+    {
+      "year": 2027,
+      "month": 5,
+      "day": 4,
+      "hour": null,
+      "minute": null,
+      "endHour": null,
+      "endMinute": null,
+      "title": "69thシングル 東京握手会",
+      "members": [
+        "森川優",
+        "渡邉葵心",
+        "佐藤綺星"
+      ],
+      "memberUnknown": false,
+      "detailUrl": "https://www.akb48.co.jp/news/detailpage/498898917",
+      "location": "東京ビッグサイト",
+      "note": "69thシングル『タイトル未定』発売記念 初回限定盤対象イベント開催のご案内",
+      "kind": "event",
+      "sourceUrl": "https://www.akb48.co.jp/news/detailpage/498898917"
     }
   ]
 }
